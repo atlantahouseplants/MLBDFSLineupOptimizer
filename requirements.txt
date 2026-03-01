@@ -1,0 +1,7 @@
+pandas==2.0.0
+pulp==2.7.0
+pydfs-lineup-optimizer==3.2.0
+Flask==2.3.3
+Flask-WTF==1.1.1
+openpyxl==3.1.2
+streamlit==1.32.0

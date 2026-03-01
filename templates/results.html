@@ -1,0 +1,105 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<style>
+    .lineup-card {
+        margin-bottom: 20px;
+    }
+    .lineup-header {
+        background-color: #0d6efd;
+        color: white;
+    }
+    .player-row:hover {
+        background-color: #f8f9fa;
+    }
+    .position-P {
+        background-color: #d1e7dd;
+    }
+    .position-C {
+        background-color: #f8d7da;
+    }
+    .position-1B {
+        background-color: #cfe2ff;
+    }
+    .position-2B {
+        background-color: #fff3cd;
+    }
+    .position-3B {
+        background-color: #e2e3e5;
+    }
+    .position-SS {
+        background-color: #d7f2fb;
+    }
+    .position-OF {
+        background-color: #d3d3d3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-trophy me-2"></i>Optimized Lineups</h1>
+    <div>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-arrow-left me-1"></i>Back to Optimizer
+        </a>
+        <a href="exported_lineups.csv" class="btn btn-success" download>
+            <i class="fas fa-download me-1"></i>Download CSV
+        </a>
+    </div>
+</div>
+
+{% if lineups %}
+    <div class="row">
+        {% for lineup in lineups %}
+            <div class="col-md-6">
+                <div class="card lineup-card">
+                    <div class="card-header lineup-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Lineup #{{ loop.index }}</h5>
+                            <div>
+                                <span class="badge bg-light text-dark me-2">${{ lineup.total_salary }}</span>
+                                <span class="badge bg-warning text-dark">{{ lineup.total_fppg|round(2) }} FPPG</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-borderless mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Player</th>
+                                    <th>Team</th>
+                                    <th>Opp</th>
+                                    <th>Salary</th>
+                                    <th>FPPG</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in lineup.players %}
+                                    <tr class="player-row position-{{ player.position }}">
+                                        <td>{{ player.position }}</td>
+                                        <td>{{ player.name }}</td>
+                                        <td>{{ player.team }}</td>
+                                        <td>{{ player.opponent }}</td>
+                                        <td>${{ player.salary }}</td>
+                                        <td>{{ player.fppg|round(2) }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            {% if loop.index is divisibleby(2) %}
+                </div><div class="row">
+            {% endif %}
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <p>No lineups have been generated yet. Go back to the optimizer to create lineups.</p>
+    </div>
+{% endif %}
+{% endblock %}

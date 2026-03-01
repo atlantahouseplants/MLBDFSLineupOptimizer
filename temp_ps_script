@@ -1,0 +1,57 @@
+"""Baseline projection helpers built on top of BallparkPal sims."""
+from __future__ import annotations
+
+import pandas as pd
+
+PROJECTION_COLUMNS = [
+    "fd_player_id",
+    "full_name",
+    "team",
+    "opponent",
+    "position",
+    "player_type",
+    "salary",
+    "proj_fd_mean",
+    "proj_fd_floor",
+    "proj_fd_ceiling",
+    "proj_fd_ownership",
+    "park_adjustment",
+    "pitch_adjustment",
+    "weather_score",
+]
+
+
+def _team_run_multiplier(df: pd.DataFrame) -> pd.Series:
+    if "bpp_runs" not in df.columns:
+        return pd.Series(1.0, index=df.index)
+    runs = pd.to_numeric(df["bpp_runs"], errors="coerce")
+    temp = pd.DataFrame({"team": df["team"], "runs": runs}).dropna()
+    if temp.empty:
+        return pd.Series(1.0, index=df.index)
+    team_means = temp.groupby("team")["runs"].mean()
+    baseline = team_means.mean()
+    if pd.isna(baseline) or baseline == 0:
+        return pd.Series(1.0, index=df.index)
+    multipliers = (team_means / baseline).clip(lower=0.75, upper=1.25)
+    return df["team"].map(multipliers).fillna(1.0)
+
+
+def _pitcher_win_multiplier(df: pd.DataFrame) -> pd.Series:
+    if "bpp_win_percent" not in df.columns:
+        return pd.Series(1.0, index=df.index)
+    win_pct = pd.to_numeric(df["bpp_win_percent"], errors="coerce")
+    adjustment = ((win_pct - 0.5) * 0.6).clip(-0.25, 0.25)
+    return (1 + adjustment).fillna(1.0)
+
+
+def _park_adjustment(df: pd.DataFrame) -> pd.Series:
+    if "bpp_runs" not in df.columns:
+        return pd.Series(0.0, index=df.index)
+    runs = pd.to_numeric(df["bpp_runs"], errors="coerce")
+    delta = runs - runs.mean()
+    return delta.clip(-2, 2).fillna(0.0)
+
+
+def _pitch_adjustment(df: pd.DataFrame) -> pd.Series:
+    win_pct = pd.to_numeric(df.get("bpp_win_percent"), errors="coerce").fillna(0.5)
+    runs_allowed = pd.to_numeric(df.get("bpp_runs_allowed"), errors="coerce").fillna(runs_allowed.mean() if (runs_allowed := pd.to_numeric(df.get("bpp_runs_allowed"), errors="coerce")).notna().any() else 0))

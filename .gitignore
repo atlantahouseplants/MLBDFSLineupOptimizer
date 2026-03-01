@@ -1,0 +1,37 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local data artifacts
+data/raw/
+data/processed/
+data/slates.db
+
+# FanDuel exports and scratch csvs
+exported_lineups*.csv
+Untitled*.csv
+FanDuel-*.csv.csv
+
+# OS clutter
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.log
+*.tmp
+*~

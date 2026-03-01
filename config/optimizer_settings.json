@@ -1,0 +1,18 @@
+{
+    "salary_cap":  35000,
+    "min_stack_size":  4,
+    "stack_player_types":  [
+                               "batter"
+                           ],
+    "player_exposure_overrides":  {
+                                      "100355-79756":  0.5,
+                                      "Shohei Ohtani":  0.4
+                                  },
+    "max_lineup_ownership":  7.5,
+    "chalk_threshold":  0.15,
+    "chalk_exposure_cap":  0.4,
+    "stack_templates":  [
+                            4,
+                            3
+                        ]
+}

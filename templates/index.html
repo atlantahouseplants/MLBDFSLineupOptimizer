@@ -1,0 +1,237 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<style>
+    .card-header {
+        background-color: #0d6efd;
+        color: white;
+    }
+    .player-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-upload me-2"></i>Upload Player Data</h3>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="mb-3">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Upload FanDuel CSV File</label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".csv">
+                        <div class="form-text">Upload a FanDuel players list CSV file to get started.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload & Process</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-cog me-2"></i>Optimizer Settings</h3>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('optimize') }}" method="post" id="optimizerForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="num_lineups" class="form-label">Number of Lineups</label>
+                                <input type="number" class="form-control" id="num_lineups" name="num_lineups" value="10" min="1" max="150">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="max_exposure" class="form-label">Max Exposure</label>
+                                <input type="number" class="form-control" id="max_exposure" name="max_exposure" value="1.0" min="0.1" max="1.0" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="min_salary" class="form-label">Min Salary</label>
+                                <input type="number" class="form-control" id="min_salary" name="min_salary" value="0" min="0" max="35000">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="max_salary" class="form-label">Max Salary</label>
+                                <input type="number" class="form-control" id="max_salary" name="max_salary" value="35000" min="0" max="35000">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="excluded_players" class="form-label">Excluded Players (IDs, comma-separated)</label>
+                        <input type="text" class="form-control" id="excluded_players" name="excluded_players" placeholder="e.g., 100355-162445,100355-38000">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="locked_players" class="form-label">Locked Players (IDs, comma-separated)</label>
+                        <input type="text" class="form-control" id="locked_players" name="locked_players" placeholder="e.g., 100355-162445,100355-38000">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success btn-lg w-100">Generate Lineups</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-users me-2"></i>Player Pool</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="playerSearch" placeholder="Search players...">
+                </div>
+                <div class="mb-3">
+                    <select class="form-select" id="positionFilter">
+                        <option value="">All Positions</option>
+                        <option value="P">Pitcher (P)</option>
+                        <option value="C">Catcher (C)</option>
+                        <option value="1B">First Base (1B)</option>
+                        <option value="2B">Second Base (2B)</option>
+                        <option value="3B">Third Base (3B)</option>
+                        <option value="SS">Shortstop (SS)</option>
+                        <option value="OF">Outfield (OF)</option>
+                    </select>
+                </div>
+                <div class="player-list" id="playerList">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading players...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Load players
+        loadPlayers();
+        
+        // Search functionality
+        $('#playerSearch').on('input', function() {
+            filterPlayers();
+        });
+        
+        // Position filter
+        $('#positionFilter').on('change', function() {
+            filterPlayers();
+        });
+    });
+    
+    function loadPlayers() {
+        $.ajax({
+            url: "{{ url_for('get_players') }}",
+            type: "GET",
+            success: function(data) {
+                displayPlayers(data);
+            },
+            error: function(error) {
+                $('#playerList').html('<div class="alert alert-danger">Error loading players. Please upload a CSV file first.</div>');
+            }
+        });
+    }
+    
+    function displayPlayers(players) {
+        if (!players || players.length === 0) {
+            $('#playerList').html('<div class="alert alert-info">No players found. Please upload a CSV file first.</div>');
+            return;
+        }
+        
+        let html = '<div class="list-group">';
+        
+        players.forEach(function(player) {
+            html += `
+                <div class="list-group-item player-item" data-id="${player.Id}" data-position="${player.Position}" data-name="${player.First_Name} ${player.Last_Name}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${player.First_Name} ${player.Last_Name}</strong> (${player.Position})
+                            <small class="d-block text-muted">${player.Team} vs ${player.Opponent}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success">$${player.Salary}</span>
+                            <span class="badge bg-info">${player.FPPG ? player.FPPG.toFixed(1) : 0} FPPG</span>
+                            <div class="btn-group btn-group-sm mt-1">
+                                <button class="btn btn-outline-danger btn-exclude" data-id="${player.Id}">Exclude</button>
+                                <button class="btn btn-outline-primary btn-lock" data-id="${player.Id}">Lock</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        $('#playerList').html(html);
+        
+        // Add event listeners for exclude/lock buttons
+        $('.btn-exclude').on('click', function() {
+            const playerId = $(this).data('id');
+            let excludedPlayers = $('#excluded_players').val();
+            
+            if (excludedPlayers) {
+                excludedPlayers += ',' + playerId;
+            } else {
+                excludedPlayers = playerId;
+            }
+            
+            $('#excluded_players').val(excludedPlayers);
+            $(this).closest('.player-item').addClass('bg-light');
+        });
+        
+        $('.btn-lock').on('click', function() {
+            const playerId = $(this).data('id');
+            let lockedPlayers = $('#locked_players').val();
+            
+            if (lockedPlayers) {
+                lockedPlayers += ',' + playerId;
+            } else {
+                lockedPlayers = playerId;
+            }
+            
+            $('#locked_players').val(lockedPlayers);
+            $(this).closest('.player-item').addClass('bg-info bg-opacity-25');
+        });
+    }
+    
+    function filterPlayers() {
+        const searchTerm = $('#playerSearch').val().toLowerCase();
+        const positionFilter = $('#positionFilter').val();
+        
+        $('.player-item').each(function() {
+            const playerName = $(this).data('name').toLowerCase();
+            const playerPosition = $(this).data('position');
+            
+            const nameMatch = playerName.includes(searchTerm);
+            const positionMatch = !positionFilter || playerPosition.includes(positionFilter);
+            
+            if (nameMatch && positionMatch) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    }
+</script>
+{% endblock %}
