@@ -12,7 +12,8 @@ SRC_PATH = REPO_ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from slate_optimizer.exporters.fanduel import build_upload_dataframe
+from slate_optimizer.optimizer import LineupResult
+from slate_optimizer.optimizer.export import lineups_to_fanduel_upload
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -23,9 +24,26 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     lineups_df = pd.read_csv(Path(args.lineups))
-    upload_df = build_upload_dataframe(lineups_df)
-    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-    upload_df.to_csv(Path(args.output), index=False)
+    if "lineup_id" not in lineups_df.columns:
+        raise SystemExit("Input lineups CSV must include a lineup_id column")
+
+    lineups: list[LineupResult] = []
+    for lineup_id, group in lineups_df.groupby("lineup_id"):
+        group = group.copy().reset_index(drop=True)
+        total_salary = int(pd.to_numeric(group.get("salary"), errors="coerce").fillna(0).sum())
+        total_projection = float(pd.to_numeric(group.get("proj_fd_mean"), errors="coerce").fillna(0).sum())
+        lineups.append(
+            LineupResult(
+                dataframe=group,
+                total_salary=total_salary,
+                total_projection=total_projection,
+            )
+        )
+
+    upload_df = lineups_to_fanduel_upload(lineups)
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    upload_df.to_csv(output_path, index=False)
     print(f"Saved FanDuel upload file to {args.output}")
 
 if __name__ == "__main__":

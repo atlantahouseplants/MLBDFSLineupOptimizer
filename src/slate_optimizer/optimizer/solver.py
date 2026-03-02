@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
 from pulp import (
@@ -66,20 +66,33 @@ def _team_stack_constraints(
     decision_vars: Dict[int, LpVariable],
     stack_sizes: Sequence[int],
     stack_player_types: Sequence[str],
-):
+    min_game_total: Optional[float] = None,
+) -> List[Tuple[str, str, LpVariable]]:
     valid_sizes = [size for size in stack_sizes if size and size > 0]
     if not valid_sizes:
-        return
+        return []
 
     stack_types = {t.lower() for t in stack_player_types}
     type_mask = pool["player_type"].str.lower().isin(stack_types)
-    team_codes = pool.loc[type_mask, "team_code"].fillna("").unique()
+    hitters = pool.loc[type_mask, ["team_code", "opponent_code", "vegas_game_total"]].copy()
+    hitters["team_code"] = hitters["team_code"].fillna("")
+    hitters["opponent_code"] = hitters["opponent_code"].fillna("")
+    hitters["vegas_game_total"] = pd.to_numeric(hitters["vegas_game_total"], errors="coerce")
+    team_meta = hitters.drop_duplicates("team_code").set_index("team_code")
+    team_codes = [code for code in team_meta.index if code]
+    if min_game_total is not None:
+        team_codes = [
+            code
+            for code in team_codes
+            if pd.notna(team_meta.loc[code, "vegas_game_total"]) and team_meta.loc[code, "vegas_game_total"] >= min_game_total
+        ]
+    if not team_codes:
+        return []
 
+    stack_details: List[Tuple[str, str, LpVariable]] = []
     for size in valid_sizes:
         stack_vars = {}
         for team_code in team_codes:
-            if not team_code:
-                continue
             indices = pool.index[(pool["team_code"] == team_code) & type_mask]
             if indices.empty:
                 continue
@@ -90,8 +103,12 @@ def _team_stack_constraints(
                 - size * stack_var
                 >= 0
             )
+            opponent_code = team_meta.loc[team_code, "opponent_code"] if team_code in team_meta.index else ""
+            opponent_code = opponent_code if isinstance(opponent_code, str) else ""
+            stack_details.append((team_code, opponent_code, stack_var))
         if stack_vars:
             prob += lpSum(stack_vars.values()) >= 1
+    return stack_details
 
 
 def generate_lineups(
@@ -102,12 +119,16 @@ def generate_lineups(
     stack_player_types: Sequence[str] = ("batter",),
     stack_templates: Optional[Sequence[int]] = None,
     max_lineup_ownership: Optional[float] = None,
+    bring_back_enabled: bool = False,
+    bring_back_count: int = 1,
+    min_game_total_for_stacks: Optional[float] = None,
 ) -> List[LineupResult]:
     df = dataset.copy()
     df["proj_fd_mean"] = pd.to_numeric(df["proj_fd_mean"], errors="coerce").fillna(0.0)
     df["salary"] = pd.to_numeric(df["salary"], errors="coerce").fillna(0).astype(int)
 
     stack_sizes = tuple(stack_templates) if stack_templates else ((min_stack_size,) if min_stack_size else tuple())
+    bring_back_count = max(1, int(bring_back_count))
 
     usage_limits = _max_usage(df, num_lineups)
     usage_counts: Dict[str, int] = {pid: 0 for pid in usage_limits}
@@ -144,7 +165,34 @@ def generate_lineups(
                 if maximum:
                     prob += lpSum(decision_vars[idx] for idx in mask[mask].index) <= maximum
 
-        _team_stack_constraints(prob, pool, decision_vars, stack_sizes, stack_player_types)
+        stack_info = _team_stack_constraints(
+            prob,
+            pool,
+            decision_vars,
+            stack_sizes,
+            stack_player_types,
+            min_game_total=min_game_total_for_stacks,
+        )
+
+        if bring_back_enabled and stack_info:
+            batter_mask = pool["player_type"].str.lower() == "batter"
+            for team_code, opponent_code, stack_var in stack_info:
+                if not opponent_code:
+                    continue
+                opp_indices = pool.index[(pool["team_code"] == opponent_code) & batter_mask]
+                if opp_indices.empty:
+                    continue
+                prob += lpSum(decision_vars[idx] for idx in opp_indices) >= bring_back_count * stack_var
+
+        batter_mask = pool["player_type"].str.lower() == "batter"
+        for idx in pitcher_mask[pitcher_mask].index:
+            opponent_team = str(pool.loc[idx, "opponent_code"] or "")
+            if not opponent_team:
+                continue
+            opp_hitters = pool.index[(pool["team_code"] == opponent_team) & batter_mask]
+            if opp_hitters.empty:
+                continue
+            prob += lpSum(decision_vars[j] for j in opp_hitters) <= (1 - decision_vars[idx]) * len(opp_hitters)
 
         if max_lineup_ownership is not None and "proj_fd_ownership" in pool.columns:
             prob += lpSum(

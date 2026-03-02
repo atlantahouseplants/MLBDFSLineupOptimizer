@@ -19,6 +19,9 @@ class OptimizerConfig:
     chalk_threshold: Optional[float] = None
     chalk_exposure_cap: Optional[float] = None
     player_ownership_caps: Dict[str, float] = field(default_factory=dict)
+    bring_back_enabled: bool = False
+    bring_back_count: int = 1
+    min_game_total_for_stacks: Optional[float] = None
 
     @classmethod
     def load(cls, path: Path) -> "OptimizerConfig":

@@ -1,9 +1,17 @@
 """Builder routines for optimizer-ready datasets."""
 from __future__ import annotations
 
-from typing import List
+from datetime import datetime
+from typing import List, Optional
+
+import re
+from zoneinfo import ZoneInfo
 
 import pandas as pd
+
+_TIME_PATTERN = re.compile(r"(\d{1,2}:\d{2}\s*[AP]M)", re.IGNORECASE)
+_DATE_PATTERN = re.compile(r"(\d{1,2}/\d{1,2})")
+_EASTERN_TZ = ZoneInfo("US/Eastern")
 
 OPTIMIZER_COLUMNS = [
     "fd_player_id",
@@ -22,6 +30,21 @@ OPTIMIZER_COLUMNS = [
     "proj_fd_floor",
     "proj_fd_ceiling",
     "proj_fd_ownership",
+    "batting_order_position",
+    "order_factor",
+    "is_confirmed_lineup",
+    "batter_hand",
+    "pitcher_hand",
+    "platoon_factor",
+    "recent_fppg",
+    "season_fppg",
+    "recency_factor",
+    "game_start_time",
+    "vegas_game_total",
+    "vegas_team_total",
+    "vegas_opponent_total",
+    "vegas_moneyline",
+    "vegas_implied_win_prob",
     "stack_priority",
     "default_max_exposure",
     "player_leverage_score",
@@ -70,6 +93,51 @@ def _build_game_key(row: pd.Series) -> str:
     return "_vs_".join(teams)
 
 
+def _parse_fd_game_string(value: str, reference_year: int) -> Optional[pd.Timestamp]:
+    if not isinstance(value, str):
+        return None
+    time_match = _TIME_PATTERN.search(value)
+    if not time_match:
+        return None
+    time_str = time_match.group(1).upper().replace(" ", "")
+    try:
+        time_obj = datetime.strptime(time_str, "%I:%M%p").time()
+    except ValueError:
+        return None
+    date_match = _DATE_PATTERN.search(value)
+    if date_match:
+        month, day = map(int, date_match.group(1).split("/"))
+        date_obj = datetime(reference_year, month, day).date()
+    else:
+        date_obj = datetime.now(_EASTERN_TZ).date()
+    return pd.Timestamp.combine(date_obj, time_obj)
+
+
+def _derive_game_start_times(df: pd.DataFrame) -> pd.Series:
+    current_year = datetime.now(_EASTERN_TZ).year
+
+    def parse_row(row: pd.Series) -> pd.Timestamp:
+        ts = pd.NaT
+        date_value = row.get("bpp_game_date")
+        time_value = row.get("bpp_game_time")
+        if pd.notna(date_value) and pd.notna(time_value):
+            ts = pd.to_datetime(f"{date_value} {time_value}", errors="coerce")
+        if (pd.isna(ts) or ts is None) and pd.notna(row.get("game")):
+            parsed = _parse_fd_game_string(row.get("game"), current_year)
+            if parsed is not None:
+                ts = pd.Timestamp(parsed)
+        if pd.isna(ts) or ts is None:
+            return pd.NaT
+        if ts.tzinfo is None:
+            try:
+                ts = ts.tz_localize(_EASTERN_TZ)
+            except (TypeError, ValueError):
+                ts = pd.Timestamp(ts, tz=_EASTERN_TZ)
+        return ts.tz_convert("UTC")
+
+    return df.apply(parse_row, axis=1)
+
+
 def build_optimizer_dataset(
     players_df: pd.DataFrame,
     projections_df: pd.DataFrame,
@@ -92,17 +160,56 @@ def build_optimizer_dataset(
 
     merged["salary"] = _safe_numeric(merged.get("salary")).fillna(0).astype(int)
 
+    if "batting_order_position" not in merged.columns:
+        merged["batting_order_position"] = pd.Series(pd.NA, index=merged.index, dtype="Int64")
+    if "order_factor" not in merged.columns:
+        merged["order_factor"] = 1.0
+    if "platoon_factor" not in merged.columns:
+        merged["platoon_factor"] = 1.0
+    if "is_confirmed_lineup" not in merged.columns:
+        merged["is_confirmed_lineup"] = False
+    if "batter_hand" not in merged.columns:
+        merged["batter_hand"] = ""
+    if "pitcher_hand" not in merged.columns:
+        merged["pitcher_hand"] = ""
+    if "recent_fppg" not in merged.columns:
+        merged["recent_fppg"] = 0.0
+    if "season_fppg" not in merged.columns:
+        merged["season_fppg"] = 0.0
+    if "recency_factor" not in merged.columns:
+        merged["recency_factor"] = 1.0
+    merged["game_start_time"] = _derive_game_start_times(merged)
+
     missing = [col for col in OPTIMIZER_COLUMNS if col not in merged.columns]
     for col in missing:
         merged[col] = "" if col.startswith("bpp") or col in {"team", "opponent"} else 0
 
     dataset = merged[OPTIMIZER_COLUMNS].copy()
-    dataset["proj_fd_mean"] = _safe_numeric(dataset["proj_fd_mean"]).fillna(0.0)
-    dataset["proj_fd_floor"] = _safe_numeric(dataset["proj_fd_floor"]).fillna(0.0)
-    dataset["proj_fd_ceiling"] = _safe_numeric(dataset["proj_fd_ceiling"]).fillna(0.0)
-    dataset["proj_fd_ownership"] = _safe_numeric(dataset["proj_fd_ownership"]).fillna(0.0)
-    dataset["bpp_runs"] = _safe_numeric(dataset["bpp_runs"]).fillna(0.0)
-    dataset["bpp_win_percent"] = _safe_numeric(dataset["bpp_win_percent"]).fillna(0.0)
+    numeric_cols = [
+        "proj_fd_mean",
+        "proj_fd_floor",
+        "proj_fd_ceiling",
+        "proj_fd_ownership",
+        "order_factor",
+        "platoon_factor",
+        "recent_fppg",
+        "season_fppg",
+        "recency_factor",
+        "game_start_time",
+        "bpp_runs",
+        "bpp_win_percent",
+        "vegas_game_total",
+        "vegas_team_total",
+        "vegas_opponent_total",
+        "vegas_moneyline",
+        "vegas_implied_win_prob",
+    ]
+    for col in numeric_cols:
+        dataset[col] = _safe_numeric(dataset[col]).fillna(0.0)
+
+    dataset["is_confirmed_lineup"] = dataset["is_confirmed_lineup"].astype(bool)
+    dataset["batter_hand"] = dataset["batter_hand"].astype(str)
+    dataset["pitcher_hand"] = dataset["pitcher_hand"].astype(str)
 
     dataset = _add_leverage_columns(dataset)
     dataset.sort_values(by=["player_type", "team_code", "proj_fd_mean"], ascending=[True, True, False], inplace=True)

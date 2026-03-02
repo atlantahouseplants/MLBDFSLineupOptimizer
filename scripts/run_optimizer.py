@@ -14,6 +14,7 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 from slate_optimizer.optimizer import LineupResult, OptimizerConfig, generate_lineups
+from slate_optimizer.optimizer.export import write_fanduel_upload
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -52,6 +53,23 @@ def parse_args() -> argparse.Namespace:
         help="Optional cap on total lineup ownership (sum of proj_fd_ownership).",
     )
     parser.add_argument(
+        "--bring-back",
+        action="store_true",
+        help="Enable bring-back requirement (include hitters from opposing team).",
+    )
+    parser.add_argument(
+        "--bring-back-count",
+        type=int,
+        default=None,
+        help="Number of opposing hitters required when bring-back is enabled.",
+    )
+    parser.add_argument(
+        "--min-game-total",
+        type=float,
+        default=None,
+        help="Only stack teams from games with Vegas total at or above this value.",
+    )
+    parser.add_argument(
         "--chalk-threshold",
         type=float,
         default=None,
@@ -72,6 +90,11 @@ def parse_args() -> argparse.Namespace:
         "--output",
         default=None,
         help="Optional CSV to write all lineups (with lineup_id column).",
+    )
+    parser.add_argument(
+        "--fd-upload",
+        default=None,
+        help="Optional FanDuel upload CSV (positions with player IDs).",
     )
     return parser.parse_args()
 
@@ -147,6 +170,12 @@ def main() -> None:
     if stack_templates:
         stack_templates = [size for size in stack_templates if isinstance(size, int) and size > 0]
 
+    bring_back_enabled = config.bring_back_enabled or args.bring_back
+    bring_back_count = config.bring_back_count if config.bring_back_count else 1
+    if args.bring_back_count is not None:
+        bring_back_count = args.bring_back_count
+    min_game_total = config.min_game_total_for_stacks if config.min_game_total_for_stacks is not None else args.min_game_total
+
     lineups = generate_lineups(
         df,
         num_lineups=args.num_lineups,
@@ -155,6 +184,9 @@ def main() -> None:
         stack_player_types=(config.stack_player_types if config.stack_player_types else ("batter",)),
         stack_templates=stack_templates,
         max_lineup_ownership=max_lineup_ownership,
+        bring_back_enabled=bring_back_enabled,
+        bring_back_count=bring_back_count,
+        min_game_total_for_stacks=min_game_total,
     )
 
     if not lineups:
@@ -167,11 +199,23 @@ def main() -> None:
 
     _print_exposure_summary(lineups)
 
+    lineups_df = _combine_lineups(lineups)
+
+    upload_target = None
+
     if args.output:
-        result_df = _combine_lineups(lineups)
-        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-        result_df.to_csv(args.output, index=False)
-        print(f"Saved lineup breakdown to {args.output}")
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        lineups_df.to_csv(output_path, index=False)
+        print(f"Saved lineup breakdown to {output_path}")
+        upload_target = output_path.with_name(f"{output_path.stem}_fanduel_upload.csv")
+
+    if args.fd_upload:
+        upload_target = Path(args.fd_upload)
+
+    if upload_target is not None:
+        write_fanduel_upload(lineups, upload_target)
+        print(f"Saved FanDuel upload file to {upload_target}")
 
 if __name__ == "__main__":
     main()
