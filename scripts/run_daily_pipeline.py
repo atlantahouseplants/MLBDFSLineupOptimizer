@@ -5,7 +5,7 @@ import argparse
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Sequence
 
 import pandas as pd
 
@@ -32,8 +32,12 @@ from slate_optimizer.optimizer import (
 from slate_optimizer.optimizer.export import write_fanduel_upload
 from slate_optimizer.projection import compute_baseline_projections, compute_ownership_series
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
+def build_parser(add_help: bool = True) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        add_help=add_help,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument("--bpp-source", required=True, help="Directory with BallparkPal Excel files.")
     parser.add_argument("--fanduel-csv", required=True, help="FanDuel player list CSV for the slate.")
     parser.add_argument("--alias-file", default=None, help="Optional alias JSON for name overrides.")
@@ -123,7 +127,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Write merged slate + projections CSVs alongside optimizer outputs.",
     )
-    return parser.parse_args()
+    return parser
+
+
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = build_parser()
+    return parser.parse_args(argv)
 
 def _combine_lineups(lineups: List[LineupResult]) -> pd.DataFrame:
     rows = []
@@ -168,8 +177,7 @@ def _print_stack_summary(lineups: List[LineupResult]) -> None:
         pct = row["appearances"] / (len(lineups) * 9)
         print(f"  {row['team_code']}: {row['appearances']} spots ({pct:.0%} of hitters)")
 
-def main() -> None:
-    args = parse_args()
+def run_pipeline(args: argparse.Namespace) -> dict:
     tag = args.tag or datetime.now().strftime("%Y%m%d")
 
     def _parse_list(value: str | None) -> List[str]:
@@ -420,7 +428,16 @@ def main() -> None:
 
     if not lineups:
         print("No feasible lineups generated.")
-        return
+        return {
+            "tag": tag,
+            "output_dir": output_dir,
+            "optimizer_df": optimizer_df,
+            "lineups": [],
+            "lineup_df": pd.DataFrame(),
+            "salary_cap": salary_cap,
+            "lineups_path": None,
+            "upload_path": None,
+        }
 
     print(f"Generated {len(lineups)} lineups. Top lineup proj={lineups[0].total_projection:.2f}")
     _print_exposure_summary(lineups)
@@ -434,6 +451,22 @@ def main() -> None:
     upload_path = output_dir / f"{tag}_fanduel_upload.csv"
     write_fanduel_upload(lineups, upload_path)
     print(f"Saved FanDuel upload file to {upload_path}")
+
+    return {
+        "tag": tag,
+        "output_dir": output_dir,
+        "optimizer_df": optimizer_df,
+        "lineups": lineups,
+        "lineup_df": combined_lineups,
+        "salary_cap": salary_cap,
+        "lineups_path": lineups_path,
+        "upload_path": upload_path,
+    }
+
+
+def main() -> None:
+    args = parse_args()
+    run_pipeline(args)
 
 if __name__ == "__main__":
     main()

@@ -9,7 +9,7 @@ import json
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 import pandas as pd
@@ -30,15 +30,138 @@ from slate_optimizer.optimizer import build_optimizer_dataset, generate_lineups
 from slate_optimizer.optimizer.config import OptimizerConfig
 from slate_optimizer.optimizer.dataset import OPTIMIZER_COLUMNS
 from slate_optimizer.optimizer.export import lineups_to_fanduel_upload
-from slate_optimizer.projection import compute_baseline_projections, compute_ownership_series
-
+from slate_optimizer.projection import (
+    OwnershipModelConfig,
+    blend_projection_sources,
+    compute_baseline_projections,
+    compute_ownership_series,
+)
+from slate_optimizer.simulation import (
+    FieldQualityMix,
+    SimulationConfig,
+    build_correlation_matrix,
+    fit_player_distributions,
+    select_portfolio,
+    simulate_contest,
+    simulate_field,
+    simulate_slate,
+)
+from scipy.stats import norm
 
 WORKFLOW_KEY = "workflow_state"
 NAV_KEY = "workflow_nav"
 CONFIG_KEY = "optimizer_config"
 LINEUPS_KEY = "lineup_results"
+SIM_CONFIG_KEY = "simulation_config"
+SIM_RESULTS_KEY = "simulation_results"
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "data" / "slates.db"
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "processed"
+
+MANUAL_WEIGHT_PRESET = "Manual weights"
+DEFAULT_WEIGHT_PRESET = "Balanced (equal blend)"
+
+DEFAULT_MODEL_PRESET = "Balanced (field median)"
+OWNERSHIP_MODEL_CUSTOM = "Manual adjustments"
+
+MODEL_DEFAULT_VALUES = asdict(OwnershipModelConfig())
+
+def _preset_values(base: Dict[str, float], **updates) -> Dict[str, float]:
+    data = dict(base)
+    data.update(updates)
+    return data
+
+
+OWNERSHIP_MODEL_PRESETS = {
+    DEFAULT_MODEL_PRESET: dict(MODEL_DEFAULT_VALUES),
+    "Chalk leaning": _preset_values(
+        MODEL_DEFAULT_VALUES,
+        salary_weight=0.35,
+        projection_weight=0.35,
+        value_weight=0.1,
+        team_weight=0.1,
+        name_weight=0.05,
+        position_weight=0.05,
+        min_pct=0.08,
+        max_pct=0.95,
+    ),
+    "Leverage hunting": _preset_values(
+        MODEL_DEFAULT_VALUES,
+        salary_weight=0.1,
+        projection_weight=0.2,
+        value_weight=0.35,
+        team_weight=0.15,
+        name_weight=0.05,
+        position_weight=0.15,
+        min_pct=0.03,
+        max_pct=0.75,
+    ),
+}
+
+OWNERSHIP_MODEL_OPTIONS = list(OWNERSHIP_MODEL_PRESETS.keys()) + [OWNERSHIP_MODEL_CUSTOM]
+
+OWNERSHIP_MODEL_FIELDS = [
+    ("salary_weight", "Salary weight", 0.0, 3.0, 0.05, "Higher salary rank tends to increase ownership."),
+    ("projection_weight", "Projection weight", 0.0, 3.0, 0.05, "Effect of projection rank on ownership."),
+    ("value_weight", "Value weight", 0.0, 3.0, 0.05, "Effect of value (points per dollar)."),
+    ("team_weight", "Team total weight", 0.0, 3.0, 0.05, "Influence of team implied run totals."),
+    ("name_weight", "Name recognition weight", 0.0, 3.0, 0.05, "Star power / recent performance signal."),
+    ("position_weight", "Positional scarcity weight", 0.0, 3.0, 0.05, "Concentration at thin positions."),
+    ("min_pct", "Min ownership (decimal)", 0.0, 0.5, 0.01, "0.05 = 5% baseline ownership floor."),
+    ("max_pct", "Max ownership (decimal)", 0.1, 1.0, 0.01, "Upper cap for fallback ownership (0.25 = 25%)."),
+]
+
+
+def _ownership_model_preset_values(preset: str) -> Dict[str, float]:
+    base = OWNERSHIP_MODEL_PRESETS.get(preset)
+    if base is None:
+        base = OWNERSHIP_MODEL_PRESETS[DEFAULT_MODEL_PRESET]
+    values: Dict[str, float] = {}
+    for field, *_ in OWNERSHIP_MODEL_FIELDS:
+        values[field] = float(base.get(field, MODEL_DEFAULT_VALUES.get(field, 0.0)))
+    return values
+
+
+def _apply_ownership_model_preset(preset: str) -> None:
+    values = _ownership_model_preset_values(preset)
+    for field, value in values.items():
+        st.session_state[f"ownership_model_{field}"] = value
+
+
+def _preset_equal_weights(count: int) -> List[float]:
+    return [1.0] * max(count, 1)
+
+
+def _preset_primary_anchor(count: int) -> List[float]:
+    if count <= 1:
+        return [1.0] * max(count, 1)
+    anchor = 0.5
+    tail_share = (1.0 - anchor) / max(count - 1, 1)
+    return [anchor] + [tail_share] * (count - 1)
+
+
+def _preset_leverage_boost(count: int) -> List[float]:
+    # Later uploads often reflect last-minute intel; emphasize them progressively.
+    if count <= 0:
+        return []
+    return [float(idx + 1) for idx in range(count)]
+
+
+WEIGHT_PRESETS = {
+    DEFAULT_WEIGHT_PRESET: {
+        "description": "Treat every uploaded ownership source equally.",
+        "generator": _preset_equal_weights,
+    },
+    "Primary anchor (source order)": {
+        "description": "Lean on the first uploaded source while still blending others.",
+        "generator": _preset_primary_anchor,
+    },
+    "Leverage boost (latest source emphasis)": {
+        "description": "Weight later uploads more heavily to capture late-breaking ownership moves.",
+        "generator": _preset_leverage_boost,
+    },
+}
+
+WEIGHT_PRESET_OPTIONS = list(WEIGHT_PRESETS.keys()) + [MANUAL_WEIGHT_PRESET]
 
 
 def _get_session() -> Dict:
@@ -63,6 +186,126 @@ def _get_config_state() -> Dict:
     return st.session_state.setdefault(CONFIG_KEY, default_config)
 
 
+def _get_sim_config_state() -> Dict:
+    default_config = {
+        "num_simulations": 10000,
+        "volatility_scale": 1.0,
+        "copula_nu": 5,
+        "teammate_corr": 0.25,
+        "pitcher_vs_opposing": -0.15,
+        "field_size": 1000,
+        "selection_metric": "top_1pct_rate",
+        "diversity_weight": 0.3,
+        "max_player_exposure": 0.6,
+        "use_stratified": False,
+    }
+    return st.session_state.setdefault(SIM_CONFIG_KEY, default_config)
+
+
+def _apply_sim_preset(preset: SimulationConfig, state: Dict) -> None:
+    state["num_simulations"] = preset.num_simulations
+    state["volatility_scale"] = preset.volatility_scale
+    state["field_size"] = preset.num_field_lineups
+    state["selection_metric"] = preset.selection_metric
+    state["diversity_weight"] = preset.diversity_weight
+    state["max_player_exposure"] = preset.max_player_exposure
+
+
+def _build_simulation_config(state: Dict) -> SimulationConfig:
+    config = SimulationConfig(
+        num_simulations=int(state.get("num_simulations", 10000)),
+        volatility_scale=float(state.get("volatility_scale", 1.0)),
+        num_field_lineups=int(state.get("field_size", 1000)),
+        selection_metric=str(state.get("selection_metric", "top_1pct_rate")),
+        diversity_weight=float(state.get("diversity_weight", 0.3)),
+        max_player_exposure=float(state.get("max_player_exposure", 0.6)),
+    )
+    config.correlation.teammate_base = float(state.get("teammate_corr", config.correlation.teammate_base))
+    config.correlation.pitcher_vs_opposing = float(state.get("pitcher_vs_opposing", config.correlation.pitcher_vs_opposing))
+    config.correlation.copula_nu = int(state.get("copula_nu", config.correlation.copula_nu))
+    config.use_stratified = bool(state.get("use_stratified", False))
+    return config
+
+
+def _run_simulation_stack(
+    optimizer_df: pd.DataFrame,
+    lineups,
+    lineup_df: Optional[pd.DataFrame],
+    sim_config: SimulationConfig,
+    salary_cap: int,
+):
+    distributions = fit_player_distributions(optimizer_df, sim_config.volatility_scale)
+    correlation_model = build_correlation_matrix(optimizer_df, sim_config.correlation)
+    slate_sim = simulate_slate(
+        distributions,
+        correlation_model,
+        num_simulations=sim_config.num_simulations,
+        seed=sim_config.seed,
+        use_antithetic=sim_config.use_antithetic,
+    )
+    quality_mix = FieldQualityMix(
+        shark_pct=sim_config.field_quality_shark_pct,
+        rec_pct=sim_config.field_quality_rec_pct,
+        random_pct=sim_config.field_quality_random_pct,
+    )
+    field_sim = simulate_field(
+        optimizer_df,
+        num_opponent_lineups=sim_config.num_field_lineups,
+        salary_cap=salary_cap,
+        seed=sim_config.seed,
+        position_constraints=True,
+        quality_mix=quality_mix,
+    )
+    contest_result = simulate_contest(
+        lineups,
+        slate_sim,
+        field_sim,
+        entry_fee=sim_config.entry_fee,
+        payout_structure=sim_config.payout_structure,
+    )
+    contest_df = contest_result.to_dataframe().sort_values(
+        sim_config.selection_metric, ascending=False
+    )
+    portfolio = select_portfolio(
+        contest_result,
+        num_lineups=min(sim_config.num_candidates, len(lineups)),
+        selection_metric=sim_config.selection_metric,
+        max_overlap=sim_config.max_overlap,
+        max_player_exposure=sim_config.max_player_exposure,
+        diversity_weight=sim_config.diversity_weight,
+    )
+    portfolio_df = portfolio.to_dataframe() if portfolio.selected else pd.DataFrame()
+    raw_ids: List[int] = []
+    if not portfolio_df.empty and "lineup_id" in portfolio_df.columns:
+        raw_ids = [int(value) for value in portfolio_df["lineup_id"].tolist()]
+    selected_ids = [idx + 1 for idx in raw_ids]
+    selected_players = pd.DataFrame()
+    if selected_ids and lineup_df is not None and not lineup_df.empty:
+        selected_players = lineup_df[lineup_df["lineup_id"].isin(selected_ids)].copy()
+    summary = {
+        "win_rate": portfolio.portfolio_win_rate,
+        "top1": portfolio.portfolio_top1pct_rate,
+        "cash": portfolio.portfolio_cash_rate,
+        "roi": portfolio.portfolio_expected_roi,
+    }
+    selected_objects = []
+    if selected_ids:
+        zero_based = [max(0, idx - 1) for idx in selected_ids]
+        for idx in zero_based:
+            if 0 <= idx < len(lineups):
+                selected_objects.append(lineups[idx])
+    return (
+        contest_df,
+        portfolio_df,
+        summary,
+        selected_players,
+        selected_ids,
+        slate_sim,
+        correlation_model,
+        selected_objects,
+    )
+
+
 def _save_uploaded_file(uploaded, directory: Path) -> Path:
     path = directory / uploaded.name
     with open(path, "wb") as temp_file:
@@ -81,6 +324,31 @@ def _combine_lineups(lineups) -> pd.DataFrame:
     if not rows:
         return pd.DataFrame()
     return pd.concat(rows, ignore_index=True)
+
+
+
+def _activate_sim_portfolio(workflow: Dict, selected_lineups) -> None:
+    if not selected_lineups:
+        st.warning("Simulation portfolio has no lineups to activate.")
+        return
+    workflow.setdefault("optimizer_lineups_backup", workflow.get("lineups"))
+    workflow.setdefault("optimizer_lineups_df_backup", workflow.get("lineups_df"))
+    workflow["lineups"] = selected_lineups
+    workflow["lineups_df"] = _combine_lineups(selected_lineups)
+    workflow["active_lineup_source"] = "simulation"
+    st.success("Simulation portfolio is now active for Steps 5-6.")
+
+
+
+def _restore_optimizer_lineups(workflow: Dict) -> None:
+    backup = workflow.get("optimizer_lineups_backup")
+    if not backup:
+        st.info("Original optimizer lineups not available.")
+        return
+    workflow["lineups"] = backup
+    workflow["lineups_df"] = workflow.get("optimizer_lineups_df_backup", _combine_lineups(backup))
+    workflow["active_lineup_source"] = "optimizer"
+    st.success("Restored optimizer-generated lineups.")
 
 
 def _write_multiple(uploaded_files: Iterable, directory: Path) -> List[Path]:
@@ -121,6 +389,38 @@ def _parse_recency_blend(value: Optional[str]) -> Optional[Tuple[float, float]]:
     if season_weight + recent_weight <= 0:
         raise ValueError("Recency blend weights must sum to a positive value")
     return season_weight, recent_weight
+
+
+def _weight_preset_values(preset: Optional[str], source_count: int) -> Optional[List[float]]:
+    if not source_count:
+        return None
+    if preset == MANUAL_WEIGHT_PRESET:
+        return None
+    if not preset or preset not in WEIGHT_PRESETS:
+        preset = DEFAULT_WEIGHT_PRESET
+    preset_def = WEIGHT_PRESETS.get(preset)
+    if not preset_def:
+        return None
+    generator = preset_def.get("generator")
+    if generator is None:
+        return None
+    raw_weights = [float(value) for value in generator(source_count)]
+    total = sum(raw_weights)
+    if total <= 0:
+        return None
+    return [value / total for value in raw_weights]
+
+
+def _weight_preset_preview(preset: Optional[str], sources: Sequence) -> str:
+    weights = _weight_preset_values(preset, len(sources)) if sources else None
+    if not weights:
+        return ""
+    labels = [getattr(upload, "name", f"Source {idx + 1}") for idx, upload in enumerate(sources)]
+    preview = []
+    for idx, weight in enumerate(weights):
+        label = labels[idx] if idx < len(labels) else f"Source {idx + 1}"
+        preview.append(f"{label}: {weight:.2f}")
+    return ", ".join(preview)
 
 
 def _merge_optional_sources(
@@ -237,7 +537,13 @@ def _process_slate(
     handed_file,
     recent_file,
     ownership_files,
+    projection_files,
+    projection_preset: Optional[str],
+    projection_weights_input: Optional[str],
+    projection_baseline_weight: float,
+    ownership_preset: Optional[str],
     ownership_weights_input: Optional[str],
+    ownership_model_settings: Optional[Dict],
     recency_blend_input: Optional[str],
     platoon_opposite_boost: float,
     platoon_same_penalty: float,
@@ -265,9 +571,65 @@ def _process_slate(
             for uploaded in ownership_files:
                 ownership_paths.append(_save_uploaded_file(uploaded, temp_dir))
 
+        projection_paths = []
+        if projection_files:
+            for uploaded in projection_files:
+                projection_paths.append(_save_uploaded_file(uploaded, temp_dir))
+
+        manual_weight_override = bool(ownership_weights_input and ownership_paths)
+        manual_preset_selected = ownership_preset == MANUAL_WEIGHT_PRESET
         ownership_weights = None
         if ownership_paths:
-            ownership_weights = _parse_weights(ownership_weights_input, len(ownership_paths))
+            if manual_preset_selected and not manual_weight_override:
+                raise ValueError("Enter ownership weights when using the manual preset.")
+            if manual_weight_override:
+                ownership_weights = _parse_weights(ownership_weights_input, len(ownership_paths))
+            else:
+                ownership_weights = _weight_preset_values(ownership_preset, len(ownership_paths))
+
+        model_defaults = OwnershipModelConfig()
+        ownership_model_settings = ownership_model_settings or {}
+        model_values_raw = ownership_model_settings.get("values") or {}
+        model_values: Dict[str, float] = {}
+        for field, *_ in OWNERSHIP_MODEL_FIELDS:
+            model_values[field] = float(model_values_raw.get(field, getattr(model_defaults, field)))
+        min_pct = max(0.0, model_values.get("min_pct", model_defaults.min_pct))
+        max_pct = max(model_values.get("max_pct", model_defaults.max_pct), min_pct + 1e-6)
+        model_values["min_pct"] = min_pct
+        model_values["max_pct"] = max_pct
+        ownership_model_config = OwnershipModelConfig(
+            salary_weight=model_values.get("salary_weight", model_defaults.salary_weight),
+            projection_weight=model_values.get("projection_weight", model_defaults.projection_weight),
+            value_weight=model_values.get("value_weight", model_defaults.value_weight),
+            team_weight=model_values.get("team_weight", model_defaults.team_weight),
+            name_weight=model_values.get("name_weight", model_defaults.name_weight),
+            position_weight=model_values.get("position_weight", model_defaults.position_weight),
+            min_pct=min_pct,
+            max_pct=max_pct,
+        )
+        ownership_model_summary = {
+            "preset": ownership_model_settings.get("preset") or DEFAULT_MODEL_PRESET,
+            "manual_override": bool(ownership_model_settings.get("manual_override")),
+            "values": model_values,
+            "min_pct": min_pct,
+            "max_pct": max_pct,
+        }
+
+        manual_projection_override = bool(projection_weights_input and projection_paths)
+        manual_projection_preset = projection_preset == MANUAL_WEIGHT_PRESET
+        projection_weights = None
+        if projection_paths:
+            if manual_projection_preset and not manual_projection_override:
+                raise ValueError("Enter projection weights when using the manual preset.")
+            if manual_projection_override:
+                projection_weights = _parse_weights(projection_weights_input, len(projection_paths))
+            else:
+                projection_weights = _weight_preset_values(projection_preset, len(projection_paths))
+        projection_baseline_weight = float(
+            projection_baseline_weight if projection_baseline_weight is not None else 1.0
+        )
+        if projection_baseline_weight < 0:
+            raise ValueError("Baseline weight must be non-negative.")
 
         recency_blend = _parse_recency_blend(recency_blend_input)
 
@@ -302,12 +664,22 @@ def _process_slate(
             platoon_switch_boost=platoon_switch_boost,
         )
 
+        projection_paths_list = [Path(p) for p in projection_paths]
+        projections, projection_blend_result = blend_projection_sources(
+            combined,
+            projections,
+            source_paths=projection_paths_list,
+            weights=projection_weights,
+            baseline_weight=projection_baseline_weight,
+        )
+
         ownership_paths_list = [Path(p) for p in ownership_paths]
         ownership_result = compute_ownership_series(
             combined,
             projections,
             source_paths=ownership_paths_list,
             weights=ownership_weights,
+            model_config=ownership_model_config,
         )
         ownership_map = ownership_result.ownership.to_dict()
         projections["proj_fd_ownership"] = (
@@ -324,12 +696,77 @@ def _process_slate(
     ]
     summary_messages.extend(optional_messages)
 
+    blend_preview = []
+    for detail in getattr(ownership_result, "sources", []) or []:
+        blend_preview.append(f"{detail.name}:{detail.weight:.2f}")
+    if blend_preview:
+        summary_messages.append("Ownership weights -> " + ", ".join(blend_preview))
+    summary_messages.append(
+        "Ownership model -> "
+        f"{ownership_model_summary['preset']} floor:{ownership_model_summary['min_pct'] * 100:.1f}%"
+        f" ceiling:{ownership_model_summary['max_pct'] * 100:.1f}%"
+    )
+
+    projection_blend_message = []
+    if projection_blend_result and getattr(projection_blend_result, "sources", None):
+        projection_blend_message.append(f"BallparkPal:{projection_blend_result.baseline_share:.2f}")
+        for detail in projection_blend_result.sources:
+            projection_blend_message.append(f"{detail.name}:{detail.weight:.2f}")
+    if projection_blend_message:
+        summary_messages.append("Projection blend -> " + ", ".join(projection_blend_message))
+
+    projection_blend_config = {
+        "preset": projection_preset or DEFAULT_WEIGHT_PRESET,
+        "manual_override": manual_projection_override,
+        "source_files": [path.name for path in projection_paths_list],
+        "baseline_weight_input": projection_baseline_weight,
+        "baseline_share": getattr(projection_blend_result, "baseline_share", 1.0),
+        "applied_weights": [
+            {
+                "name": detail.name,
+                "weight": detail.weight,
+                "matched_players": detail.matched_players,
+                "has_floor": detail.has_floor,
+                "has_ceiling": detail.has_ceiling,
+            }
+            for detail in (projection_blend_result.sources if projection_blend_result else [])
+        ],
+    }
+
+    ownership_config = {
+        "preset": ownership_preset or DEFAULT_WEIGHT_PRESET,
+        "manual_override": manual_weight_override,
+        "source_files": [path.name for path in ownership_paths_list],
+        "requested_weights": ownership_weights,
+        "applied_weights": [
+            {
+                "name": detail.name,
+                "weight": detail.weight,
+                "matched_players": detail.matched_players,
+            }
+            for detail in getattr(ownership_result, "sources", []) or []
+        ],
+    }
+
+    projection_config = {
+        "recency_blend": list(recency_blend) if recency_blend else None,
+        "platoon": {
+            "opposite": platoon_opposite_boost,
+            "same": platoon_same_penalty,
+            "switch": platoon_switch_boost,
+        },
+        "ownership": ownership_config,
+        "ownership_model": ownership_model_summary,
+        "projection_blend": projection_blend_config,
+    }
+
     workflow_payload = {
         "players": combined,
         "projections": projections,
         "optimizer": optimizer_df,
         "diagnostics": diagnostics,
         "ownership_summary": ownership_result,
+        "projection_blend_summary": projection_blend_result,
         "messages": summary_messages,
         "recency_blend": recency_blend,
         "platoon_settings": {
@@ -337,8 +774,34 @@ def _process_slate(
             "same_penalty": platoon_same_penalty,
             "switch_boost": platoon_switch_boost,
         },
+        "projection_config": projection_config,
     }
     return workflow_payload
+
+
+def _serialize_strategy_config(workflow: Dict) -> str:
+    payload = {
+        "optimizer": dict(_get_config_state()),
+        "projection": workflow.get("projection_config"),
+    }
+    return json.dumps(payload)
+
+
+def _extract_projection_config_from_lineups(df: Optional[pd.DataFrame]) -> Optional[Dict]:
+    if df is None or df.empty or "strategy_config_json" not in df.columns:
+        return None
+    configs = df["strategy_config_json"].dropna()
+    for raw in configs:
+        if not isinstance(raw, str):
+            continue
+        try:
+            payload = json.loads(raw)
+        except Exception:  # pylint: disable=broad-except
+            continue
+        projection_cfg = payload.get("projection")
+        if projection_cfg:
+            return projection_cfg
+    return None
 
 
 def render_validation_summary(workflow: Dict) -> None:
@@ -346,18 +809,167 @@ def render_validation_summary(workflow: Dict) -> None:
     if diagnostics:
         st.subheader("Merge diagnostics")
         st.table(_format_diagnostics(diagnostics))
+    projection_cfg = workflow.get("projection_config") or {}
+    _render_projection_config_summary(config=projection_cfg)
+    _render_projection_blend_summary(workflow.get("projection_blend_summary") or projection_cfg.get("projection_blend"))
+    _render_ownership_model_summary(projection_cfg.get("ownership_model"))
     ownership_result = workflow.get("ownership_summary")
     if ownership_result:
-        if ownership_result.source_count:
-            st.success(
-                f"Ownership blended from {ownership_result.source_count} source(s); "
-                f"coverage {ownership_result.covered_players}/{len(ownership_result.ownership)} players"
+        _render_ownership_summary(ownership_result)
+    if workflow.get("messages"):
+        st.subheader("Messages")
+        for message in workflow["messages"]:
+            st.write(message)
+
+
+def _render_ownership_summary(summary) -> None:
+    if not summary:
+        return
+    sources = getattr(summary, "sources", []) or []
+    total_players = len(summary.ownership) if hasattr(summary, "ownership") else None
+    st.subheader("Ownership blend summary")
+    if not sources:
+        st.info("Using fallback ownership estimator (no external sources provided).")
+        if total_players:
+            st.caption(f"Coverage 0/{total_players} players.")
+        return
+    rows = [
+        {
+            "Source": detail.name,
+            "Weight": f"{detail.weight:.2f}",
+            "Matched players": detail.matched_players,
+        }
+        for detail in sources
+    ]
+    table = pd.DataFrame(rows)
+    st.table(table)
+    if total_players is not None:
+        st.caption(
+            f"Coverage {summary.covered_players}/{total_players} players. External sources: {summary.source_count}"
+        )
+
+
+def _render_projection_blend_summary(summary) -> None:
+    if not summary:
+        return
+    if hasattr(summary, "sources"):
+        sources = summary.sources or []
+        baseline_share = getattr(summary, "baseline_share", 1.0)
+    else:
+        summary_dict = summary if isinstance(summary, dict) else {}
+        sources = summary_dict.get("applied_weights") or []
+        baseline_share = float(summary_dict.get("baseline_share", 1.0))
+    st.subheader("Projection blend summary")
+    if not sources:
+        st.info("Projection blend uses BallparkPal baseline only.")
+        st.caption(f"BallparkPal share {baseline_share:.2f}")
+        return
+    rows = []
+    for detail in sources:
+        if hasattr(detail, "name"):
+            rows.append(
+                {
+                    "Source": detail.name,
+                    "Weight": f"{detail.weight:.2f}",
+                    "Matched players": detail.matched_players,
+                    "Floor": "Yes" if getattr(detail, "has_floor", False) else "No",
+                    "Ceiling": "Yes" if getattr(detail, "has_ceiling", False) else "No",
+                }
             )
         else:
-            st.info("Using fallback ownership estimator (no external sources provided).")
-    if workflow.get("messages"):
-        for message in workflow["messages"]:
-            st.write(f"- {message}")
+            rows.append(
+                {
+                    "Source": detail.get("name", "source"),
+                    "Weight": f"{float(detail.get('weight', 0.0)):.2f}",
+                    "Matched players": detail.get("matched_players"),
+                    "Floor": "Yes" if detail.get("has_floor") else "No",
+                    "Ceiling": "Yes" if detail.get("has_ceiling") else "No",
+                }
+            )
+    st.table(pd.DataFrame(rows))
+    st.caption(f"BallparkPal share {baseline_share:.2f}")
+
+
+def _render_ownership_model_summary(model_cfg) -> None:
+    if not model_cfg:
+        return
+    values = model_cfg.get("values") or model_cfg.get("parameters") or {}
+    rows = []
+    for field, label, *_ in OWNERSHIP_MODEL_FIELDS:
+        if field in {"min_pct", "max_pct"}:
+            continue
+        rows.append({"Factor": label, "Weight": f"{values.get(field, 0.0):.2f}"})
+    if rows:
+        st.subheader("Ownership model summary")
+        st.table(pd.DataFrame(rows))
+    min_pct = model_cfg.get("min_pct")
+    max_pct = model_cfg.get("max_pct")
+    preset = model_cfg.get("preset")
+    caption_parts = []
+    if preset:
+        caption_parts.append(f"Preset: {preset}")
+    if min_pct is not None and max_pct is not None:
+        caption_parts.append(f"Floor {float(min_pct) * 100:.1f}% / Ceiling {float(max_pct) * 100:.1f}%")
+    if caption_parts:
+        st.caption(" | ".join(caption_parts))
+
+
+def _ownership_blend_preview_text(config: Dict) -> str:
+    weights = config.get("applied_weights") or []
+    entries = []
+    for detail in weights[:4]:
+        name = detail.get("name") or "source"
+        weight = detail.get("weight")
+        if weight is None:
+            continue
+        entries.append(f"{name}: {float(weight):.2f}")
+    if len(weights) > 4:
+        entries.append("...")
+    return ", ".join(entries)
+
+
+def _render_projection_config_summary(workflow: Optional[Dict] = None, config: Optional[Dict] = None) -> None:
+    if config is None:
+        config = (workflow or {}).get("projection_config") if workflow else None
+    if not config:
+        return
+    st.subheader("Projection input settings")
+    recency = config.get("recency_blend") or []
+    if len(recency) == 2:
+        recency_text = f"{float(recency[0]):.2f} season / {float(recency[1]):.2f} recent"
+    else:
+        recency_text = "Default"
+    platoon = config.get("platoon") or {}
+    opp = platoon.get("opposite")
+    same = platoon.get("same")
+    switch = platoon.get("switch")
+    platoon_text = (
+        f"opp {float(opp):.2f} / same {float(same):.2f} / switch {float(switch):.2f}"
+        if all(value is not None for value in (opp, same, switch))
+        else "Not specified"
+    )
+    ownership_cfg = config.get("ownership") or {}
+    preset_label = ownership_cfg.get("preset") or DEFAULT_WEIGHT_PRESET
+    if ownership_cfg.get("manual_override"):
+        preset_label += " (manual override)"
+    projection_blend_cfg = config.get("projection_blend") or {}
+    projection_label = projection_blend_cfg.get("preset") or DEFAULT_WEIGHT_PRESET
+    if projection_blend_cfg.get("manual_override"):
+        projection_label += " (manual override)"
+    col_recency, col_platoon, col_own, col_proj = st.columns(4)
+    col_recency.write(f"Recency blend: **{recency_text}**")
+    col_platoon.write(f"Platoon multipliers: **{platoon_text}**")
+    col_own.write(f"Ownership preset: **{preset_label}**")
+    preview = _ownership_blend_preview_text(ownership_cfg)
+    if preview:
+        col_own.caption(f"Weights -> {preview}")
+    col_proj.write(f"Projection preset: **{projection_label}**")
+    baseline_share = projection_blend_cfg.get("baseline_share")
+    if baseline_share is not None:
+        col_proj.caption(f"BallparkPal share {float(baseline_share):.2f}")
+    proj_preview = _ownership_blend_preview_text(projection_blend_cfg)
+    if proj_preview:
+        col_proj.caption(f"Sources -> {proj_preview}")
 
 
 def _game_status_dataframe(optimizer_df: Optional[pd.DataFrame]) -> pd.DataFrame:
@@ -382,6 +994,7 @@ def _game_status_dataframe(optimizer_df: Optional[pd.DataFrame]) -> pd.DataFrame
             return "Locking Soon"
         return "Open"
     games["status"] = games["game_start_time"].apply(_status)
+    games["minutes_to_lock"] = (games["game_start_time"] - now_utc).dt.total_seconds() / 60.0
     games["local_start"] = games["game_start_time"].dt.tz_convert(ZoneInfo("US/Eastern")).dt.strftime("%I:%M %p")
     return games.sort_values("game_start_time")
 
@@ -392,8 +1005,48 @@ def _render_game_status_panel(workflow: Dict) -> None:
     if games.empty:
         return
     st.subheader("Game lock status")
-    display_cols = games[["game_key", "local_start", "status"]]
-    st.dataframe(display_cols.rename(columns={"game_key": "Game", "local_start": "Start (ET)"}), use_container_width=True)
+    display_cols = games[["game_key", "local_start", "status", "minutes_to_lock"]]
+    display_cols = display_cols.rename(
+        columns={"game_key": "Game", "local_start": "Start (ET)", "minutes_to_lock": "Minutes"}
+    )
+    st.dataframe(display_cols, use_container_width=True)
+
+
+def _next_lock_info(optimizer_df: Optional[pd.DataFrame]) -> Optional[Dict[str, str]]:
+    games = _game_status_dataframe(optimizer_df)
+    if games.empty:
+        return None
+    future = games[games["status"] != "Locked"].copy()
+    if future.empty:
+        return None
+    soonest = future.sort_values("game_start_time").iloc[0]
+    minutes = float(soonest.get("minutes_to_lock", float("nan")))
+    local = soonest.get("local_start")
+    return {
+        "game": soonest.get("game_key"),
+        "local": local,
+        "minutes": minutes,
+        "status": soonest.get("status"),
+    }
+
+
+def _render_lock_countdown(workflow: Dict, label: str = "Next lock") -> None:
+    optimizer_df = workflow.get("optimizer")
+    info = _next_lock_info(optimizer_df)
+    if not info:
+        return
+    minutes = info.get("minutes")
+    status = info.get("status")
+    game = info.get("game")
+    local = info.get("local")
+    if minutes is None or pd.isna(minutes):
+        return
+    delta = pd.Timedelta(minutes=float(minutes))
+    countdown = f"{int(delta.components.hours):02d}:{int(delta.components.minutes):02d}:{int(delta.components.seconds):02d}"
+    st.info(
+        f"{label}: {game} locks at {local} ({status}) in {minutes:.1f} min ({countdown}).",
+        icon="⏳",
+    )
 
 
 def _bench_risk_flags(lineup_df: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
@@ -408,6 +1061,75 @@ def _bench_risk_flags(lineup_df: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
     confirmed = confirmed.astype(bool)
     risk_mask = (~confirmed) & (~locked_mask)
     return risk_mask, locked_mask
+
+
+def _late_swap_candidates(lineup_df: pd.DataFrame, horizon_minutes: int = 90) -> pd.DataFrame:
+    if "game_start_time" not in lineup_df.columns:
+        return pd.DataFrame()
+    horizon_minutes = max(15, int(horizon_minutes))
+    times = pd.to_datetime(lineup_df["game_start_time"], errors="coerce", utc=True)
+    if times.isna().all():
+        return pd.DataFrame()
+    confirmed = lineup_df.get("is_confirmed_lineup")
+    if confirmed is None:
+        confirmed = pd.Series(False, index=lineup_df.index)
+    confirmed = confirmed.astype(bool)
+    now = pd.Timestamp.now(tz="UTC")
+    upper = now + pd.Timedelta(minutes=horizon_minutes)
+    soon_mask = times.notna() & (times > now) & (times <= upper)
+    risk_mask = soon_mask & (~confirmed)
+    if not risk_mask.any():
+        return pd.DataFrame()
+    local_times = times.dt.tz_convert(ZoneInfo("US/Eastern"))
+    result = lineup_df.loc[risk_mask, ["lineup_id", "full_name", "team_code", "proj_fd_mean", "salary"]].copy()
+    result["game_start_time"] = times.loc[risk_mask]
+    result["start_et"] = local_times.loc[risk_mask].dt.strftime("%I:%M %p")
+    minutes_to_lock = (times.loc[risk_mask] - now).dt.total_seconds() / 60.0
+    result["minutes_to_lock"] = minutes_to_lock.round(1)
+    result = result.sort_values(["minutes_to_lock", "lineup_id", "full_name"])
+    return result
+
+
+def _render_late_swap_panel(workflow: Dict) -> None:
+    lineup_df: Optional[pd.DataFrame] = workflow.get("lineups_df")
+    if lineup_df is None or lineup_df.empty:
+        return
+    with st.expander("Late Swap Aide", expanded=False):
+        window = st.slider(
+            "Alert window (minutes)",
+            min_value=15,
+            max_value=180,
+            value=int(st.session_state.get("late_swap_window", 90)),
+            step=15,
+            key="late_swap_window",
+        )
+        candidates = _late_swap_candidates(lineup_df, window)
+        if candidates.empty:
+            st.success("No unconfirmed players approaching lock in the selected window.")
+            return
+        display_cols = ["lineup_id", "full_name", "team_code", "start_et", "minutes_to_lock"]
+        st.dataframe(candidates[display_cols], use_container_width=True)
+        st.caption("Players with unconfirmed lineups locking soon. Add them to your scratch list or focus view.")
+        action_cols = st.columns(3)
+        if action_cols[0].button("Focus on these lineups", key="late_swap_focus"):
+            st.session_state["late_swap_filter_ids"] = sorted(candidates["lineup_id"].unique().tolist())
+            st.experimental_rerun()
+        if action_cols[1].button("Add to scratch list", key="late_swap_add_scratches"):
+            existing = set(st.session_state.get("scratched_players", []))
+            existing.update(candidates["full_name"].unique().tolist())
+            st.session_state["scratched_players"] = sorted(existing)
+            st.experimental_rerun()
+        if action_cols[2].button("Re-opt flagged lineups", key="late_swap_reopt"):
+            try:
+                config_state = _get_config_state()
+                diffs = _reoptimize_scratches(candidates["full_name"].unique().tolist(), workflow, config_state)
+                if diffs:
+                    for message in diffs:
+                        st.caption(message)
+                st.success("Affected lineups re-optimized.")
+                st.experimental_rerun()
+            except Exception as exc:  # pylint: disable=broad-except
+                st.error(f"Late swap re-optimization failed: {exc}")
 
 
 def _reoptimize_scratches(
@@ -595,8 +1317,9 @@ def _sidebar_navigation() -> str:
         "1. Slate Setup",
         "2. Review Projections",
         "3. Configure & Optimize",
-        "4. Review Lineups",
-        "5. Post-Slate",
+        "4. Simulate & Select",
+        "5. Review Lineups",
+        "6. Post-Slate",
         "Backtest Dashboard",
     ]
     default_step = st.session_state.get(NAV_KEY, steps[0])
@@ -696,12 +1419,127 @@ def _section_leverage(df: pd.DataFrame) -> None:
     )
 
 
+
+
+def _factor_leader_table(df: pd.DataFrame, column: str, label: str, ascending: bool = False) -> pd.DataFrame:
+    if column not in df.columns:
+        return pd.DataFrame()
+    data = df[["full_name", "team_code", column]].copy()
+    data = data.rename(columns={column: label})
+    data = data.sort_values(label, ascending=ascending).head(5)
+    return data
+
+
 def _section_chalk(df: pd.DataFrame, top: int = 5) -> None:
     if "proj_fd_ownership" not in df.columns:
         st.info("No ownership column available.")
         return
     chalk = df.sort_values("proj_fd_ownership", ascending=False)
     st.table(chalk[["full_name", "team_code", "proj_fd_ownership", "proj_fd_mean"]].head(top))
+
+
+def _variance_scatter(df: pd.DataFrame) -> None:
+    required = {"proj_fd_mean", "proj_fd_ceiling", "proj_fd_floor", "proj_fd_ownership"}
+    if not required.issubset(df.columns):
+        st.info("Variance explorer requires mean/floor/ceiling/ownership columns.")
+        return
+    temp = df.copy()
+    temp["ceiling"] = pd.to_numeric(temp["proj_fd_ceiling"], errors="coerce")
+    temp["floor"] = pd.to_numeric(temp["proj_fd_floor"], errors="coerce")
+    temp["proj_fd_mean"] = pd.to_numeric(temp["proj_fd_mean"], errors="coerce")
+    temp["proj_fd_ownership"] = pd.to_numeric(temp["proj_fd_ownership"], errors="coerce")
+    temp["volatility"] = (temp["ceiling"] - temp["floor"]).clip(lower=0)
+    temp = temp.dropna(subset=["volatility", "proj_fd_mean"])
+    if temp.empty:
+        st.info("Not enough data to show variance scatter.")
+        return
+    chart_df = temp[["full_name", "proj_fd_mean", "volatility", "proj_fd_ownership"]].rename(
+        columns={
+            "proj_fd_mean": "Projection",
+            "volatility": "Volatility",
+            "proj_fd_ownership": "Ownership",
+            "full_name": "Player",
+        }
+    )
+    st.scatter_chart(chart_df, x="Projection", y="Volatility", color="Ownership", size="Ownership")
+    st.caption("Bubble size/color = ownership %. Targets in the upper-left are high-volatility leverage plays.")
+
+
+def _variance_leaderboard(df: pd.DataFrame) -> None:
+    if "volatility" not in df.columns:
+        temp = df.copy()
+        if {"proj_fd_ceiling", "proj_fd_floor"}.issubset(temp.columns):
+            temp["volatility"] = pd.to_numeric(temp["proj_fd_ceiling"], errors="coerce") - pd.to_numeric(
+                temp["proj_fd_floor"], errors="coerce"
+            )
+        else:
+            st.info("Not enough columns to compute volatility leaderboard.")
+            return
+    else:
+        temp = df.copy()
+    temp["volatility"] = pd.to_numeric(temp["volatility"], errors="coerce")
+    temp["proj_fd_ownership"] = pd.to_numeric(temp.get("proj_fd_ownership"), errors="coerce")
+    sorted_df = temp.dropna(subset=["volatility"]).sort_values("volatility", ascending=False).head(10)
+    if sorted_df.empty:
+        st.info("No volatility data available.")
+        return
+    display = sorted_df[["full_name", "team_code", "volatility", "proj_fd_mean", "proj_fd_ownership"]]
+    display = display.rename(
+        columns={
+            "volatility": "Volatility",
+            "proj_fd_mean": "Proj",
+            "proj_fd_ownership": "Own%",
+        }
+    )
+    st.table(display)
+
+
+def _ownership_accuracy_panel(date_str: str) -> None:
+    try:
+        metrics = backtest.calculate_ownership_accuracy(date_str)
+    except Exception:  # pylint: disable=broad-except
+        return
+    if not metrics:
+        return
+    st.subheader("Ownership calibration by bucket")
+    mae = metrics.get("mae")
+    count = metrics.get("count")
+    if mae is not None and count:
+        st.caption(f"Global MAE {mae:.3f} across {count} players")
+    bucket_mae = metrics.get("bucket_mae") or {}
+    if bucket_mae:
+        chart_df = pd.DataFrame(
+            {
+                "Projected % bucket": [f"{bucket}-{bucket + 5}" for bucket in bucket_mae.keys()],
+                "MAE": list(bucket_mae.values()),
+            }
+        )
+        st.bar_chart(chart_df.set_index("Projected % bucket"))
+    else:
+        st.info("No ownership calibration buckets recorded for this slate.")
+
+
+def _render_readiness_checklist(workflow: Dict) -> None:
+    st.subheader("Slate readiness checklist")
+    optimizer_ready = workflow.get("optimizer") is not None
+    projection_cfg = workflow.get("projection_config") or {}
+    ownership_ready = bool(workflow.get("ownership_summary"))
+    projection_blend_ready = bool(workflow.get("projection_blend_summary"))
+    ownership_model_ready = bool(projection_cfg.get("ownership_model"))
+    lineups_ready = bool(workflow.get("lineups"))
+    checks = [
+        ("Slate processed", optimizer_ready),
+        ("Ownership sources blended", ownership_ready),
+        ("Projection sources blended", projection_blend_ready),
+        ("Ownership model tuned", ownership_model_ready),
+        ("Lineups generated", lineups_ready),
+    ]
+    cols = st.columns(2)
+    for idx, (label, ready) in enumerate(checks):
+        icon = "✅" if ready else "⏳"
+        cols[idx % 2].write(f"{icon} {label}")
+    if not all(status for _, status in checks[:-1]):
+        st.info("Complete the pending items before locking lineups.")
 
 
 def _render_step_one() -> None:
@@ -736,9 +1574,94 @@ def _render_step_one() -> None:
         accept_multiple_files=True,
         key="ownership_sources",
     )
+    ownership_preset = st.selectbox(
+        "Ownership weight preset",
+        WEIGHT_PRESET_OPTIONS,
+        index=WEIGHT_PRESET_OPTIONS.index(DEFAULT_WEIGHT_PRESET),
+        help="Pick a blend strategy for multi-source ownership inputs. Source order follows the upload order.",
+    )
+    if ownership_files:
+        preview_text = _weight_preset_preview(ownership_preset, ownership_files)
+        if preview_text:
+            st.caption(f"Preset weights -> {preview_text}")
     ownership_weights_input = st.text_input(
         "Ownership weights (comma-separated, optional)",
         placeholder="0.4,0.3,0.3",
+        help="Leave blank to use the selected preset. Enter comma-separated weights to override (one per ownership file).",
+    )
+
+    model_preset_index = OWNERSHIP_MODEL_OPTIONS.index(DEFAULT_MODEL_PRESET)
+    ownership_model_preset = st.selectbox(
+        "Ownership model preset",
+        OWNERSHIP_MODEL_OPTIONS,
+        index=model_preset_index,
+        help="Controls how the fallback ownership model weighs salary/projection/value/etc.",
+    )
+    active_model_key = "ownership_model_active_preset"
+    if active_model_key not in st.session_state:
+        _apply_ownership_model_preset(DEFAULT_MODEL_PRESET)
+        st.session_state[active_model_key] = DEFAULT_MODEL_PRESET
+    if ownership_model_preset != OWNERSHIP_MODEL_CUSTOM and st.session_state.get(active_model_key) != ownership_model_preset:
+        _apply_ownership_model_preset(ownership_model_preset)
+        st.session_state[active_model_key] = ownership_model_preset
+    elif ownership_model_preset == OWNERSHIP_MODEL_CUSTOM and st.session_state.get(active_model_key) != OWNERSHIP_MODEL_CUSTOM:
+        st.session_state[active_model_key] = OWNERSHIP_MODEL_CUSTOM
+
+    ownership_model_values: Dict[str, float] = {}
+    with st.expander("Ownership model tuning", expanded=False):
+        model_cols = st.columns(3)
+        preset_defaults = _ownership_model_preset_values(DEFAULT_MODEL_PRESET)
+        for idx, (field, label, min_val, max_val, step_val, help_text) in enumerate(OWNERSHIP_MODEL_FIELDS):
+            session_key = f"ownership_model_{field}"
+            if session_key not in st.session_state:
+                st.session_state[session_key] = preset_defaults.get(field, 0.0)
+            column = model_cols[idx % len(model_cols)]
+            ownership_model_values[field] = float(
+                column.number_input(
+                    label,
+                    min_value=min_val,
+                    max_value=max_val,
+                    value=float(st.session_state.get(session_key, preset_defaults.get(field, 0.0))),
+                    step=step_val,
+                    key=session_key,
+                    help=help_text,
+                )
+            )
+    ownership_model_settings = {
+        "preset": ownership_model_preset,
+        "manual_override": ownership_model_preset == OWNERSHIP_MODEL_CUSTOM,
+        "values": ownership_model_values,
+    }
+
+    projection_files = st.file_uploader(
+        "Projection CSVs (optional, multiple)",
+        type=["csv"],
+        accept_multiple_files=True,
+        key="projection_sources",
+        help="Upload alternate projection sets (e.g., SaberSim, RG).",
+    )
+    projection_preset = st.selectbox(
+        "Projection blend preset",
+        WEIGHT_PRESET_OPTIONS,
+        index=WEIGHT_PRESET_OPTIONS.index(DEFAULT_WEIGHT_PRESET),
+        help="Blend strategy for projection sources. Upload order determines anchor order.",
+    )
+    if projection_files:
+        preview_text = _weight_preset_preview(projection_preset, projection_files)
+        if preview_text:
+            st.caption(f"Projection preset weights -> {preview_text}")
+    projection_weights_input = st.text_input(
+        "Projection weights (comma-separated, optional)",
+        placeholder="0.6,0.4",
+        help="Overrides the preset weights for projection sources (BallparkPal weight controlled separately).",
+    )
+    projection_baseline_weight = st.slider(
+        "BallparkPal baseline weight",
+        min_value=0.0,
+        max_value=3.0,
+        value=1.0,
+        step=0.1,
+        help="Controls how much the BallparkPal baseline contributes relative to uploaded sources before normalization.",
     )
     recency_blend_input = st.text_input(
         "Recency blend weights (season,recent)",
@@ -783,7 +1706,13 @@ def _render_step_one() -> None:
                     handedness_file,
                     recent_stats_file,
                     ownership_files or [],
+                    projection_files or [],
+                    projection_preset,
+                    projection_weights_input,
+                    projection_baseline_weight,
+                    ownership_preset,
                     ownership_weights_input,
+                    ownership_model_settings,
                     recency_blend_input,
                     platoon_opp_input,
                     platoon_same_input,
@@ -792,27 +1721,37 @@ def _render_step_one() -> None:
                 session_state = _get_session()
                 session_state.update(workflow_payload)
             st.success("Slate processed successfully.")
-            render_validation_summary(workflow_payload)
         except Exception as exc:  # pylint: disable=broad-except
             st.error(f"Failed to process slate: {exc}")
-    else:
-        current = _get_session()
-        if current.get("optimizer") is not None:
-            st.info("Session already contains a processed slate. You can re-run if inputs change.")
+
+    current = _get_session()
+    if current.get("optimizer") is not None:
+        st.divider()
+        render_validation_summary(current)
 
 
 def _render_step_two() -> None:
     st.header("Step 2 · Review Projections")
     workflow = _get_session()
+    _render_lock_countdown(workflow)
     optimizer_df: Optional[pd.DataFrame] = workflow.get("optimizer")
     if optimizer_df is None or optimizer_df.empty:
         st.info("Process a slate first (Step 1) to load projections.")
         return
 
+    ownership_result = workflow.get("ownership_summary")
+    if ownership_result:
+        _render_ownership_summary(ownership_result)
+
+    projection_cfg = workflow.get("projection_config") or {}
+    _render_projection_config_summary(config=projection_cfg)
+    _render_projection_blend_summary(workflow.get("projection_blend_summary") or projection_cfg.get("projection_blend"))
+    _render_ownership_model_summary(projection_cfg.get("ownership_model"))
+
     with st.sidebar.expander("Projection Filters", expanded=True):
         filtered_df = _apply_filters(optimizer_df)
 
-    display_cols = [
+    base_columns = [
         "full_name",
         "team_code",
         "position",
@@ -822,20 +1761,60 @@ def _render_step_two() -> None:
         "proj_fd_ownership",
         "player_leverage_score",
         "ownership_edge",
-        "vegas_team_total",
-        "order_factor",
-        "platoon_factor",
-        "recency_factor",
     ]
-    available_cols = [col for col in display_cols if col in filtered_df.columns]
+    factor_options = {
+        "Base projection": "base_projection",
+        "Value score": "value_score",
+        "Vegas multiplier": "vegas_multiplier",
+        "Order factor": "order_factor",
+        "Platoon factor": "platoon_factor",
+        "Recency factor": "recency_factor",
+        "Floor multiplier": "floor_multiplier",
+        "Ceiling multiplier": "ceiling_multiplier",
+        "Team total": "vegas_team_total",
+    }
+    with st.expander("Projection factors displayed", expanded=False):
+        selected_labels = st.multiselect(
+            "Select factor columns",
+            list(factor_options.keys()),
+            default=["Value score", "Vegas multiplier", "Order factor", "Recency factor"],
+        )
+    extra_columns = [factor_options[label] for label in selected_labels if factor_options[label] in filtered_df.columns]
+    display_cols = [col for col in base_columns + extra_columns if col in filtered_df.columns]
     st.subheader("Projection table")
-    st.dataframe(filtered_df[available_cols], use_container_width=True)
+    st.dataframe(filtered_df[display_cols], use_container_width=True)
     st.download_button(
         label="Download filtered projections",
         data=filtered_df.to_csv(index=False).encode("utf-8"),
         file_name="filtered_projections.csv",
         mime="text/csv",
     )
+
+    st.subheader("Factor leaders")
+    col_val, col_floor, col_ceiling = st.columns(3)
+    with col_val:
+        top_value = _factor_leader_table(filtered_df, "value_score", "Value score")
+        if top_value.empty:
+            st.info("Value score unavailable.")
+        else:
+            st.table(top_value)
+    with col_floor:
+        top_floor = _factor_leader_table(filtered_df, "floor_multiplier", "Floor x", ascending=False)
+        if top_floor.empty:
+            st.info("Floor multipliers unavailable.")
+        else:
+            st.table(top_floor)
+    with col_ceiling:
+        top_ceiling = _factor_leader_table(filtered_df, "ceiling_multiplier", "Ceiling x", ascending=False)
+        if top_ceiling.empty:
+            st.info("Ceiling multipliers unavailable.")
+        else:
+            st.table(top_ceiling)
+
+    st.subheader("Variance explorer")
+    _variance_scatter(filtered_df)
+    st.subheader("High-volatility targets")
+    _variance_leaderboard(filtered_df)
 
     # Manual overrides
     override_cols = [col for col in ["proj_fd_mean", "proj_fd_ownership"] if col in filtered_df.columns]
@@ -878,6 +1857,7 @@ def _render_step_two() -> None:
 def _render_step_three() -> None:
     st.header("Step 3 · Configure & Optimize")
     workflow = _get_session()
+    _render_lock_countdown(workflow)
     optimizer_df: Optional[pd.DataFrame] = workflow.get("optimizer")
     if optimizer_df is None or optimizer_df.empty:
         st.info("Process a slate first (Step 1) to configure and run the optimizer.")
@@ -949,6 +1929,8 @@ def _render_step_three() -> None:
         step=0.5,
     )
 
+    _render_readiness_checklist(workflow)
+
     col_save, col_load = st.columns(2)
     with col_save:
         config_json = json.dumps(config_state, indent=2).encode("utf-8")
@@ -981,6 +1963,9 @@ def _render_step_three() -> None:
                 lineups, lineup_df = _run_solver(optimizer_df, config_state)
                 workflow["lineups"] = lineups
                 workflow["lineups_df"] = lineup_df
+                workflow.pop("optimizer_lineups_backup", None)
+                workflow.pop("optimizer_lineups_df_backup", None)
+                workflow["active_lineup_source"] = "optimizer"
             st.success(f"Generated {len(lineups)} lineups. Proceed to Step 4.")
         except Exception as exc:  # pylint: disable=broad-except
             st.error(f"Optimizer failed: {exc}")
@@ -998,6 +1983,7 @@ def _render_lineup_summary(
     lineup_df: pd.DataFrame,
     bench_mask: Optional[pd.Series] = None,
     locked_mask: Optional[pd.Series] = None,
+    visible_ids: Optional[Set[int]] = None,
 ) -> None:
     if lineup_df.empty:
         st.info("No lineup data available.")
@@ -1005,7 +1991,10 @@ def _render_lineup_summary(
     if bench_mask is None or locked_mask is None:
         bench_mask, locked_mask = _bench_risk_flags(lineup_df)
     summary_rows = []
+    allowed_ids = set(visible_ids or [])
     for idx, lineup in enumerate(lineups, start=1):
+        if allowed_ids and idx not in allowed_ids:
+            continue
         df = lineup.dataframe
         total_ownership = pd.to_numeric(df.get("proj_fd_ownership"), errors="coerce").fillna(0).sum()
         avg_leverage = (
@@ -1024,6 +2013,9 @@ def _render_lineup_summary(
         )
     summary_df = pd.DataFrame(summary_rows)
     st.subheader("Lineup summary")
+    if summary_df.empty:
+        st.info("No lineups available for this view.")
+        return
     st.dataframe(summary_df, use_container_width=True)
 
     selected_lineup = st.selectbox(
@@ -1130,6 +2122,312 @@ def _calculate_lineup_actuals(lineup_df: pd.DataFrame, actual_map: pd.Series) ->
     return grouped
 
 
+
+def _record_simulation_accuracy(
+    db: SlateDatabase,
+    date_str: str,
+    lineup_points: pd.DataFrame,
+    workflow: Dict,
+    contest_meta: Dict[str, float],
+    matched_actuals: Optional[pd.DataFrame] = None,
+) -> None:
+    sim_results = workflow.get(SIM_RESULTS_KEY)
+    if not sim_results:
+        return
+    contest_df = sim_results.get("contest_df")
+    if not isinstance(contest_df, pd.DataFrame) or contest_df.empty:
+        return
+    merged = contest_df.merge(
+        lineup_points[["lineup_id", "total_actual_points", "payout", "roi"]],
+        on="lineup_id",
+        how="inner",
+    ).dropna(subset=["total_actual_points"])
+    if merged.empty:
+        return
+
+    threshold = 150.0
+    mean_scores = merged["mean_score"].astype(float)
+    std_scores = merged["std_score"].astype(float).clip(lower=1e-3)
+    z_scores = (threshold - mean_scores) / std_scores
+    predicted_prob = 1 - norm.cdf(z_scores)
+    actual_event = (merged["total_actual_points"].astype(float) >= threshold).astype(float)
+    metrics: Dict[str, float] = {}
+    metrics["brier_score_15"] = float(((predicted_prob - actual_event) ** 2).mean())
+
+    for label, column in [("p10", "p10_score"), ("p25", "p25_score"), ("p50", "median_score"), ("p75", "p75_score"), ("p90", "p90_score")]:
+        if column in merged.columns:
+            calibration = (
+                merged["total_actual_points"].astype(float) <= merged[column].astype(float)
+            ).mean()
+            metrics[f"dist_calibration_{label}"] = float(calibration)
+
+    sim_config = sim_results.get("sim_config")
+    if sim_config:
+        metrics["teammate_corr_predicted"] = float(
+            getattr(sim_config.correlation, "teammate_base", float("nan"))
+        )
+
+    metrics["field_winning_score_predicted"] = float(
+        contest_df["max_score"].astype(float).max()
+    )
+    if contest_meta and contest_meta.get("winning_score"):
+        metrics["field_winning_score_actual"] = float(contest_meta["winning_score"])
+    else:
+        metrics["field_winning_score_actual"] = float(
+            lineup_points["total_actual_points"].max()
+        )
+
+    correlation_metrics = _teammate_correlation_metrics(
+        matched_actuals,
+        workflow.get("optimizer"),
+        sim_results.get("correlation_model") if sim_results else None,
+    )
+    metrics.update(correlation_metrics)
+
+    lineup_corr = _lineup_score_correlation(merged)
+    if lineup_corr is not None:
+        metrics["lineup_score_corr"] = lineup_corr
+
+    if metrics:
+        db.insert_simulation_accuracy(date_str, metrics, len(merged))
+
+
+
+def _teammate_correlation_metrics(
+    matched_actuals: Optional[pd.DataFrame],
+    optimizer_df: Optional[pd.DataFrame],
+    corr_model,
+) -> Dict[str, float]:
+    if matched_actuals is None or optimizer_df is None or optimizer_df.empty or corr_model is None:
+        return {}
+    meta = optimizer_df[["fd_player_id", "team_code", "player_type"]].drop_duplicates()
+    merged = matched_actuals.merge(meta, on="fd_player_id", how="left")
+    merged = merged.dropna(subset=["team_code", "actual_fd_points"])
+    merged["player_type"] = merged["player_type"].astype(str).str.lower()
+    batters = merged[merged["player_type"] == "batter"]
+    if batters.empty:
+        return {}
+    index_map = {pid: idx for idx, pid in enumerate(corr_model.player_ids)}
+    score_a: list[float] = []
+    score_b: list[float] = []
+    predicted: list[float] = []
+    for _, group in batters.groupby("team_code"):
+        players = group[["fd_player_id", "actual_fd_points"]].values.tolist()
+        if len(players) < 2:
+            continue
+        for i in range(len(players)):
+            pid_i, score_i = players[i]
+            idx_i = index_map.get(str(pid_i))
+            if idx_i is None:
+                continue
+            for j in range(i + 1, len(players)):
+                pid_j, score_j = players[j]
+                idx_j = index_map.get(str(pid_j))
+                if idx_j is None:
+                    continue
+                score_a.append(float(score_i))
+                score_b.append(float(score_j))
+                predicted.append(float(corr_model.matrix[idx_i, idx_j]))
+    metrics: Dict[str, float] = {}
+    if predicted:
+        metrics["teammate_corr_predicted"] = float(np.mean(predicted))
+    if len(score_a) >= 2:
+        actual_corr = np.corrcoef(score_a, score_b)[0, 1]
+        if np.isfinite(actual_corr):
+            metrics["teammate_corr_actual"] = float(actual_corr)
+            if predicted:
+                metrics["teammate_corr_error"] = float(actual_corr) - float(np.mean(predicted))
+    return metrics
+
+
+
+def _lineup_score_correlation(merged: pd.DataFrame) -> Optional[float]:
+    if merged.empty or "total_actual_points" not in merged.columns:
+        return None
+    if "mean_score" not in merged.columns:
+        return None
+    actual_scores = merged["total_actual_points"].astype(float)
+    predicted_scores = merged["mean_score"].astype(float)
+    if actual_scores.nunique() <= 1 or predicted_scores.nunique() <= 1:
+        return None
+    corr = np.corrcoef(predicted_scores, actual_scores)[0, 1]
+    return float(corr) if np.isfinite(corr) else None
+
+
+
+def _render_simulation_calibration(date_str: str) -> None:
+    db: Optional[SlateDatabase] = None
+    try:
+        db = SlateDatabase(DEFAULT_DB_PATH)
+        metrics_df = db.fetch_simulation_accuracy(date_str)
+    except Exception as exc:  # pylint: disable=broad-except
+        st.warning(f"Unable to load simulation calibration metrics: {exc}")
+        return
+    finally:
+        if db is not None:
+            try:
+                db.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    if metrics_df.empty:
+        st.caption("No simulation calibration metrics recorded for this date.")
+        return
+
+    latest = metrics_df.sort_values("created_at").drop_duplicates("metric_name", keep="last")
+    metrics_indexed = latest.set_index("metric_name")
+    st.subheader("Simulation calibration")
+    metric_cols = st.columns(3)
+    if "brier_score_15" in metrics_indexed.index:
+        metric_cols[0].metric(
+            "Brier score @150",
+            f"{metrics_indexed.loc['brier_score_15', 'metric_value']:.4f}",
+        )
+    if {"field_winning_score_predicted", "field_winning_score_actual"}.issubset(metrics_indexed.index):
+        predicted = metrics_indexed.loc["field_winning_score_predicted", "metric_value"]
+        actual = metrics_indexed.loc["field_winning_score_actual", "metric_value"]
+        metric_cols[1].metric(
+            "Winning score",
+            f"{actual:.1f}",
+            f"Δ {actual - predicted:+.1f}",
+        )
+    if "teammate_corr_predicted" in metrics_indexed.index:
+        metric_cols[2].metric(
+            "Teammate corr",
+            f"{metrics_indexed.loc['teammate_corr_predicted', 'metric_value']:.2f}",
+        )
+    st.dataframe(
+        latest[["metric_name", "metric_value", "num_players", "created_at"]],
+        use_container_width=True,
+    )
+
+
+
+
+
+def _render_lineup_rankings(contest_df: pd.DataFrame, selected_ids: List[int]) -> None:
+    if contest_df is None or contest_df.empty:
+        return
+    st.subheader("Candidate lineup rankings")
+    display = contest_df.copy()
+    display["lineup_number"] = display["lineup_id"].astype(int) + 1
+    selection = set(selected_ids or [])
+    display["selected"] = display["lineup_number"].isin(selection)
+    keep_cols = [
+        "lineup_number",
+        "mean_score",
+        "p90_score",
+        "p99_score",
+        "win_rate",
+        "top_1pct_rate",
+        "cash_rate",
+        "expected_roi",
+        "total_ownership",
+        "selected",
+    ]
+    for col in keep_cols:
+        if col not in display.columns:
+            display[col] = np.nan
+    renamed = display[keep_cols].rename(
+        columns={
+            "lineup_number": "Lineup",
+            "mean_score": "Mean",
+            "p90_score": "P90",
+            "p99_score": "P99",
+            "win_rate": "Win %",
+            "top_1pct_rate": "Top 1%",
+            "cash_rate": "Cash %",
+            "expected_roi": "Exp ROI",
+            "total_ownership": "Own %",
+            "selected": "Selected",
+        }
+    )
+    st.dataframe(renamed, use_container_width=True)
+
+
+
+def _player_distribution_viewer(sim_results: Dict, optimizer_df: pd.DataFrame) -> None:
+    slate_sim = sim_results.get("slate_sim") if sim_results else None
+    if slate_sim is None or optimizer_df is None or optimizer_df.empty:
+        return
+    st.subheader("Player distribution viewer")
+    players = (
+        optimizer_df[["fd_player_id", "full_name", "proj_fd_mean"]]
+        .drop_duplicates()
+        .sort_values("full_name")
+    )
+    if players.empty:
+        st.info("No player metadata available for simulation view.")
+        return
+    selected_name = st.selectbox(
+        "Select player",
+        players["full_name"].tolist(),
+    )
+    player_row = players[players["full_name"] == selected_name].iloc[0]
+    player_id = player_row["fd_player_id"]
+    projection = float(player_row.get("proj_fd_mean", 0.0))
+    try:
+        scores = slate_sim.player_scores(player_id)
+    except KeyError:
+        st.info("Player missing from simulation output.")
+        return
+    counts, bins = np.histogram(scores, bins=30)
+    midpoints = (bins[1:] + bins[:-1]) / 2
+    hist_df = pd.DataFrame({"bin": midpoints, "frequency": counts})
+    st.bar_chart(hist_df.set_index("bin"))
+    st.caption(
+        f"Mean {scores.mean():.2f} | Std {scores.std():.2f} | P10 {np.percentile(scores,10):.2f} | P90 {np.percentile(scores,90):.2f} | Projection {projection:.2f}"
+    )
+
+
+
+def _render_correlation_heatmap(sim_results: Dict, optimizer_df: pd.DataFrame, top_n: int = 15) -> None:
+    corr_model = sim_results.get("correlation_model") if sim_results else None
+    if corr_model is None:
+        return
+    st.subheader("Correlation heatmap (top hitters)")
+    if optimizer_df is None or optimizer_df.empty:
+        st.info("Optimizer dataset unavailable for correlation view.")
+        return
+    top_players = (
+        optimizer_df[optimizer_df["player_type"].str.lower() == "batter"]
+        .sort_values("proj_fd_mean", ascending=False)
+        .head(top_n)
+    )
+    if top_players.empty:
+        st.info("No hitters found for correlation heatmap.")
+        return
+    ids = [pid for pid in top_players["fd_player_id"].astype(str) if pid in corr_model.player_ids]
+    if len(ids) < 2:
+        st.info("Insufficient overlap between hitters and correlation matrix.")
+        return
+    index_map = {pid: idx for idx, pid in enumerate(corr_model.player_ids)}
+    indices = [index_map[pid] for pid in ids]
+    matrix = corr_model.matrix[np.ix_(indices, indices)]
+    labels = top_players.set_index("fd_player_id").loc[ids, "full_name"].tolist()
+    heatmap_df = pd.DataFrame(matrix, index=labels, columns=labels)
+    styled = heatmap_df.style.background_gradient(cmap="RdBu_r", axis=None)
+    st.dataframe(styled, use_container_width=True)
+
+
+
+def _render_convergence_chart(sim_results: Dict, lineups) -> None:
+    slate_sim = sim_results.get("slate_sim") if sim_results else None
+    if slate_sim is None or not lineups:
+        return
+    st.subheader("Simulation convergence")
+    first_lineup = lineups[0]
+    player_ids = first_lineup.dataframe["fd_player_id"].astype(str).tolist()
+    scores = slate_sim.lineup_scores(player_ids)
+    running_mean = np.cumsum(scores) / np.arange(1, len(scores) + 1)
+    convergence_df = pd.DataFrame({
+        "simulation": np.arange(1, len(running_mean) + 1),
+        "running_mean": running_mean,
+    })
+    st.line_chart(convergence_df.set_index("simulation"))
+    st.caption("Running average of the first lineup's simulated score as iterations increase.")
+
+
 def _process_results_submission(
     date_str: str,
     actual_scores_file,
@@ -1159,7 +2457,7 @@ def _process_results_submission(
         lineup_points["roi"] = ((lineup_points.get("payout", 0).fillna(0) - entry_fee) / entry_fee).astype(float)
     else:
         lineup_points["roi"] = np.nan
-    lineup_points["strategy_config_json"] = json.dumps(_get_config_state())
+    lineup_points["strategy_config_json"] = _serialize_strategy_config(workflow)
 
     db = SlateDatabase(DEFAULT_DB_PATH)
     db.insert_actual_scores(
@@ -1176,25 +2474,291 @@ def _process_results_submission(
         winning_score=contest_meta.get("winning_score"),
         cash_line=contest_meta.get("cash_line"),
     )
+    _record_simulation_accuracy(db, date_str, lineup_points, workflow, contest_meta, matched_actuals)
     db.close()
-    return {"lineup_points": lineup_points, "actuals": matched_actuals}
+    return {"lineup_points": lineup_points, "actuals": matched_actuals, "date": date_str}
+
+
 
 
 def _render_step_four() -> None:
-    st.header("Step 4 · Review Lineups")
+    st.header("Step 4 – Simulate & Select")
     workflow = _get_session()
+    _render_lock_countdown(workflow)
+    _render_lock_countdown(workflow)
+    optimizer_df: Optional[pd.DataFrame] = workflow.get("optimizer")
+    lineups = workflow.get("lineups")
+    lineup_df: Optional[pd.DataFrame] = workflow.get("lineups_df")
+    if optimizer_df is None or optimizer_df.empty:
+        st.info("Process a slate first (Step 1) to load projections.")
+        return
+    if not lineups or lineup_df is None or lineup_df.empty:
+        st.info("Run the optimizer in Step 3 to generate candidate lineups.")
+        return
+
+    projection_cfg = workflow.get("projection_config") or {}
+    _render_projection_config_summary(config=projection_cfg)
+    _render_projection_blend_summary(workflow.get("projection_blend_summary") or projection_cfg.get("projection_blend"))
+    _render_ownership_model_summary(projection_cfg.get("ownership_model"))
+
+    sim_state = _get_sim_config_state()
+    col_left, col_right = st.columns(2)
+    with col_left:
+        sim_state["num_simulations"] = st.slider(
+            "Number of simulations",
+            min_value=1000,
+            max_value=50000,
+            value=int(sim_state.get("num_simulations", 10000) or 10000),
+            step=1000,
+        )
+        sim_state["volatility_scale"] = st.slider(
+            "Volatility scale",
+            min_value=0.5,
+            max_value=2.0,
+            value=float(sim_state.get("volatility_scale", 1.0) or 1.0),
+            step=0.1,
+        )
+        sim_state["copula_nu"] = st.slider(
+            "Copula \u03bd",
+            min_value=3,
+            max_value=20,
+            value=int(sim_state.get("copula_nu", 5) or 5),
+            step=1,
+        )
+        sim_state["teammate_corr"] = st.slider(
+            "Teammate correlation",
+            min_value=0.05,
+            max_value=0.50,
+            value=float(sim_state.get("teammate_corr", 0.25) or 0.25),
+            step=0.01,
+        )
+    with col_right:
+        sim_state["pitcher_vs_opposing"] = st.slider(
+            "Pitcher vs opposing hitters correlation",
+            min_value=-0.30,
+            max_value=0.0,
+            value=float(sim_state.get("pitcher_vs_opposing", -0.15) or -0.15),
+            step=0.01,
+        )
+        sim_state["field_size"] = st.slider(
+            "Field size (opponent lineups)",
+            min_value=500,
+            max_value=5000,
+            value=int(sim_state.get("field_size", 1000) or 1000),
+            step=500,
+        )
+        metric_options = ["top_1pct_rate", "win_rate", "cash_rate", "expected_roi", "p99_score"]
+        current_metric = sim_state.get("selection_metric", "top_1pct_rate")
+        metric_index = metric_options.index(current_metric) if current_metric in metric_options else 0
+        sim_state["selection_metric"] = st.selectbox(
+            "Selection metric",
+            metric_options,
+            index=metric_index,
+        )
+        sim_state["diversity_weight"] = st.slider(
+            "Diversity weight",
+            min_value=0.0,
+            max_value=1.0,
+            value=float(sim_state.get("diversity_weight", 0.3) or 0.3),
+            step=0.1,
+        )
+        sim_state["max_player_exposure"] = st.slider(
+            "Max player exposure",
+            min_value=0.1,
+            max_value=1.0,
+            value=float(sim_state.get("max_player_exposure", 0.6) or 0.6),
+            step=0.05,
+        )
+    sim_state["use_stratified"] = st.checkbox(
+        "Advanced: stratified sampling",
+        value=bool(sim_state.get("use_stratified", False)),
+    )
+
+    st.markdown("**Presets**")
+    preset_cols = st.columns(3)
+    if preset_cols[0].button("GPP"):
+        _apply_sim_preset(SimulationConfig.gpp_preset(), sim_state)
+        st.experimental_rerun()
+    if preset_cols[1].button("Cash"):
+        _apply_sim_preset(SimulationConfig.cash_preset(), sim_state)
+        st.experimental_rerun()
+    if preset_cols[2].button("Single Entry"):
+        _apply_sim_preset(SimulationConfig.single_entry_preset(), sim_state)
+        st.experimental_rerun()
+
+    config_state = _get_config_state()
+    if st.button("Run Simulation & Select Lineups", type="primary"):
+        try:
+            with st.spinner("Running Monte Carlo simulations..."):
+                sim_config = _build_simulation_config(sim_state)
+                (
+                    contest_df,
+                    portfolio_df,
+                    summary,
+                    selected_players,
+                    selected_ids,
+                    slate_sim,
+                    correlation_model,
+                    selected_lineup_objects,
+                ) = _run_simulation_stack(
+                    optimizer_df,
+                    lineups,
+                    lineup_df,
+                    sim_config,
+                    salary_cap=int(config_state.get("salary_cap", 35000) or 35000),
+                )
+                workflow[SIM_RESULTS_KEY] = {
+                    "contest_df": contest_df,
+                    "portfolio_df": portfolio_df,
+                    "summary": summary,
+                    "sim_config": sim_config,
+                    "selected_players": selected_players,
+                    "selected_ids": selected_ids,
+                    "slate_sim": slate_sim,
+                    "correlation_model": correlation_model,
+                    "selected_lineup_objects": selected_lineup_objects,
+                }
+            st.success("Simulation complete. Proceed to Step 5 to review final lineups.")
+        except Exception as exc:  # pylint: disable=broad-except
+            st.error(f"Simulation failed: {exc}")
+
+    sim_results = workflow.get(SIM_RESULTS_KEY)
+    if not sim_results:
+        return
+
+    selected_ids = sim_results.get("selected_ids") or []
+    contest_df = sim_results.get("contest_df")
+    if isinstance(contest_df, pd.DataFrame) and not contest_df.empty:
+        _render_lineup_rankings(contest_df, selected_ids)
+        st.download_button(
+            "Download simulation results",
+            data=contest_df.to_csv(index=False).encode("utf-8"),
+            file_name="simulation_lineups.csv",
+            mime="text/csv",
+        )
+
+    summary = sim_results.get("summary") or {}
+    if summary:
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("Portfolio win rate", f"{summary.get('win_rate', 0.0):.2%}")
+        metric_cols[1].metric("Portfolio top 1%", f"{summary.get('top1', 0.0):.2%}")
+        metric_cols[2].metric("Portfolio cash rate", f"{summary.get('cash', 0.0):.2%}")
+        metric_cols[3].metric("Expected ROI (sum)", f"{summary.get('roi', 0.0):.2f}x")
+
+    portfolio_df = sim_results.get("portfolio_df")
+    if isinstance(portfolio_df, pd.DataFrame) and not portfolio_df.empty:
+        st.subheader("Selected portfolio")
+        st.dataframe(portfolio_df, use_container_width=True)
+        st.download_button(
+            "Download selected lineups",
+            data=portfolio_df.to_csv(index=False).encode("utf-8"),
+            file_name="portfolio_lineups.csv",
+            mime="text/csv",
+        )
+        selected_players = sim_results.get("selected_players")
+        if isinstance(selected_players, pd.DataFrame) and not selected_players.empty:
+            exposures = _player_exposure_summary(selected_players)
+            st.subheader("Portfolio exposure summary")
+            st.dataframe(exposures, use_container_width=True)
+
+        selected_objects = sim_results.get("selected_lineup_objects") or []
+    if selected_objects:
+        col_use, col_restore = st.columns(2)
+        if col_use.button("Use Simulation Portfolio for Steps 5-6", type="primary"):
+            _activate_sim_portfolio(workflow, selected_objects)
+            st.experimental_rerun()
+        if workflow.get("optimizer_lineups_backup"):
+            if col_restore.button("Restore Optimizer Lineups", type="secondary"):
+                _restore_optimizer_lineups(workflow)
+                st.experimental_rerun()
+    elif workflow.get("optimizer_lineups_backup"):
+        if st.button("Restore Optimizer Lineups", type="secondary"):
+            _restore_optimizer_lineups(workflow)
+            st.experimental_rerun()
+
+    _player_distribution_viewer(sim_results, optimizer_df)
+    _render_correlation_heatmap(sim_results, optimizer_df)
+    _render_convergence_chart(sim_results, lineups)
+
+def _render_step_five() -> None:
+    st.header("Step 5 – Review Lineups")
+    workflow = _get_session()
+    _render_lock_countdown(workflow)
+    _render_lock_countdown(workflow)
     lineups = workflow.get("lineups")
     lineup_df = workflow.get("lineups_df")
+    active_source = workflow.get("active_lineup_source", "optimizer")
+    if active_source == "simulation":
+        st.caption("Active lineup source: Simulation portfolio")
+    else:
+        st.caption("Active lineup source: Optimizer output")
     if not lineups or lineup_df is None or lineup_df.empty:
         st.info("Run the optimizer in Step 3 to review lineups.")
         return
 
+    projection_cfg = workflow.get("projection_config") or {}
+    _render_projection_config_summary(config=projection_cfg)
+    _render_projection_blend_summary(workflow.get("projection_blend_summary") or projection_cfg.get("projection_blend"))
+    _render_ownership_model_summary(projection_cfg.get("ownership_model"))
+
+    sim_results = workflow.get(SIM_RESULTS_KEY)
+    selected_ids: List[int] = []
+    if sim_results:
+        selected_ids = sim_results.get("selected_ids") or []
+
+    late_swap_filter_ids = st.session_state.get("late_swap_filter_ids")
+
+    view_options = ["All lineups"]
+    if selected_ids:
+        view_options.append("Selected portfolio")
+    if late_swap_filter_ids:
+        view_options.append("Late swap focus")
+    view_choice = st.radio(
+        "View mode",
+        view_options,
+        horizontal=True,
+    )
+
+    display_df = lineup_df
+    if view_choice == "Selected portfolio" and selected_ids:
+        display_df = lineup_df[lineup_df["lineup_id"].isin(selected_ids)]
+        if display_df.empty:
+            st.info("Selected portfolio lineups have not been generated yet.")
+            display_df = lineup_df
+        else:
+            st.caption(
+                f"Showing {display_df['lineup_id'].nunique()} lineups from the simulated portfolio."
+            )
+    elif view_choice == "Selected portfolio" and not selected_ids:
+        st.info("Run Step 4 to generate a simulated portfolio before filtering.")
+    elif view_choice == "Late swap focus" and late_swap_filter_ids:
+        display_df = lineup_df[lineup_df["lineup_id"].isin(late_swap_filter_ids)]
+        if display_df.empty:
+            st.info("No lineups remaining in the late swap filter. Clearing filter.")
+            st.session_state.pop("late_swap_filter_ids", None)
+            st.experimental_rerun()
+        else:
+            st.caption(
+                f"Focusing on {display_df['lineup_id'].nunique()} lineups flagged in the late swap aide."
+            )
+
     _render_game_status_panel(workflow)
     if st.button("Check Lineups Now", type="secondary"):
         st.experimental_rerun()
+    if late_swap_filter_ids and st.button("Clear late swap filter", key="clear_late_swap_filter"):
+        st.session_state.pop("late_swap_filter_ids", None)
+        st.experimental_rerun()
+
+    visible_ids = set(display_df["lineup_id"].unique().tolist())
+    if active_source == "simulation" and not visible_ids:
+        st.info("Simulation portfolio is empty. Restore optimizer lineups or run Step 4 again.")
 
     bench_risk_mask, locked_mask = _bench_risk_flags(lineup_df)
-    risk_players = lineup_df[bench_risk_mask]
+    if visible_ids:
+        view_mask = lineup_df["lineup_id"].isin(visible_ids)
+    else:
+        view_mask = pd.Series(True, index=lineup_df.index)
+    risk_players = lineup_df[bench_risk_mask & view_mask]
     if not risk_players.empty:
         st.warning(
             f"Bench risk: {len(risk_players)} players across {risk_players['lineup_id'].nunique()} lineups without confirmed orders."
@@ -1202,16 +2766,48 @@ def _render_step_four() -> None:
     else:
         st.success("No bench-risk players detected in unlocked games.")
 
-    _render_lineup_summary(lineups, lineup_df, bench_risk_mask, locked_mask)
+    _render_late_swap_panel(workflow)
 
-    exposures = _player_exposure_summary(lineup_df)
+    _render_lineup_summary(
+        lineups,
+        lineup_df,
+        bench_risk_mask,
+        locked_mask,
+        visible_ids if visible_ids else None,
+    )
+
     st.subheader("Player exposure summary")
-    st.dataframe(exposures, use_container_width=True)
+    exposures = _player_exposure_summary(display_df)
+    if exposures.empty:
+        st.info("No lineups available for the selected view.")
+    else:
+        st.dataframe(exposures, use_container_width=True)
 
-    stack_exposure = _stack_exposure_summary(lineup_df)
+    st.subheader("Lineup variance summary")
+    _variance_leaderboard(display_df)
+
+    stack_exposure = _stack_exposure_summary(display_df)
     if not stack_exposure.empty:
         st.subheader("Stack exposure by team")
         st.dataframe(stack_exposure, use_container_width=True)
+
+    if not display_df.empty:
+        st.subheader("Exposure heatmap (team x position)")
+        pivot = (
+            display_df.pivot_table(
+                index="team_code",
+                columns="position",
+                values="fd_player_id",
+                aggfunc=lambda x: len(x.unique()),
+                fill_value=0,
+            )
+            if {"team_code", "position", "fd_player_id"}.issubset(display_df.columns)
+            else pd.DataFrame()
+        )
+        if not pivot.empty:
+            st.dataframe(pivot, use_container_width=True)
+        else:
+            st.info("Unable to build exposure heatmap (missing team/position data).")
 
     locks, excludes = _lock_controls(lineup_df)
     if st.button("Re-Run with Locks", type="secondary", key="rerun_locks"):
@@ -1263,8 +2859,8 @@ def _render_step_four() -> None:
     )
 
 
-def _render_step_five() -> None:
-    st.header("Step 5 · Post-Slate Review")
+def _render_step_six() -> None:
+    st.header("Step 6 – Post-Slate Review")
     workflow = _get_session()
     if workflow.get("optimizer") is None:
         st.info("Process a slate first to review post-slate metrics.")
@@ -1315,6 +2911,16 @@ def _render_step_five() -> None:
         lineup_points = payload.get("lineup_points")
         actuals = payload.get("actuals")
         if lineup_points is not None:
+            stored_config = _extract_projection_config_from_lineups(lineup_points)
+            if stored_config:
+                _render_projection_config_summary(config=stored_config)
+                _render_projection_blend_summary(stored_config.get("projection_blend"))
+                _render_ownership_model_summary(stored_config.get("ownership_model"))
+            else:
+                projection_cfg = workflow.get("projection_config") or {}
+                _render_projection_config_summary(config=projection_cfg)
+                _render_projection_blend_summary(workflow.get("projection_blend_summary") or projection_cfg.get("projection_blend"))
+                _render_ownership_model_summary(projection_cfg.get("ownership_model"))
             st.subheader("Lineup actual performance")
             st.dataframe(lineup_points, use_container_width=True)
         if actuals is not None:
@@ -1335,6 +2941,20 @@ def _render_step_five() -> None:
                 ],
                 use_container_width=True,
             )
+        _ownership_accuracy_panel(date_str)
+        try:
+            brier = backtest.calculate_brier_score(date_str)
+            if brier.get("num_players"):
+                pct = brier.get("pct_above_threshold")
+                st.metric(
+                    f"Projection Brier (> {brier.get('threshold', 15):.0f})",
+                    f"{brier.get('brier_score', float('nan')):.4f}",
+                    help=f"Pct above threshold: {pct:.1%}" if pct == pct else None,
+                )
+        except Exception as exc:  # pylint: disable=broad-except
+            st.caption(f"Brier score unavailable: {exc}")
+
+    _render_simulation_calibration(date_str)
 
 
 def _render_placeholder(step_label: str) -> None:
@@ -1372,6 +2992,8 @@ def _render_backtest_dashboard() -> None:
             perf = backtest.calculate_lineup_performance(date)
             own = backtest.calculate_ownership_accuracy(date)
             proj = backtest.calculate_projection_accuracy(date)
+            brier = backtest.calculate_brier_score(date)
+            variance = backtest.calculate_variance_metrics(date)
         except Exception:
             continue
         metrics_rows.append(
@@ -1381,6 +3003,9 @@ def _render_backtest_dashboard() -> None:
                 "cash_rate": perf.get("cash_rate"),
                 "ownership_mae": own.get("mae"),
                 "projection_mae": proj.get("mae"),
+                "brier_score": brier.get("brier_score"),
+                "avg_volatility": variance.get("avg_volatility"),
+                "high_leverage_count": variance.get("high_leverage_count"),
             }
         )
     metrics_df = pd.DataFrame(metrics_rows).sort_values("date")
@@ -1395,24 +3020,70 @@ def _render_backtest_dashboard() -> None:
         st.line_chart(metrics_df.set_index("date")["ownership_mae"])
         st.subheader("Projection MAE")
         st.line_chart(metrics_df.set_index("date")["projection_mae"])
+        if "brier_score" in metrics_df.columns:
+            st.subheader("Projection Brier (>15 pts)")
+            st.line_chart(metrics_df.set_index("date")["brier_score"])
+        if "avg_volatility" in metrics_df.columns:
+            st.subheader("Average player volatility")
+            st.line_chart(metrics_df.set_index("date")["avg_volatility"])
+        if "high_leverage_count" in metrics_df.columns:
+            st.subheader("High-leverage targets per slate")
+            st.bar_chart(metrics_df.set_index("date")["high_leverage_count"])
+
+    brier_avg = (
+        float(metrics_df["brier_score"].dropna().mean())
+        if (not metrics_df.empty and "brier_score" in metrics_df.columns and metrics_df["brier_score"].notna().any())
+        else float("nan")
+    )
 
     scatter_date = st.selectbox("Leverage scatter date", slate_df["date"].tolist())
+    scatter_lineups = db.fetch_lineup_results(scatter_date)
+    config_preview = _extract_projection_config_from_lineups(scatter_lineups)
+    if config_preview:
+        _render_projection_config_summary(config=config_preview)
+        _render_projection_blend_summary(config_preview.get("projection_blend"))
+        _render_ownership_model_summary(config_preview.get("ownership_model"))
     try:
         projections = _load_optimizer_csv(scatter_date)
+        team_options = ["All"] + sorted(projections.get("team_code", pd.Series(dtype=str)).dropna().unique().tolist())
+        pos_options = ["All"] + sorted(projections.get("position", pd.Series(dtype=str)).dropna().unique().tolist())
+        col_team, col_pos = st.columns(2)
+        team_filter = col_team.selectbox("Team filter", team_options)
+        pos_filter = col_pos.selectbox("Position filter", pos_options)
+        filtered_proj = projections.copy()
+        if team_filter != "All":
+            filtered_proj = filtered_proj[filtered_proj["team_code"] == team_filter]
+        if pos_filter != "All":
+            filtered_proj = filtered_proj[filtered_proj["position"] == pos_filter]
         actual = db.fetch_actual_scores(scatter_date)
-        merged = projections.merge(actual[["fd_player_id", "actual_fd_points"]], on="fd_player_id", how="inner")
+        merged = filtered_proj.merge(actual[["fd_player_id", "actual_fd_points"]], on="fd_player_id", how="inner")
         merged["outperformance"] = merged["actual_fd_points"].astype(float) - merged["proj_fd_mean"].astype(float)
         scatter_data = merged[["player_leverage_score", "outperformance"]]
         st.subheader("Leverage score effectiveness")
-        st.scatter_chart(scatter_data.rename(columns={"player_leverage_score": "Leverage", "outperformance": "Outperformance"}))
+        st.scatter_chart(
+            scatter_data.rename(columns={"player_leverage_score": "Leverage", "outperformance": "Outperformance"})
+        )
+        leverage_stats = backtest.calculate_leverage_roi(scatter_date)
+        if leverage_stats:
+            st.metric(
+                "Positive leverage avg outperformance",
+                f"{leverage_stats.get('positive_leverage_outperformance', float('nan')):.2f}",
+            )
+            st.metric(
+                "Negative leverage avg outperformance",
+                f"{leverage_stats.get('negative_leverage_outperformance', float('nan')):.2f}",
+            )
     except Exception as exc:  # pylint: disable=broad-except
         st.warning(f"Unable to load leverage scatter data: {exc}")
+
+    _ownership_accuracy_panel(scatter_date)
 
     summary = backtest.get_cumulative_metrics(start_str, end_str)
     st.subheader("Summary")
     st.metric("Total slates", summary.get("total_slates"))
     st.metric("Overall ROI", summary.get("overall_roi"))
     st.metric("Overall cash rate", summary.get("overall_cash_rate"))
+    st.metric("Avg Brier (>15)", f"{brier_avg:.4f}" if brier_avg == brier_avg else "N/A")
     db.close()
 
 
@@ -1430,6 +3101,8 @@ def main() -> None:
         _render_step_four()
     elif current_step.startswith("5"):
         _render_step_five()
+    elif current_step.startswith("6"):
+        _render_step_six()
     else:
         _render_backtest_dashboard()
 

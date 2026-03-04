@@ -19,6 +19,13 @@ The system has strong architecture but weak data inputs. The projection model is
 
 Transform this from a prototype into a daily-use competitive tool by upgrading the projection and ownership models, adding a backtesting engine, building a streamlined single-UI daily workflow, and integrating late-swap support. The guiding principle: get the inputs right (projections + ownership), and the existing optimizer + contrarian framework will do the rest.
 
+### 1.4 Implementation Status (March 2026)
+
+- **Completed:** Core simulation stack/CLIs, Streamlit Step 4/5 Simulate & Select (portfolio filtering, calibration panels, ownership summaries), projection-factor logging (value score, vegas/order/platoon/recency modifiers, dynamic floor/ceiling), projection Brier metrics, ownership weight/model presets (multi-source projection + ownership blending with UI controls), variance dashboards, the Step 5 Late Swap Aide (focus/scratch/re-optimize flows), and the Section 20 simulation test suite.
+- **Outstanding:** Final late-swap automation polish (countdowns/alerts across the workflow and lock-aware presets), remaining dashboard refinements (additional leverage/variance history views), and any QA for the new presets prior to deployment.
+- **Next Steps:** Finish Section 4.5 late-swap requirements, expand the historical dashboards with the new calibration metrics, and ready the workflow for season launch.
+
+
 ---
 
 ## 2. DFS Philosophy & Strategy Context
@@ -275,12 +282,12 @@ The current system requires running multiple CLI scripts with various arguments.
 
 MLB slates have staggered lock times. Players get scratched from lineups. This feature prevents you from getting stuck with a scratched player in a locked lineup.
 
-#### 4.5.1 Requirements
+#### 4.5.1 Requirements (Completed)
 
-- Track lock times per game on the slate (derivable from the FanDuel CSV or game start times).
-- Before lock: flag any players in generated lineups who are NOT in confirmed batting orders (bench risk).
-- Provide a re-optimization workflow: remove scratched/unconfirmed players, re-run the optimizer for affected lineups only, and regenerate with the same strategy settings.
-- Display a countdown or status indicator for each game's lock time.
+- Track lock times per game on the slate (derivable from the FanDuel CSV or game start times). **Implemented via the global lock countdown + game status panel.**
+- Before lock: flag any players in generated lineups who are NOT in confirmed batting orders (bench risk). **Bench-risk flags and the new Late Swap Aide cover this.**
+- Provide a re-optimization workflow: remove scratched/unconfirmed players, re-run the optimizer for affected lineups only, and regenerate with the same strategy settings. **Delivered through the scratch workflow + Late Swap Aide re-opt button.**
+- Display a countdown or status indicator for each game's lock time. **Now shown atop Steps 2–5 and in the lock status table.**
 
 ---
 

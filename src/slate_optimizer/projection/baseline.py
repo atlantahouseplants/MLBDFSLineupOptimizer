@@ -36,6 +36,8 @@ PROJECTION_COLUMNS = [
     "proj_fd_floor",
     "proj_fd_ceiling",
     "proj_fd_ownership",
+    "base_projection",
+    "value_score",
     "batting_order_position",
     "order_factor",
     "is_confirmed_lineup",
@@ -45,6 +47,9 @@ PROJECTION_COLUMNS = [
     "recent_fppg",
     "season_fppg",
     "recency_factor",
+    "vegas_multiplier",
+    "floor_multiplier",
+    "ceiling_multiplier",
     "vegas_game_total",
     "vegas_team_total",
     "vegas_opponent_total",
@@ -238,6 +243,7 @@ def compute_baseline_projections(
     fd_points = pd.to_numeric(df.get("bpp_points_fd"), errors="coerce")
     fallback = pd.to_numeric(df.get("fppg"), errors="coerce")
     df["proj_fd_mean"] = fd_points.fillna(fallback).fillna(0.0)
+    df["base_projection"] = df["proj_fd_mean"]
 
     if "player_type" not in df.columns:
         df["player_type"] = ""
@@ -322,9 +328,46 @@ def compute_baseline_projections(
 
     team_multiplier = _vegas_team_multiplier(df)
     df.loc[hitters_mask, "proj_fd_mean"] *= team_multiplier.loc[hitters_mask]
+    df["vegas_multiplier"] = team_multiplier
+    salary_raw = df.get("salary")
+    if not isinstance(salary_raw, pd.Series):
+        salary_raw = pd.Series(salary_raw, index=df.index)
+    salary_series = pd.to_numeric(salary_raw, errors="coerce")
+    salary_series = salary_series.replace(0, pd.NA)
+    df["value_score"] = (df["proj_fd_mean"] / salary_series).fillna(0.0) * 1000.0
 
-    df["proj_fd_floor"] = df["proj_fd_mean"] * 0.8
-    df["proj_fd_ceiling"] = df["proj_fd_mean"] * 1.2
+    floor_multiplier = pd.Series(1.0, index=df.index, dtype=float)
+    ceiling_multiplier = pd.Series(1.0, index=df.index, dtype=float)
+
+    hitter_floor = (
+        0.55
+        + 0.15 * recency_factor.clip(0.7, 1.3)
+        + 0.1 * order_factor.clip(0.8, 1.2)
+    ).clip(0.5, 0.95)
+    pitcher_floor = (
+        0.65
+        + 0.1 * win_multiplier.clip(0.8, 1.2)
+    ).clip(0.55, 0.95)
+    floor_multiplier.loc[hitters_mask] = hitter_floor.loc[hitters_mask]
+    floor_multiplier.loc[pitchers_mask] = pitcher_floor.loc[pitchers_mask]
+
+    hitter_ceiling = (
+        1.2
+        + 0.1 * (team_multiplier - 1.0)
+        + 0.05 * (platoon_factor - 1.0)
+        + 0.05 * recency_factor
+    ).clip(1.05, 1.8)
+    pitcher_ceiling = (
+        1.25
+        + 0.1 * win_multiplier
+    ).clip(1.1, 1.8)
+    ceiling_multiplier.loc[hitters_mask] = hitter_ceiling.loc[hitters_mask]
+    ceiling_multiplier.loc[pitchers_mask] = pitcher_ceiling.loc[pitchers_mask]
+
+    df["floor_multiplier"] = floor_multiplier.fillna(0.8)
+    df["ceiling_multiplier"] = ceiling_multiplier.fillna(1.2)
+    df["proj_fd_floor"] = df["proj_fd_mean"] * df["floor_multiplier"]
+    df["proj_fd_ceiling"] = df["proj_fd_mean"] * df["ceiling_multiplier"]
 
     for col in ("team", "opponent", "position", "full_name"):
         if col not in df.columns:

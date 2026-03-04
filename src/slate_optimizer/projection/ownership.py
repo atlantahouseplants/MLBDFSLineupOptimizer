@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Sequence
 
+import numpy as np
 import pandas as pd
 
 _COLUMN_MAP = {
@@ -89,8 +90,24 @@ def _load_source(path: Path, name_lookup: pd.Series) -> pd.DataFrame:
     return grouped
 
 
-def _estimate_fallback(players_df: pd.DataFrame, projections_df: pd.DataFrame) -> pd.Series:
-    meta_cols = [col for col in ("fd_player_id", "salary", "position") if col in players_df.columns]
+def _estimate_fallback(
+    players_df: pd.DataFrame,
+    projections_df: pd.DataFrame,
+    model_config: OwnershipModelConfig | None = None,
+) -> pd.Series:
+    meta_cols = [
+        col
+        for col in (
+            "fd_player_id",
+            "salary",
+            "position",
+            "team_code",
+            "vegas_team_total",
+            "full_name",
+            "fppg",
+        )
+        if col in players_df.columns
+    ]
     meta = players_df[meta_cols].copy()
     if meta.empty:
         meta = pd.DataFrame({"fd_player_id": projections_df["fd_player_id"].astype(str)})
@@ -110,21 +127,51 @@ def _estimate_fallback(players_df: pd.DataFrame, projections_df: pd.DataFrame) -
     merged["salary_rank"] = merged["salary"].rank(pct=True)
     merged["projection_rank"] = merged["proj_fd_mean"].rank(pct=True)
 
+    with np.errstate(divide="ignore", invalid="ignore"):
+        value = merged["proj_fd_mean"] / merged["salary"].replace(0, np.nan)
+    merged["value_rank"] = value.rank(pct=True).fillna(0.5)
+
+    team_totals_raw = merged.get("vegas_team_total")
+    if isinstance(team_totals_raw, pd.Series):
+        team_totals = pd.to_numeric(team_totals_raw, errors="coerce")
+    else:
+        team_totals = pd.Series(np.nan, index=merged.index)
+    if team_totals.notna().any():
+        merged["team_rank"] = team_totals.rank(pct=True)
+    else:
+        merged["team_rank"] = 0.5
+
+    name_signal = pd.to_numeric(merged.get("fppg"), errors="coerce")
+    if name_signal.notna().any():
+        merged["name_rank"] = name_signal.rank(pct=True)
+    else:
+        merged["name_rank"] = merged["proj_fd_mean"].rank(pct=True)
+
     pos_counts = merged["position"].fillna("UTIL").value_counts()
     max_count = pos_counts.max() if not pos_counts.empty else 1
     merged["pos_scarcity"] = 1 - merged["position"].fillna("UTIL").map(pos_counts) / max_count
     merged["pos_scarcity"] = merged["pos_scarcity"].fillna(0.0)
 
-    raw = (
-        0.45 * merged["salary_rank"]
-        + 0.45 * merged["projection_rank"]
-        + 0.10 * merged["pos_scarcity"]
-    )
+    cfg = model_config or OwnershipModelConfig()
+    normalized_weights = cfg.normalized_weights()
+    raw = pd.Series(0.0, index=merged.index, dtype=float)
+    for column, weight in normalized_weights.items():
+        raw = raw.add(weight * merged[column], fill_value=0.0)
     raw = raw.fillna(raw.mean() if raw.notna().any() else 0.1)
+    raw = raw.clip(lower=0.0)
     if raw.max() and raw.max() > 0:
         raw = raw / raw.max()
-    fallback = (0.05 + 0.95 * raw).clip(upper=1.0)
+    min_pct, max_pct = cfg.clamp_range()
+    span = max_pct - min_pct
+    fallback = (min_pct + span * raw).clip(lower=min_pct, upper=max_pct)
     return pd.Series(fallback.values, index=merged["fd_player_id"], name="proj_fd_ownership")
+
+
+@dataclass
+class OwnershipSourceDetail:
+    name: str
+    weight: float
+    matched_players: int
 
 
 @dataclass
@@ -134,6 +181,7 @@ class OwnershipBlendResult:
     ownership: pd.Series
     source_count: int
     covered_players: int
+    sources: list[OwnershipSourceDetail]
 
 
 def compute_ownership_series(
@@ -141,6 +189,7 @@ def compute_ownership_series(
     projections_df: pd.DataFrame,
     source_paths: Sequence[Path] | None = None,
     weights: Sequence[float] | None = None,
+    model_config: OwnershipModelConfig | None = None,
 ) -> OwnershipBlendResult:
     source_paths = list(source_paths or [])
     if weights and len(weights) != len(source_paths):
@@ -153,8 +202,10 @@ def compute_ownership_series(
     for path in source_paths:
         prepared_sources.append(_load_source(Path(path), name_lookup))
 
+    source_details: List[OwnershipSourceDetail] = []
     normalized_weights: List[float] = []
     covered_players = 0
+
     if prepared_sources:
         if weights:
             normalized_weights = [float(w) for w in weights]
@@ -167,17 +218,41 @@ def compute_ownership_series(
 
         blended = pd.Series(0.0, index=unique_ids, dtype=float)
         coverage = pd.Series(False, index=unique_ids, dtype=bool)
-        for weight, source in zip(normalized_weights, prepared_sources):
+        for weight, source, path_obj in zip(normalized_weights, prepared_sources, source_paths):
             src_series = source.set_index("fd_player_id")["proj_fd_ownership"]
             coverage.loc[src_series.index] = True
             blended = blended.add(src_series * weight, fill_value=0.0)
+            matched = int(src_series.index.nunique())
+            source_details.append(
+                OwnershipSourceDetail(
+                    name=Path(path_obj).name,
+                    weight=float(weight),
+                    matched_players=matched,
+                )
+            )
 
-        fallback = _estimate_fallback(players_df, projections_df).reindex(unique_ids).fillna(0.05)
+        fallback = _estimate_fallback(players_df, projections_df, model_config=model_config).reindex(unique_ids).fillna(
+            0.05
+        )
         blended = blended.where(coverage, fallback)
         covered_players = int(coverage.sum())
+        fallback_gap = int(len(unique_ids) - covered_players)
+        if fallback_gap > 0:
+            remaining_weight = max(0.0, 1.0 - sum(detail.weight for detail in source_details))
+            source_details.append(
+                OwnershipSourceDetail(
+                    name="fallback_model",
+                    weight=remaining_weight,
+                    matched_players=fallback_gap,
+                )
+            )
     else:
-        fallback = _estimate_fallback(players_df, projections_df)
+        fallback = _estimate_fallback(players_df, projections_df, model_config=model_config)
         blended = fallback.reindex(unique_ids).fillna(0.05)
+        covered_players = len(unique_ids)
+        source_details.append(
+            OwnershipSourceDetail(name="fallback_model", weight=1.0, matched_players=len(unique_ids))
+        )
 
     blended = blended.clip(lower=0.0, upper=1.0)
     ownership_series = pd.Series(blended.values, index=unique_ids, name="proj_fd_ownership")
@@ -185,7 +260,43 @@ def compute_ownership_series(
         ownership=ownership_series,
         source_count=len(prepared_sources),
         covered_players=covered_players,
+        sources=source_details,
     )
 
 
-__all__ = ["compute_ownership_series", "OwnershipBlendResult"]
+
+__all__ = [
+    "compute_ownership_series",
+    "OwnershipBlendResult",
+    "OwnershipSourceDetail",
+    "OwnershipModelConfig",
+]
+@dataclass
+class OwnershipModelConfig:
+    salary_weight: float = 0.2
+    projection_weight: float = 0.25
+    value_weight: float = 0.2
+    team_weight: float = 0.15
+    name_weight: float = 0.1
+    position_weight: float = 0.1
+    min_pct: float = 0.05
+    max_pct: float = 1.0
+
+    def normalized_weights(self) -> dict[str, float]:
+        weights = {
+            "salary_rank": max(0.0, float(self.salary_weight)),
+            "projection_rank": max(0.0, float(self.projection_weight)),
+            "value_rank": max(0.0, float(self.value_weight)),
+            "team_rank": max(0.0, float(self.team_weight)),
+            "name_rank": max(0.0, float(self.name_weight)),
+            "pos_scarcity": max(0.0, float(self.position_weight)),
+        }
+        total = sum(weights.values())
+        if total <= 0:
+            raise ValueError("Ownership model weights must sum to a positive value")
+        return {key: value / total for key, value in weights.items()}
+
+    def clamp_range(self) -> tuple[float, float]:
+        min_pct = max(0.0, float(self.min_pct))
+        max_pct = max(min_pct + 1e-6, float(self.max_pct))
+        return min_pct, max_pct

@@ -59,6 +59,17 @@ CREATE TABLE IF NOT EXISTS actual_scores (
 );
 """
 
+
+_CREATE_SIMULATION_ACCURACY = """
+CREATE TABLE IF NOT EXISTS simulation_accuracy (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    metric_name TEXT NOT NULL,
+    metric_value REAL NOT NULL,
+    num_players INTEGER,
+    created_at TEXT NOT NULL
+);
+"""
 _CREATE_LINEUP_RESULTS = """
 CREATE TABLE IF NOT EXISTS lineup_results (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,6 +111,7 @@ class SlateDatabase:
         cur.execute(_CREATE_SLATE_RESULTS)
         cur.execute(_CREATE_ACTUAL_SCORES)
         cur.execute(_CREATE_LINEUP_RESULTS)
+        cur.execute(_CREATE_SIMULATION_ACCURACY)
         self.conn.commit()
 
     def insert_slate(self, tag: str, fanduel_csv: Path, ballparkpal_dir: Path) -> SlateRecord:
@@ -280,6 +292,28 @@ class SlateDatabase:
         )
         self.conn.commit()
 
+    def insert_simulation_accuracy(self, date: str, metrics: dict[str, float], num_players: int) -> None:
+        """Persist simulation calibration metrics."""
+        if not metrics:
+            return
+        created_at = datetime.utcnow().isoformat()
+        rows = []
+        for name, value in metrics.items():
+            if value is None:
+                continue
+            rows.append((date, name, float(value), num_players, created_at))
+        if not rows:
+            return
+        cur = self.conn.cursor()
+        cur.executemany(
+            """
+            INSERT INTO simulation_accuracy(date, metric_name, metric_value, num_players, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+        self.conn.commit()
+
     def fetch_actual_scores(self, date: str) -> pd.DataFrame:
         cur = self.conn.cursor()
         rows = cur.execute(
@@ -304,6 +338,13 @@ class SlateDatabase:
         ).fetchall()
         return pd.DataFrame(rows, columns=[col[0] for col in cur.description]) if rows else pd.DataFrame()
 
+    def fetch_simulation_accuracy(self, date: str) -> pd.DataFrame:
+        cur = self.conn.cursor()
+        rows = cur.execute(
+            "SELECT * FROM simulation_accuracy WHERE date = ? ORDER BY created_at",
+            (date,),
+        ).fetchall()
+        return pd.DataFrame(rows, columns=[col[0] for col in cur.description]) if rows else pd.DataFrame()
+
     def close(self) -> None:
         self.conn.close()
-
