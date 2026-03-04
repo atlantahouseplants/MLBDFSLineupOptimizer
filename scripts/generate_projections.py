@@ -31,6 +31,24 @@ def parse_args() -> argparse.Namespace:
         default="data/processed",
         help="Directory to write the projection CSV.",
     )
+    parser.add_argument(
+        "--platoon-opposite-boost",
+        type=float,
+        default=None,
+        help="Multiplier for hitters vs opposite-hand pitchers (default 1.06).",
+    )
+    parser.add_argument(
+        "--platoon-same-penalty",
+        type=float,
+        default=None,
+        help="Multiplier for same-hand matchups (default 0.95).",
+    )
+    parser.add_argument(
+        "--platoon-switch-boost",
+        type=float,
+        default=None,
+        help="Multiplier for switch hitters (default 1.03).",
+    )
     return parser.parse_args()
 
 def main() -> None:
@@ -54,7 +72,12 @@ def main() -> None:
     if players_df.empty:
         raise SystemExit(f"Slate {slate.slate_id} has no stored players to project.")
 
-    projections = compute_baseline_projections(players_df)
+    projections = compute_baseline_projections(
+        players_df,
+        platoon_opposite_boost=args.platoon_opposite_boost,
+        platoon_same_penalty=args.platoon_same_penalty,
+        platoon_switch_boost=args.platoon_switch_boost,
+    )
     output_path = output_dir / f"{slate.tag}_baseline_projections.csv"
     projections.to_csv(output_path, index=False)
 

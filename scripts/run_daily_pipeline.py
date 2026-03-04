@@ -64,6 +64,24 @@ def parse_args() -> argparse.Namespace:
         help="Season vs recent weighting (e.g., 0.7,0.3).",
     )
     parser.add_argument(
+        "--platoon-opposite-boost",
+        type=float,
+        default=None,
+        help="Multiplier for hitters vs opposite-hand pitchers (default 1.06).",
+    )
+    parser.add_argument(
+        "--platoon-same-penalty",
+        type=float,
+        default=None,
+        help="Multiplier for same-hand matchups (default 0.95).",
+    )
+    parser.add_argument(
+        "--platoon-switch-boost",
+        type=float,
+        default=None,
+        help="Multiplier for switch hitters (default 1.03).",
+    )
+    parser.add_argument(
         "--ownership-sources",
         default=None,
         help="Comma-separated ownership CSV files to blend (fd_player_id + ownership).",
@@ -191,6 +209,10 @@ def main() -> None:
             recency_blend = (float(tokens[0]), float(tokens[1]))
         except ValueError:
             raise SystemExit("Invalid --recency-blend (must be numeric)")
+
+    platoon_opposite_boost = args.platoon_opposite_boost
+    platoon_same_penalty = args.platoon_same_penalty
+    platoon_switch_boost = args.platoon_switch_boost
 
     bpp_loader = BallparkPalLoader(Path(args.bpp_source))
     bundle = bpp_loader.load_bundle()
@@ -323,6 +345,9 @@ def main() -> None:
     projections = compute_baseline_projections(
         combined,
         recency_blend=recency_blend,
+        platoon_opposite_boost=platoon_opposite_boost,
+        platoon_same_penalty=platoon_same_penalty,
+        platoon_switch_boost=platoon_switch_boost,
     )
 
     ownership_result = compute_ownership_series(

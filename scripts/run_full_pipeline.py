@@ -24,6 +24,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stack-templates", default=None)
     parser.add_argument("--max-lineup-ownership", type=float, default=None)
     parser.add_argument("--config", default=None)
+    parser.add_argument("--platoon-opposite-boost", type=float, default=None, help="Multiplier for hitters vs opposite-hand pitchers (default 1.06).")
+    parser.add_argument("--platoon-same-penalty", type=float, default=None, help="Multiplier for same-hand matchups (default 0.95).")
+    parser.add_argument("--platoon-switch-boost", type=float, default=None, help="Multiplier for switch hitters (default 1.03).")
     parser.add_argument("--adjust", action="store_true", help="Apply projection adjustments before optimizing.")
     return parser.parse_args()
 
@@ -47,6 +50,12 @@ def main() -> None:
         pipeline_cmd += ["--max-lineup-ownership", str(args.max_lineup_ownership)]
     if args.config:
         pipeline_cmd += ["--config", args.config]
+    if args.platoon_opposite_boost is not None:
+        pipeline_cmd += ["--platoon-opposite-boost", str(args.platoon_opposite_boost)]
+    if args.platoon_same_penalty is not None:
+        pipeline_cmd += ["--platoon-same-penalty", str(args.platoon_same_penalty)]
+    if args.platoon_switch_boost is not None:
+        pipeline_cmd += ["--platoon-switch-boost", str(args.platoon_switch_boost)]
 
     run(pipeline_cmd)
 

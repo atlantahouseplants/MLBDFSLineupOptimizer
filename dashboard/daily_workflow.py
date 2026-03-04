@@ -239,6 +239,9 @@ def _process_slate(
     ownership_files,
     ownership_weights_input: Optional[str],
     recency_blend_input: Optional[str],
+    platoon_opposite_boost: float,
+    platoon_same_penalty: float,
+    platoon_switch_boost: float,
 ) -> Dict:
     if not fanduel_file:
         raise ValueError("FanDuel CSV is required.")
@@ -291,7 +294,13 @@ def _process_slate(
             recent_path,
         )
 
-        projections = compute_baseline_projections(combined, recency_blend=recency_blend)
+        projections = compute_baseline_projections(
+            combined,
+            recency_blend=recency_blend,
+            platoon_opposite_boost=platoon_opposite_boost,
+            platoon_same_penalty=platoon_same_penalty,
+            platoon_switch_boost=platoon_switch_boost,
+        )
 
         ownership_paths_list = [Path(p) for p in ownership_paths]
         ownership_result = compute_ownership_series(
@@ -311,6 +320,7 @@ def _process_slate(
     summary_messages = [
         f"Players loaded: {len(combined)}",
         f"Ownership sources blended: {ownership_result.source_count}",
+        f"Platoon multipliers -> opp:{platoon_opposite_boost:.2f} same:{platoon_same_penalty:.2f} switch:{platoon_switch_boost:.2f}",
     ]
     summary_messages.extend(optional_messages)
 
@@ -322,6 +332,11 @@ def _process_slate(
         "ownership_summary": ownership_result,
         "messages": summary_messages,
         "recency_blend": recency_blend,
+        "platoon_settings": {
+            "opposite_boost": platoon_opposite_boost,
+            "same_penalty": platoon_same_penalty,
+            "switch_boost": platoon_switch_boost,
+        },
     }
     return workflow_payload
 
@@ -728,7 +743,34 @@ def _render_step_one() -> None:
     recency_blend_input = st.text_input(
         "Recency blend weights (season,recent)",
         value="0.7,0.3",
+        help="Enter two comma-separated values like 0.7,0.3 (season first, then recent).",
     )
+    platoon_opp_input = st.number_input(
+        "Opposite-hand multiplier",
+        min_value=0.5,
+        max_value=1.5,
+        value=1.06,
+        step=0.01,
+        help="Boost hitters vs. opposite-hand pitchers (default 1.06).",
+    )
+    platoon_same_input = st.number_input(
+        "Same-hand multiplier",
+        min_value=0.5,
+        max_value=1.2,
+        value=0.95,
+        step=0.01,
+        help="Penalty for same-hand matchups (default 0.95).",
+    )
+    platoon_switch_input = st.number_input(
+        "Switch-hitter multiplier",
+        min_value=0.5,
+        max_value=1.5,
+        value=1.03,
+        step=0.01,
+        help="Adjustment for switch hitters (default 1.03).",
+    )
+
+    st.caption("Recency weights mix season vs. short-term production, while the platoon multipliers control how much hitters gain or lose against pitcher handedness (defaults shown above).")
 
     if st.button("Process Slate", type="primary"):
         try:
@@ -743,6 +785,9 @@ def _render_step_one() -> None:
                     ownership_files or [],
                     ownership_weights_input,
                     recency_blend_input,
+                    platoon_opp_input,
+                    platoon_same_input,
+                    platoon_switch_input,
                 )
                 session_state = _get_session()
                 session_state.update(workflow_payload)

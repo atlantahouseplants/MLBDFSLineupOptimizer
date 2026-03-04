@@ -102,7 +102,12 @@ def _opponent_pitcher_map(df: pd.DataFrame) -> pd.Series:
     return pitcher_map
 
 
-def _platoon_adjustment(df: pd.DataFrame) -> pd.Series:
+def _platoon_adjustment(
+    df: pd.DataFrame,
+    opposite_boost: float = OPPOSITE_HAND_BOOST,
+    same_penalty: float = SAME_HAND_PENALTY,
+    switch_boost: float = SWITCH_HITTER_BOOST,
+) -> pd.Series:
     bats = df.get("batter_hand", "").astype(str).str.upper()
     opponent_codes = df.get("opponent_code", "").astype(str)
     hitters = df.get("player_type", "").astype(str).str.lower() == "batter"
@@ -111,14 +116,18 @@ def _platoon_adjustment(df: pd.DataFrame) -> pd.Series:
 
     factors = pd.Series(1.0, index=df.index, dtype=float)
     switch_mask = hitters & (bats == "S")
-    factors.loc[switch_mask] = SWITCH_HITTER_BOOST
+    factors.loc[switch_mask] = switch_boost
 
-    opposite_mask = hitters & ((bats == "L") & (opponent_hand == "R") | (bats == "R") & (opponent_hand == "L"))
-    same_mask = hitters & (
-        ((bats == "L") & (opponent_hand == "L")) | ((bats == "R") & (opponent_hand == "R"))
+    opposite_mask = hitters & (
+        ((bats == "L") & (opponent_hand == "R"))
+        | ((bats == "R") & (opponent_hand == "L"))
     )
-    factors.loc[opposite_mask] = OPPOSITE_HAND_BOOST
-    factors.loc[same_mask] = SAME_HAND_PENALTY
+    same_mask = hitters & (
+        ((bats == "L") & (opponent_hand == "L"))
+        | ((bats == "R") & (opponent_hand == "R"))
+    )
+    factors.loc[opposite_mask] = opposite_boost
+    factors.loc[same_mask] = same_penalty
     return factors.fillna(1.0)
 
 
@@ -220,6 +229,9 @@ def _weather_score(df: pd.DataFrame) -> pd.Series:
 def compute_baseline_projections(
     players_df: pd.DataFrame,
     recency_blend: tuple[float, float] | None = None,
+    platoon_opposite_boost: float | None = None,
+    platoon_same_penalty: float | None = None,
+    platoon_switch_boost: float | None = None,
 ) -> pd.DataFrame:
     """Generate naive mean/floor/ceiling projections from available columns."""
     df = players_df.copy()
@@ -263,7 +275,28 @@ def compute_baseline_projections(
     df["order_factor"] = order_factor
     df.loc[hitters_mask, "proj_fd_mean"] *= order_factor.loc[hitters_mask]
 
-    platoon_factor = _platoon_adjustment(df)
+    opp_boost = (
+        float(platoon_opposite_boost)
+        if platoon_opposite_boost is not None
+        else OPPOSITE_HAND_BOOST
+    )
+    same_penalty = (
+        float(platoon_same_penalty)
+        if platoon_same_penalty is not None
+        else SAME_HAND_PENALTY
+    )
+    switch_boost = (
+        float(platoon_switch_boost)
+        if platoon_switch_boost is not None
+        else SWITCH_HITTER_BOOST
+    )
+
+    platoon_factor = _platoon_adjustment(
+        df,
+        opposite_boost=opp_boost,
+        same_penalty=same_penalty,
+        switch_boost=switch_boost,
+    )
     df["platoon_factor"] = platoon_factor
     df.loc[hitters_mask, "proj_fd_mean"] *= platoon_factor.loc[hitters_mask]
 
