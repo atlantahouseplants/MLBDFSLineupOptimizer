@@ -13,10 +13,6 @@ __all__ = [
 ]
 
 
-def _clamp(value: float, lower: float, upper: float) -> float:
-    return max(lower, min(upper, value))
-
-
 @dataclass
 class CorrelationConfig:
     teammate_base: float = 0.25
@@ -52,6 +48,7 @@ def build_correlation_matrix(
     optimizer_df: pd.DataFrame,
     config: Optional[CorrelationConfig] = None,
 ) -> CorrelationModel:
+    """Build correlation matrix using vectorized operations."""
     config = config or CorrelationConfig()
     df = optimizer_df.copy()
     df["player_type"] = df.get("player_type", "").astype(str).str.lower()
@@ -60,22 +57,90 @@ def build_correlation_matrix(
     df["team_code"] = df.get("team_code", "").astype(str)
     df["opponent_code"] = df.get("opponent_code", "").astype(str)
     df["stack_priority"] = df.get("stack_priority", "mid").astype(str).str.lower()
-    df["vegas_game_total"] = pd.to_numeric(df.get("vegas_game_total"), errors="coerce")
-    df["batting_order_position"] = pd.to_numeric(
-        df.get("batting_order_position"), errors="coerce"
-    )
+    if "vegas_game_total" in df.columns:
+        df["vegas_game_total"] = pd.to_numeric(df["vegas_game_total"], errors="coerce").fillna(0.0)
+    else:
+        df["vegas_game_total"] = 0.0
+    if "batting_order_position" in df.columns:
+        df["batting_order_position"] = pd.to_numeric(df["batting_order_position"], errors="coerce").fillna(0.0)
+    else:
+        df["batting_order_position"] = 0.0
 
     player_ids = df["fd_player_id"].astype(str).tolist()
-    num_players = len(player_ids)
-    matrix = np.eye(num_players, dtype=np.float64)
+    n = len(player_ids)
+    matrix = np.eye(n, dtype=np.float64)
 
-    for i in range(num_players):
-        row_i = df.iloc[i]
-        for j in range(i + 1, num_players):
-            row_j = df.iloc[j]
-            corr = _pair_correlation(row_i, row_j, config)
-            matrix[i, j] = matrix[j, i] = corr
+    # Extract arrays for vectorized comparison
+    player_type = df["player_type"].values
+    stack_key = df["stack_key"].values
+    game_key = df["game_key"].values
+    team_code = df["team_code"].values
+    opponent_code = df["opponent_code"].values
+    stack_priority = df["stack_priority"].values
+    vegas_total = df["vegas_game_total"].values
+    batting_order = df["batting_order_position"].values
+    is_batter = player_type == "batter"
+    is_pitcher = player_type == "pitcher"
 
+    # Build boolean matrices (n x n) using broadcasting
+    # Same stack: both have non-empty matching stack_key
+    same_stack = (stack_key[:, None] == stack_key[None, :]) & (stack_key[:, None] != "")
+    # Same game: both have non-empty matching game_key
+    same_game = (game_key[:, None] == game_key[None, :]) & (game_key[:, None] != "")
+    # Both batters
+    both_batters = is_batter[:, None] & is_batter[None, :]
+    # Pitcher-batter pairs
+    pitcher_batter = is_pitcher[:, None] & is_batter[None, :]
+    batter_pitcher = is_batter[:, None] & is_pitcher[None, :]
+    # Pitcher on same team as batter
+    pitcher_same_team = (team_code[:, None] == team_code[None, :])
+    # Pitcher vs opposing hitters
+    pitcher_vs_opp = (team_code[:, None] == opponent_code[None, :])
+
+    # 1. Teammate batters (same stack, both batters)
+    teammate_mask = same_stack & both_batters
+    matrix[teammate_mask] = config.teammate_base
+
+    # Adjacent batting order bonus
+    order_diff = np.abs(batting_order[:, None] - batting_order[None, :])
+    adjacent = (order_diff <= 1.0) & (batting_order[:, None] > 0) & (batting_order[None, :] > 0)
+    adjacent_teammate = teammate_mask & adjacent
+    matrix[adjacent_teammate] += config.teammate_adjacent_bonus
+
+    # Stack priority bonus (either player is "high")
+    is_high = stack_priority == "high"
+    either_high = is_high[:, None] | is_high[None, :]
+    high_teammate = teammate_mask & either_high
+    matrix[high_teammate] += config.stack_priority_bonus
+
+    # Vegas scaling for teammates
+    avg_vegas = (vegas_total[:, None] + vegas_total[None, :]) / 2.0
+    has_vegas = (vegas_total[:, None] > 0) & (vegas_total[None, :] > 0)
+    vegas_scale = np.clip(avg_vegas / config.vegas_scaling_denominator, 1.0, config.vegas_scale_cap)
+    scale_mask = teammate_mask & has_vegas
+    matrix[scale_mask] *= vegas_scale[scale_mask]
+
+    # 2. Same game, different team, both batters
+    opp_game_mask = same_game & both_batters & ~same_stack
+    matrix[opp_game_mask] = config.same_game_opponent
+
+    # 3. Pitcher + own team's batter
+    own_pitcher_mask = (pitcher_batter | batter_pitcher) & pitcher_same_team
+    matrix[own_pitcher_mask] = config.pitcher_own_hitters
+
+    # 4. Pitcher vs opposing batter
+    opp_pitcher_mask = (pitcher_batter & pitcher_vs_opp) | (batter_pitcher & (opponent_code[:, None] == team_code[None, :]))
+    matrix[opp_pitcher_mask] = config.pitcher_vs_opposing
+
+    # Clamp off-diagonal to [-0.95, 0.95]
+    np.clip(matrix, -0.95, 0.95, out=matrix)
+    np.fill_diagonal(matrix, 1.0)
+
+    # Symmetrize (some masks may have applied asymmetrically)
+    matrix = (matrix + matrix.T) / 2.0
+    np.fill_diagonal(matrix, 1.0)
+
+    # Ensure PSD and compute Cholesky
     matrix = _ensure_positive_semidefinite(matrix)
     cholesky = _compute_cholesky(matrix)
     return CorrelationModel(
@@ -86,90 +151,36 @@ def build_correlation_matrix(
     )
 
 
-def _pair_correlation(row_i: pd.Series, row_j: pd.Series, config: CorrelationConfig) -> float:
-    same_game = bool(row_i.get("game_key") and row_i.get("game_key") == row_j.get("game_key"))
-    same_stack = bool(row_i.get("stack_key") and row_i.get("stack_key") == row_j.get("stack_key"))
-    type_i = row_i.get("player_type")
-    type_j = row_j.get("player_type")
-
-    if same_stack and type_i == type_j == "batter":
-        corr = config.teammate_base
-        if _are_adjacent(row_i.get("batting_order_position"), row_j.get("batting_order_position")):
-            corr += config.teammate_adjacent_bonus
-        if "high" in {row_i.get("stack_priority"), row_j.get("stack_priority")}:
-            corr += config.stack_priority_bonus
-        vegas_total = _pair_vegas_total(row_i, row_j)
-        if vegas_total and vegas_total > 0:
-            scale = _clamp(
-                vegas_total / config.vegas_scaling_denominator,
-                1.0,
-                config.vegas_scale_cap,
-            )
-            corr *= scale
-        return float(_clamp(corr, -0.95, 0.95))
-
-    if same_game and type_i == type_j == "batter" and not same_stack:
-        return float(_clamp(config.same_game_opponent, -0.95, 0.95))
-
-    if type_i == "pitcher" and type_j == "batter":
-        return _pitcher_batter_corr(row_i, row_j, config)
-    if type_j == "pitcher" and type_i == "batter":
-        return _pitcher_batter_corr(row_j, row_i, config)
-
-    if not same_game:
-        return float(config.cross_game)
-
-    return float(config.cross_game)
-
-
-def _pitcher_batter_corr(pitcher: pd.Series, hitter: pd.Series, config: CorrelationConfig) -> float:
-    team_code = pitcher.get("team_code")
-    if team_code and team_code == hitter.get("team_code"):
-        return float(_clamp(config.pitcher_own_hitters, -0.95, 0.95))
-    if team_code and team_code == hitter.get("opponent_code"):
-        return float(_clamp(config.pitcher_vs_opposing, -0.95, 0.0))
-    return float(config.cross_game)
-
-
-def _are_adjacent(order_i, order_j) -> bool:
-    if pd.isna(order_i) or pd.isna(order_j):
-        return False
-    return abs(float(order_i) - float(order_j)) <= 1.0
-
-
-def _pair_vegas_total(row_i: pd.Series, row_j: pd.Series) -> Optional[float]:
-    vals = []
-    for row in (row_i, row_j):
-        value = row.get("vegas_game_total")
-        if pd.notna(value):
-            vals.append(float(value))
-    if not vals:
-        return None
-    return float(sum(vals) / len(vals))
-
-
 def _ensure_positive_semidefinite(matrix: np.ndarray) -> np.ndarray:
-    eigvals = np.linalg.eigvalsh(matrix)
-    if np.all(eigvals >= 0):
-        return matrix
-    return _nearest_positive_semidefinite(matrix)
-
-
-def _nearest_positive_semidefinite(matrix: np.ndarray) -> np.ndarray:
-    sym = (matrix + matrix.T) / 2
+    """Force the matrix to be PSD with a robust minimum eigenvalue."""
+    sym = (matrix + matrix.T) / 2.0
     eigvals, eigvecs = np.linalg.eigh(sym)
-    eigvals = np.clip(eigvals, 1e-6, None)
+    min_eig = eigvals.min()
+    if min_eig >= 1e-4:
+        return sym
+    # Clip eigenvalues with a strong floor
+    eigvals = np.clip(eigvals, 1e-4, None)
     reconstructed = eigvecs @ np.diag(eigvals) @ eigvecs.T
-    reconstructed = (reconstructed + reconstructed.T) / 2
+    reconstructed = (reconstructed + reconstructed.T) / 2.0
+    # Rescale so diagonal is exactly 1.0 (correlation matrix)
+    d = np.sqrt(np.diag(reconstructed))
+    d[d == 0] = 1.0
+    reconstructed = reconstructed / (d[:, None] * d[None, :])
     np.fill_diagonal(reconstructed, 1.0)
     return reconstructed
 
 
 def _compute_cholesky(matrix: np.ndarray) -> np.ndarray:
-    for jitter_exp in range(6):
+    """Cholesky with increasing jitter fallback."""
+    last_error = None
+    m = matrix.copy()
+    for attempt in range(8):
         try:
-            return np.linalg.cholesky(matrix)
-        except np.linalg.LinAlgError:
-            jitter = 10 ** (-6 + jitter_exp)
-            matrix = matrix + np.eye(matrix.shape[0]) * jitter
-    raise
+            return np.linalg.cholesky(m)
+        except np.linalg.LinAlgError as exc:
+            last_error = exc
+            jitter = 10 ** (-6 + attempt)
+            m = m + np.eye(m.shape[0]) * jitter
+    raise np.linalg.LinAlgError(
+        f"Cholesky decomposition failed after 8 jitter attempts: {last_error}"
+    )

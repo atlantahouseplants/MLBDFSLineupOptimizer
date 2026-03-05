@@ -74,9 +74,14 @@ def _team_stack_constraints(
 
     stack_types = {t.lower() for t in stack_player_types}
     type_mask = pool["player_type"].str.lower().isin(stack_types)
-    hitters = pool.loc[type_mask, ["team_code", "opponent_code", "vegas_game_total"]].copy()
+    cols = ["team_code", "opponent_code"]
+    if "vegas_game_total" in pool.columns:
+        cols.append("vegas_game_total")
+    hitters = pool.loc[type_mask, cols].copy()
     hitters["team_code"] = hitters["team_code"].fillna("")
     hitters["opponent_code"] = hitters["opponent_code"].fillna("")
+    if "vegas_game_total" not in hitters.columns:
+        hitters["vegas_game_total"] = float("nan")
     hitters["vegas_game_total"] = pd.to_numeric(hitters["vegas_game_total"], errors="coerce")
     team_meta = hitters.drop_duplicates("team_code").set_index("team_code")
     team_codes = [code for code in team_meta.index if code]

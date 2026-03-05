@@ -106,12 +106,14 @@ def simulate_contest(
         )
         lineup_df = candidate.dataframe
         player_ids = lineup_df["fd_player_id"].astype(str).tolist()
-        total_ownership = float(
-            pd.to_numeric(lineup_df.get("proj_fd_ownership"), errors="coerce").fillna(0.0).sum()
-        )
-        leverage_score = float(
-            pd.to_numeric(lineup_df.get("player_leverage_score"), errors="coerce").fillna(0.0).sum()
-        )
+        if "proj_fd_ownership" in lineup_df.columns:
+            total_ownership = float(pd.to_numeric(lineup_df["proj_fd_ownership"], errors="coerce").fillna(0.0).sum())
+        else:
+            total_ownership = 0.0
+        if "player_leverage_score" in lineup_df.columns:
+            leverage_score = float(pd.to_numeric(lineup_df["player_leverage_score"], errors="coerce").fillna(0.0).sum())
+        else:
+            leverage_score = 0.0
         dup_rate = _duplication_rate(player_ids, field_sets)
         lineup_results.append(
             LineupSimResult(
