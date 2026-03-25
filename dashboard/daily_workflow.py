@@ -1113,12 +1113,12 @@ def _render_late_swap_panel(workflow: Dict) -> None:
         action_cols = st.columns(3)
         if action_cols[0].button("Focus on these lineups", key="late_swap_focus"):
             st.session_state["late_swap_filter_ids"] = sorted(candidates["lineup_id"].unique().tolist())
-            st.experimental_rerun()
+            st.rerun()
         if action_cols[1].button("Add to scratch list", key="late_swap_add_scratches"):
             existing = set(st.session_state.get("scratched_players", []))
             existing.update(candidates["full_name"].unique().tolist())
             st.session_state["scratched_players"] = sorted(existing)
-            st.experimental_rerun()
+            st.rerun()
         if action_cols[2].button("Re-opt flagged lineups", key="late_swap_reopt"):
             try:
                 config_state = _get_config_state()
@@ -1127,7 +1127,7 @@ def _render_late_swap_panel(workflow: Dict) -> None:
                     for message in diffs:
                         st.caption(message)
                 st.success("Affected lineups re-optimized.")
-                st.experimental_rerun()
+                st.rerun()
             except Exception as exc:  # pylint: disable=broad-except
                 st.error(f"Late swap re-optimization failed: {exc}")
 
@@ -1842,7 +1842,7 @@ def _render_step_two() -> None:
                 optimizer_df = _apply_ownership_edge(optimizer_df)
                 workflow["optimizer"] = optimizer_df
                 st.success("Overrides applied. Projection table refreshed.")
-                st.experimental_rerun()
+                st.rerun()
 
     st.subheader("Stack overview")
     _section_stacks(filtered_df)
@@ -1947,7 +1947,7 @@ def _render_step_three() -> None:
                 loaded_data = json.loads(uploaded_config.getvalue().decode("utf-8"))
                 config_state.update(loaded_data)
                 st.success("Configuration loaded.")
-                st.experimental_rerun()
+                st.rerun()
             except Exception as exc:  # pylint: disable=broad-except
                 st.error(f"Failed to load config: {exc}")
 
@@ -2578,13 +2578,13 @@ def _render_step_four() -> None:
     preset_cols = st.columns(3)
     if preset_cols[0].button("GPP"):
         _apply_sim_preset(SimulationConfig.gpp_preset(), sim_state)
-        st.experimental_rerun()
+        st.rerun()
     if preset_cols[1].button("Cash"):
         _apply_sim_preset(SimulationConfig.cash_preset(), sim_state)
-        st.experimental_rerun()
+        st.rerun()
     if preset_cols[2].button("Single Entry"):
         _apply_sim_preset(SimulationConfig.single_entry_preset(), sim_state)
-        st.experimental_rerun()
+        st.rerun()
 
     config_state = _get_config_state()
     if st.button("Run Simulation & Select Lineups", type="primary"):
@@ -2666,15 +2666,15 @@ def _render_step_four() -> None:
         col_use, col_restore = st.columns(2)
         if col_use.button("Use Simulation Portfolio for Steps 5-6", type="primary"):
             _activate_sim_portfolio(workflow, selected_objects)
-            st.experimental_rerun()
+            st.rerun()
         if workflow.get("optimizer_lineups_backup"):
             if col_restore.button("Restore Optimizer Lineups", type="secondary"):
                 _restore_optimizer_lineups(workflow)
-                st.experimental_rerun()
+                st.rerun()
     elif workflow.get("optimizer_lineups_backup"):
         if st.button("Restore Optimizer Lineups", type="secondary"):
             _restore_optimizer_lineups(workflow)
-            st.experimental_rerun()
+            st.rerun()
 
     _player_distribution_viewer(sim_results, optimizer_df)
     _render_correlation_heatmap(sim_results, optimizer_df)
@@ -2736,7 +2736,7 @@ def _render_step_five() -> None:
         if display_df.empty:
             st.info("No lineups remaining in the late swap filter. Clearing filter.")
             st.session_state.pop("late_swap_filter_ids", None)
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.caption(
                 f"Focusing on {display_df['lineup_id'].nunique()} lineups flagged in the late swap aide."
@@ -2744,10 +2744,10 @@ def _render_step_five() -> None:
 
     _render_game_status_panel(workflow)
     if st.button("Check Lineups Now", type="secondary"):
-        st.experimental_rerun()
+        st.rerun()
     if late_swap_filter_ids and st.button("Clear late swap filter", key="clear_late_swap_filter"):
         st.session_state.pop("late_swap_filter_ids", None)
-        st.experimental_rerun()
+        st.rerun()
 
     visible_ids = set(display_df["lineup_id"].unique().tolist())
     if active_source == "simulation" and not visible_ids:
@@ -2823,7 +2823,7 @@ def _render_step_five() -> None:
                     workflow["lineups_df"] = lineup_df
                     workflow["lock_settings"] = {"locks": locks, "excludes": excludes}
                 st.success("Lineups regenerated with updated constraints.")
-                st.experimental_rerun()
+                st.rerun()
         except Exception as exc:  # pylint: disable=broad-except
             st.error(f"Failed to re-run optimizer: {exc}")
 
@@ -2840,7 +2840,7 @@ def _render_step_five() -> None:
                 for message in diffs:
                     st.write(message)
             st.success("Affected lineups re-optimized. Download files to update your entries.")
-            st.experimental_rerun()
+            st.rerun()
         except Exception as exc:  # pylint: disable=broad-except
             st.error(f"Late swap optimization failed: {exc}")
 
