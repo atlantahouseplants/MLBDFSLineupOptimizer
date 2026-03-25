@@ -78,7 +78,7 @@ def build_correlation_matrix(
     opponent_code = df["opponent_code"].values
     stack_priority = df["stack_priority"].values
     vegas_total = df["vegas_game_total"].values
-    batting_order = df["batting_order_position"].values
+    batting_order = df["batting_order_position"].to_numpy(dtype=np.float64, na_value=0.0)
     is_batter = player_type == "batter"
     is_pitcher = player_type == "pitcher"
 

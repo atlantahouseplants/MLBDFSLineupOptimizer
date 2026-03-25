@@ -17,6 +17,7 @@ OPTIMIZER_COLUMNS = [
     "fd_player_id",
     "full_name",
     "position",
+    "roster_position",
     "player_type",
     "team",
     "team_code",
@@ -181,8 +182,9 @@ def build_optimizer_dataset(
     merged["game_start_time"] = _derive_game_start_times(merged)
 
     missing = [col for col in OPTIMIZER_COLUMNS if col not in merged.columns]
+    _string_defaults = {"team", "opponent", "roster_position"}
     for col in missing:
-        merged[col] = "" if col.startswith("bpp") or col in {"team", "opponent"} else 0
+        merged[col] = "" if col.startswith("bpp") or col in _string_defaults else 0
 
     dataset = merged[OPTIMIZER_COLUMNS].copy()
     numeric_cols = [

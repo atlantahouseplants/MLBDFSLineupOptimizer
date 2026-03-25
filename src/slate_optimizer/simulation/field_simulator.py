@@ -211,12 +211,14 @@ def _selection_probabilities(eligible: pd.DataFrame, tier: str) -> np.ndarray:
         proj = eligible["proj_fd_mean"].to_numpy(dtype=float)
         proj = proj - proj.min() if proj.size else proj
         if proj.size:
-            proj_norm = (proj - proj.min()) / (proj.ptp() + 1e-6)
+            proj_range = proj.max() - proj.min()
+            proj_norm = (proj - proj.min()) / (proj_range + 1e-6)
             ownership *= (1.0 + 0.5 * proj_norm)
     elif tier == "rec":
         salary = eligible["salary"].to_numpy(dtype=float)
         if salary.size:
-            sal_norm = (salary - salary.min()) / (salary.ptp() + 1e-6)
+            sal_range = salary.max() - salary.min()
+            sal_norm = (salary - salary.min()) / (sal_range + 1e-6)
             ownership *= (0.5 + sal_norm)
     elif tier == "random":
         ownership = np.ones_like(ownership)

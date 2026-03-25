@@ -61,29 +61,71 @@ def _lineup_to_row(lineup_df: pd.DataFrame) -> List[str]:
     rows = lineup_df.to_dict("records")
     for row in rows:
         row["fd_player_id"] = str(row.get("fd_player_id", "")).strip()
-        row["position"] = str(row.get("position", ""))
+        # Prefer roster_position (full FanDuel eligibility) over position
+        roster_pos = str(row.get("roster_position", "")).strip()
+        raw_pos = str(row.get("position", "")).strip()
+        row["position"] = roster_pos if roster_pos and roster_pos.upper() not in ("", "NAN", "NONE") else raw_pos
         row["player_type"] = str(row.get("player_type", ""))
 
-    ordered: List[str] = []
-    ordered.append(_pop_candidate(rows, ["P"])["fd_player_id"])
-    ordered.append(_pop_candidate(rows, ["C", "1B"])["fd_player_id"])
-    ordered.append(_pop_candidate(rows, ["2B"])["fd_player_id"])
-    ordered.append(_pop_candidate(rows, ["3B"])["fd_player_id"])
-    ordered.append(_pop_candidate(rows, ["SS"])["fd_player_id"])
-    ordered.append(_pop_outfielder(rows)["fd_player_id"])
-    ordered.append(_pop_outfielder(rows)["fd_player_id"])
-    ordered.append(_pop_outfielder(rows)["fd_player_id"])
-    util_player = _pop_util(rows)
+    # Assign slots using backtracking to avoid greedy ordering issues
+    slots = [
+        ("P", ["P"]),
+        ("C/1B", ["C", "1B"]),
+        ("2B", ["2B"]),
+        ("3B", ["3B"]),
+        ("SS", ["SS"]),
+        ("OF1", ["OF"]),
+        ("OF2", ["OF"]),
+        ("OF3", ["OF"]),
+    ]
+
+    def _fits(row: Dict, tokens: List[str]) -> bool:
+        positions = set(_parse_positions(row.get("position")))
+        return bool(positions.intersection(t.upper() for t in tokens))
+
+    def _backtrack(remaining: List[Dict], slot_idx: int, assigned: List[Dict]) -> bool:
+        if slot_idx == len(slots):
+            return True
+        _, tokens = slots[slot_idx]
+        for i, row in enumerate(remaining):
+            if _fits(row, tokens):
+                rest = remaining[:i] + remaining[i + 1:]
+                assigned.append(row)
+                if _backtrack(rest, slot_idx + 1, assigned):
+                    return True
+                assigned.pop()
+        return False
+
+    assigned: List[Dict] = []
+    if not _backtrack(rows, 0, assigned):
+        raise ValueError("Unable to assign all players to valid FanDuel slots")
+
+    # The UTIL slot gets whoever is left
+    assigned_ids = {r["fd_player_id"] for r in assigned}
+    util_candidates = [r for r in rows if r["fd_player_id"] not in assigned_ids]
+    if not util_candidates:
+        raise ValueError("No player remaining for UTIL slot")
+    util_player = util_candidates[0]
     if str(util_player.get("player_type", "")).lower() == "pitcher":
         raise ValueError("Pitcher cannot occupy UTIL slot")
-    ordered.append(util_player["fd_player_id"])
+
+    ordered = [r["fd_player_id"] for r in assigned] + [util_player["fd_player_id"]]
     return ordered
 
 
 def lineups_to_fanduel_upload(lineups: Sequence[LineupResult]) -> pd.DataFrame:
     if not lineups:
         return pd.DataFrame(columns=FANDUEL_UPLOAD_COLUMNS)
-    rows = [_lineup_to_row(lineup.dataframe) for lineup in lineups]
+    rows: List[List[str]] = []
+    skipped = 0
+    for lineup in lineups:
+        try:
+            rows.append(_lineup_to_row(lineup.dataframe))
+        except ValueError:
+            skipped += 1
+    if skipped:
+        import sys
+        print(f"Warning: skipped {skipped}/{len(lineups)} lineups with invalid position assignments", file=sys.stderr)
     upload_df = pd.DataFrame(rows, columns=FANDUEL_UPLOAD_COLUMNS)
     return upload_df
 
