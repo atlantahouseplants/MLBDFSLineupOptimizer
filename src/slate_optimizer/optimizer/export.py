@@ -60,7 +60,11 @@ def _lineup_to_row(lineup_df: pd.DataFrame) -> List[str]:
 
     rows = lineup_df.to_dict("records")
     for row in rows:
-        row["fd_player_id"] = str(row.get("fd_player_id", "")).strip()
+        raw_id = row.get("fd_player_id", "")
+        try:
+            row["fd_player_id"] = str(int(float(raw_id)))
+        except (ValueError, TypeError):
+            row["fd_player_id"] = str(raw_id).strip()
         # Prefer roster_position (full FanDuel eligibility) over position
         roster_pos = str(row.get("roster_position", "")).strip()
         raw_pos = str(row.get("position", "")).strip()
