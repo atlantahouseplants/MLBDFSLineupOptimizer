@@ -35,3 +35,4 @@ Thumbs.db
 *.log
 *.tmp
 *~
+src/slate_optimizer.egg-info/
