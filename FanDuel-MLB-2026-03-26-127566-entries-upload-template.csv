@@ -6,7 +6,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245609","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","",""
 "3672245611","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",Player ID + Player Name,Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Probable Pitcher,Batting Order,Roster Position
 "3672245614","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-119340:Tarik Skubal,127566-119340,P,Tarik,Tarik Skubal,Skubal,44.205882352941174,34,11200,DET@SD,DET,SD,,,,Yes,,P
-"3672245616","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-16960:Zack Wheeler,127566-16960,P,Zack,Zack Wheeler,Wheeler,42.625,24,11000,TEX@PHI,PHI,TEX,O,Shoulder,,,,P
+"3672245616","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-16960:Zack Wheeler,127566-16960,P,Zack,Zack Wheeler,Wheeler,42.625,24,11000,TEX@PHI,PHI,TEX,IL,Shoulder,,,,P
 "3672245617","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-135977:Garrett Crochet,127566-135977,P,Garrett,Garrett Crochet,Crochet,44.333333333333336,33,11000,BOS@CIN,BOS,CIN,,,,Yes,,P
 "3672245621","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-197980:Paul Skenes,127566-197980,P,Paul,Paul Skenes,Skenes,38.375,32,10800,PIT@NYM,PIT,NYM,,,,Yes,,P
 "3672245634","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-82550:Hunter Greene,127566-82550,P,Hunter,Hunter Greene,Greene,35.6,20,10400,BOS@CIN,CIN,BOS,IL,Elbow,,,,P
@@ -26,15 +26,15 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245663","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-17064:Sonny Gray,127566-17064,P,Sonny,Sonny Gray,Gray,32.09375,32,9100,BOS@CIN,BOS,CIN,,,,,,P
 "3672245666","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102407:Shane McClanahan,127566-102407,P,Shane,Shane McClanahan,McClanahan,0,1,9000,TB@STL,TB,STL,,,,,,P
 "3672245669","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-79951:Nick Pivetta,127566-79951,P,Nick,Nick Pivetta,Pivetta,35.25,32,8800,DET@SD,SD,DET,,,,Yes,,P
-"3672245671","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-119329:Nick Lodolo,127566-119329,P,Nick,Nick Lodolo,Lodolo,29.3,30,8800,BOS@CIN,CIN,BOS,O,Finger,,,,P
+"3672245671","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-119329:Nick Lodolo,127566-119329,P,Nick,Nick Lodolo,Lodolo,29.3,30,8800,BOS@CIN,CIN,BOS,IL,Finger,,,,P
 "3672245672","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-197981:Jacob Misiorowski,127566-197981,P,Jacob,Jacob Misiorowski,Misiorowski,27.5,18,8800,CWS@MIL,MIL,CWS,,,,Yes,,P
 "3672245674","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-135647:Ryan Pepiot,127566-135647,P,Ryan,Ryan Pepiot,Pepiot,29.35483870967742,31,8700,TB@STL,TB,STL,IL,Hip,,,,P
 "3672245693","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-82635:MacKenzie Gore,127566-82635,P,MacKenzie,MacKenzie Gore,Gore,29.933333333333334,30,8600,TEX@PHI,TEX,PHI,,,,,,P
-"3672245695","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102294:Grayson Rodriguez,127566-102294,P,Grayson,Grayson Rodriguez,Rodriguez,35.6,20,8600,LAA@HOU,LAA,HOU,IL,Arm,,,,P
+"3672245695","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102294:Grayson Rodriguez,127566-102294,P,Grayson,Grayson Rodriguez,Rodriguez,35.6,20,8600,LAA@HOU,LAA,HOU,IL,Shoulder,,,,P
 "3672245697","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102344:Brady Singer,127566-102344,P,Brady,Brady Singer,Singer,28.65625,32,8600,BOS@CIN,CIN,BOS,,,,,,P
-"3672245698","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-101810:Justin Steele,127566-101810,P,Justin,Justin Steele,Steele,29.25,4,8500,WSH@CHC,CHC,WSH,O,Elbow,,,,P
+"3672245698","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-101810:Justin Steele,127566-101810,P,Justin,Justin Steele,Steele,29.25,4,8500,WSH@CHC,CHC,WSH,IL,Elbow,,,,P
 "3672245700","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-165512:Andrew Abbott,127566-165512,P,Andrew,Andrew Abbott,Abbott,30.724137931034484,29,8500,BOS@CIN,CIN,BOS,,,,Yes,,P
-"3672245702","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-68523:Joe Musgrove,127566-68523,P,Joe,Joe Musgrove,Musgrove,28.45,20,8400,DET@SD,SD,DET,O,Elbow,,,,P
+"3672245702","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-68523:Joe Musgrove,127566-68523,P,Joe,Joe Musgrove,Musgrove,28.45,20,8400,DET@SD,SD,DET,IL,Elbow,,,,P
 "3672245704","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-165706:Jack Leiter,127566-165706,P,Jack,Jack Leiter,Leiter,27.724137931034484,30,8400,TEX@PHI,TEX,PHI,,,,,,P
 "3672245706","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-182153:Kodai Senga,127566-182153,P,Kodai,Kodai Senga,Senga,28.136363636363637,22,8400,PIT@NYM,NYM,PIT,,,,,,P
 "3672245707","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-117232:Michael King,127566-117232,P,Michael,Michael King,King,25.875,16,8300,DET@SD,SD,DET,,,,,,P
@@ -49,19 +49,19 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245730","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-63136:Matthew Boyd,127566-63136,P,Matthew,Matthew Boyd,Boyd,29.647058823529413,34,8200,WSH@CHC,CHC,WSH,,,,Yes,,P
 "3672245732","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-53067:Chris Bassitt,127566-53067,P,Chris,Chris Bassitt,Bassitt,24.28205128205128,39,8200,MIN@BAL,BAL,MIN,,,,,,P
 "3672245734","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-163680:Brayan Bello,127566-163680,P,Brayan,Brayan Bello,Bello,27.233333333333334,30,8200,BOS@CIN,BOS,CIN,,,,,,P
-"3672245746","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102458:Kutter Crawford,127566-102458,P,Kutter,Kutter Crawford,Crawford,27.96969696969697,33,8100,BOS@CIN,BOS,CIN,O,Wrist,,,,P
+"3672245746","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102458:Kutter Crawford,127566-102458,P,Kutter,Kutter Crawford,Crawford,27.96969696969697,33,8100,BOS@CIN,BOS,CIN,IL,Wrist,,,,P
 "3672245749","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-79246:Jack Flaherty,127566-79246,P,Jack,Jack Flaherty,Flaherty,27.647058823529413,34,8100,DET@SD,DET,SD,,,,,,P
 "3672245750","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102345:Jose Soriano,127566-102345,P,Jose,Jose Soriano,Soriano,27.193548387096776,31,8100,LAA@HOU,LAA,HOU,,,,Yes,,P
 "3672245752","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-145922:Tyler Wells,127566-145922,P,Tyler,Tyler Wells,Wells,29.5,4,8000,MIN@BAL,BAL,MIN,,,,,,P
 "3672245755","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-219653:Logan Henderson,127566-219653,P,Logan,Logan Henderson,Henderson,36.4,5,8000,CWS@MIL,MIL,CWS,,,,,,P
 "3672245756","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-16961:Jameson Taillon,127566-16961,P,Jameson,Jameson Taillon,Taillon,27.4,25,8000,WSH@CHC,CHC,WSH,,,,,,P
-"3672245758","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-164521:Brandon Walter,127566-164521,P,Brandon,Brandon Walter,Walter,31.88888888888889,9,8000,LAA@HOU,HOU,LAA,O,Elbow,,,,P
-"3672245761","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-168872:Ronel Blanco,127566-168872,P,Ronel,Ronel Blanco,Blanco,28.555555555555557,9,8000,LAA@HOU,HOU,LAA,O,Elbow,,,,P
+"3672245758","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-164521:Brandon Walter,127566-164521,P,Brandon,Brandon Walter,Walter,31.88888888888889,9,8000,LAA@HOU,HOU,LAA,IL,Elbow,,,,P
+"3672245761","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-168872:Ronel Blanco,127566-168872,P,Ronel,Ronel Blanco,Blanco,28.555555555555557,9,8000,LAA@HOU,HOU,LAA,IL,Elbow,,,,P
 "3672245764","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-83152:Pablo Lopez,127566-83152,P,Pablo,Pablo Lopez,Lopez,30.214285714285715,14,8000,MIN@BAL,MIN,BAL,IL,Elbow,,,,P
 "3672245766","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-232769:Connelly Early,127566-232769,P,Connelly,Connelly Early,Early,31.2,5,8000,BOS@CIN,BOS,CIN,,,,,,P
 "3672245768","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102001:Yusei Kikuchi,127566-102001,P,Yusei,Yusei Kikuchi,Kikuchi,27.454545454545453,33,8000,LAA@HOU,LAA,HOU,,,,,,P
 "3672245770","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-198702:Shota Imanaga,127566-198702,P,Shota,Shota Imanaga,Imanaga,26.925925925925927,27,7800,WSH@CHC,CHC,WSH,,,,,,P
-"3672245771","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-119409:Quinn Priester,127566-119409,P,Quinn,Quinn Priester,Priester,26.322580645161292,31,7800,CWS@MIL,MIL,CWS,O,Wrist,,,,P
+"3672245771","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-119409:Quinn Priester,127566-119409,P,Quinn,Quinn Priester,Priester,26.322580645161292,31,7800,CWS@MIL,MIL,CWS,IL,Wrist,,,,P
 "3672245773","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-165655:Bubba Chandler,127566-165655,P,Bubba,Bubba Chandler,Chandler,24.714285714285715,7,7800,PIT@NYM,PIT,NYM,,,,,,P
 "3672245775","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-68482:Zach Eflin,127566-68482,P,Zach,Zach Eflin,Eflin,20.214285714285715,14,7700,MIN@BAL,BAL,MIN,,,,,,P
 "3672245776","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-60647:Aaron Nola,127566-60647,P,Aaron,Aaron Nola,Nola,25.22222222222222,18,7700,TEX@PHI,PHI,TEX,,,,,,P
@@ -72,7 +72,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245795","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102447:Dean Kremer,127566-102447,P,Dean,Dean Kremer,Kremer,25.903225806451612,31,7500,MIN@BAL,BAL,MIN,,,,,,P
 "3672245797","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-145612:Bailey Ober,127566-145612,P,Bailey,Bailey Ober,Ober,22.88888888888889,27,7500,MIN@BAL,MIN,BAL,,,,,,P
 "3672245799","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-198879:Rhett Lowder,127566-198879,P,Rhett,Rhett Lowder,Lowder,27,6,7500,BOS@CIN,CIN,BOS,,,,,,P
-"3672245801","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-170315:Davis Martin,127566-170315,P,Davis,Davis Martin,Martin,23.96153846153846,26,7500,CWS@MIL,CWS,MIL,,,,,,P
+"3672245801","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-170315:Davis Martin,127566-170315,P,Davis,Davis Martin,Martin,23.96153846153846,26,7500,CWS@MIL,CWS,MIL,,,,,0,P
 "3672245803","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-219663:Chad Patrick,127566-219663,P,Chad,Chad Patrick,Patrick,20.939393939393938,33,7500,CWS@MIL,MIL,CWS,,,,,,P
 "3672245806","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-240672:Tatsuya Imai,127566-240672,P,Tatsuya,Tatsuya Imai,Imai,,0,7500,LAA@HOU,HOU,LAA,,,,,,P
 "3672245808","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-83166:Zack Littell,127566-83166,P,Zack,Zack Littell,Littell,25.696969696969695,33,7500,WSH@CHC,WSH,CHC,,,,,,P
@@ -84,11 +84,11 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245821","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102408:Matthew Liberatore,127566-102408,P,Matthew,Matthew Liberatore,Liberatore,24.137931034482758,29,7300,TB@STL,STL,TB,,,,Yes,,P
 "3672245823","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-198885:Spencer Arrighetti,127566-198885,P,Spencer,Spencer Arrighetti,Arrighetti,21.428571428571427,7,7300,LAA@HOU,HOU,LAA,,,,,,P
 "3672245825","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-82594:Dustin May,127566-82594,P,Dustin,Dustin May,May,25.16,25,7300,TB@STL,STL,TB,,,,,,P
-"3672245827","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-165543:Sean Burke,127566-165543,P,Sean,Sean Burke,Burke,23.464285714285715,28,7300,CWS@MIL,CWS,MIL,,,,,,P
+"3672245827","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-165543:Sean Burke,127566-165543,P,Sean,Sean Burke,Burke,23.464285714285715,28,7300,CWS@MIL,CWS,MIL,,,,,0,P
 "3672245828","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-163685:JP Sears,127566-163685,P,JP,JP Sears,Sears,22.51851851851852,27,7300,DET@SD,SD,DET,,,,,,P
 "3672245832","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-209173:Zebby Matthews,127566-209173,P,Zebby,Zebby Matthews,Matthews,25.0625,16,7200,MIN@BAL,MIN,BAL,,,,,,P
 "3672245834","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-119441:Alek Manoah,127566-119441,P,Alek,Alek Manoah,Manoah,27,6,7200,LAA@HOU,LAA,HOU,IL,Finger,,,,P
-"3672245836","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-82582:Griffin Canning,127566-82582,P,Griffin,Griffin Canning,Canning,24.8125,16,7200,DET@SD,SD,DET,O,Achilles,,,,P
+"3672245836","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-82582:Griffin Canning,127566-82582,P,Griffin,Griffin Canning,Canning,24.8125,16,7200,DET@SD,SD,DET,IL,Achilles,,,,P
 "3672245841","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-232240:Payton Tolle,127566-232240,P,Payton,Payton Tolle,Tolle,9.25,8,7200,BOS@CIN,BOS,CIN,,,,,,P
 "3672245842","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-211874:Kumar Rocker,127566-211874,P,Kumar,Kumar Rocker,Rocker,19.571428571428573,14,7200,TEX@PHI,TEX,PHI,,,,,,P
 "3672245844","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-52159:Lance McCullers Jr.,127566-52159,P,Lance,Lance McCullers Jr.,McCullers Jr.,16.666666666666668,16,7200,LAA@HOU,HOU,LAA,,,,,,P
@@ -101,15 +101,15 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245861","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102387:Braxton Ashcraft,127566-102387,P,Braxton,Braxton Ashcraft,Ashcraft,14.73076923076923,26,7100,PIT@NYM,PIT,NYM,,,,,,P
 "3672245863","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-135221:Cade Cavalli,127566-135221,P,Cade,Cade Cavalli,Cavalli,22.3,10,7000,WSH@CHC,WSH,CHC,,,,Yes,,P
 "3672245866","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-135229:Reid Detmers,127566-135229,P,Reid,Reid Detmers,Detmers,6.389830508474576,61,7000,LAA@HOU,LAA,HOU,,,,,,P
-"3672245867","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102498:Patrick Sandoval,127566-102498,P,Patrick,Patrick Sandoval,Sandoval,23.4375,16,7000,BOS@CIN,BOS,CIN,O,Elbow,,,,P
+"3672245867","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102498:Patrick Sandoval,127566-102498,P,Patrick,Patrick Sandoval,Sandoval,23.4375,16,7000,BOS@CIN,BOS,CIN,IL,Elbow,,,,P
 "3672245870","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-164532:DJ Herz,127566-164532,P,DJ,DJ Herz,Herz,25.94736842105263,19,7000,WSH@CHC,WSH,CHC,IL,Elbow,,,,P
-"3672245871","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-203676:David Festa,127566-203676,P,David,David Festa,Festa,22.272727272727273,11,7000,MIN@BAL,MIN,BAL,O,Shoulder,,,,P
+"3672245871","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-203676:David Festa,127566-203676,P,David,David Festa,Festa,22.272727272727273,11,7000,MIN@BAL,MIN,BAL,IL,Shoulder,,,,P
 "3672245872","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-168950:Andre Pallante,127566-168950,P,Andre,Andre Pallante,Pallante,19.516129032258064,31,7000,TB@STL,STL,TB,,,,,,P
 "3672245873","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-154714:Tylor Megill,127566-154714,P,Tylor,Tylor Megill,Megill,29.714285714285715,14,7000,PIT@NYM,NYM,PIT,IL,Elbow,,,,P
-"3672245876","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-185896:Cody Bradford,127566-185896,P,Cody,Cody Bradford,Bradford,29.785714285714285,14,7000,TEX@PHI,TEX,PHI,O,Elbow,,,,P
+"3672245876","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-185896:Cody Bradford,127566-185896,P,Cody,Cody Bradford,Bradford,29.785714285714285,14,7000,TEX@PHI,TEX,PHI,IL,Elbow,,,,P
 "3672245877","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-165551:Reese Olson,127566-165551,P,Reese,Reese Olson,Olson,28.076923076923077,13,7000,DET@SD,DET,SD,IL,Shoulder,,,,P
 "3672245878","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-165638:Randy Vasquez,127566-165638,P,Randy,Randy Vasquez,Vasquez,19.142857142857142,28,7000,DET@SD,SD,DET,,,,,,P
-"3672245880","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-165636:Hayden Wesneski,127566-165636,P,Hayden,Hayden Wesneski,Wesneski,24.833333333333332,6,7000,LAA@HOU,HOU,LAA,O,Elbow,,,,P
+"3672245880","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-165636:Hayden Wesneski,127566-165636,P,Hayden,Hayden Wesneski,Wesneski,24.833333333333332,6,7000,LAA@HOU,HOU,LAA,IL,Elbow,,,,P
 "3672245882","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-79853:Jordan Montgomery,127566-79853,P,Jordan,Jordan Montgomery,Montgomery,17.16,25,7000,TEX@PHI,TEX,PHI,IL,Elbow,,,,P
 "3672245883","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-165731:Mitchell Parker,127566-165731,P,Mitchell,Mitchell Parker,Parker,17.757575757575758,33,6900,WSH@CHC,WSH,CHC,,,,,,P
 "3672245884","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-178415:Javier Assad,127566-178415,P,Javier,Javier Assad,Assad,20.875,8,6800,WSH@CHC,CHC,WSH,,,,,,P
@@ -128,10 +128,10 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245900","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-202541:Cade Povich,127566-202541,P,Cade,Cade Povich,Povich,23.90909090909091,22,6600,MIN@BAL,BAL,MIN,,,,,,P
 "3672245903","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-135361:Nabil Crismatt,127566-135361,P,Nabil,Nabil Crismatt,Crismatt,19.625,8,6500,TEX@PHI,TEX,PHI,O,Elbow,,,,P
 "3672245904","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-110822:Jose Urquidy,127566-110822,P,Jose,Jose Urquidy,Urquidy,5,2,6500,PIT@NYM,PIT,NYM,,,,,,P
-"3672245905","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-198917:Drew Thorpe,127566-198917,P,Drew,Drew Thorpe,Thorpe,18.333333333333332,9,6500,CWS@MIL,CWS,MIL,O,Elbow,,,,P
+"3672245905","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-198917:Drew Thorpe,127566-198917,P,Drew,Drew Thorpe,Thorpe,18.333333333333332,9,6500,CWS@MIL,CWS,MIL,IL,Elbow,,,0,P
 "3672245909","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-219662:Colton Gordon,127566-219662,P,Colton,Colton Gordon,Gordon,18.05,20,6500,LAA@HOU,HOU,LAA,,,,,,P
-"3672245910","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-164529:Jordan Wicks,127566-164529,P,Jordan,Jordan Wicks,Wicks,7.428571428571429,8,6500,WSH@CHC,CHC,WSH,O,Forearm,,,,P
-"3672245912","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-82638:Jordan Hicks,127566-82638,P,Jordan,Jordan Hicks,Hicks,7.2727272727272725,34,6500,CWS@MIL,CWS,MIL,,,,,,P
+"3672245910","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-164529:Jordan Wicks,127566-164529,P,Jordan,Jordan Wicks,Wicks,7.428571428571429,8,6500,WSH@CHC,CHC,WSH,IL,Elbow,,,,P
+"3672245912","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-82638:Jordan Hicks,127566-82638,P,Jordan,Jordan Hicks,Hicks,7.2727272727272725,34,6500,CWS@MIL,CWS,MIL,,,,,0,P
 "3672245914","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-17121:Miles Mikolas,127566-17121,P,Miles,Miles Mikolas,Mikolas,19.258064516129032,31,6500,WSH@CHC,WSH,CHC,,,,,,P
 "3672245915","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-211765:Richard Fitts,127566-211765,P,Richard,Richard Fitts,Fitts,18.181818181818183,11,6500,TB@STL,STL,TB,,,,,,P
 "3672245917","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-189470:Kyle Leahy,127566-189470,P,Kyle,Kyle Leahy,Leahy,7.180327868852459,62,6500,TB@STL,STL,TB,,,,,,P
@@ -144,17 +144,17 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245926","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-232674:Andrew Alvarez,127566-232674,P,Andrew,Andrew Alvarez,Alvarez,24.4,5,6400,WSH@CHC,WSH,CHC,,,,,,P
 "3672245928","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-102684:Jake Irvin,127566-102684,P,Jake,Jake Irvin,Irvin,20,33,6300,WSH@CHC,WSH,CHC,,,,,,P
 "3672245929","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-219586:Ian Seymour,127566-219586,P,Ian,Ian Seymour,Seymour,16.789473684210527,19,6300,TB@STL,TB,STL,,,,,,P
-"3672245930","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-219668:Hunter Dobbins,127566-219668,P,Hunter,Hunter Dobbins,Dobbins,20.76923076923077,13,6300,TB@STL,STL,TB,O,Knee,,,,P
+"3672245930","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-219668:Hunter Dobbins,127566-219668,P,Hunter,Hunter Dobbins,Dobbins,20.76923076923077,13,6300,TB@STL,STL,TB,IL,Knee,,,,P
 "3672245931","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-232673:Mitch Farris,127566-232673,P,Mitch,Mitch Farris,Farris,20.2,5,6300,LAA@HOU,LAA,HOU,,,,,,P
 "3672245932","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-197899:Kai-Wei Teng,127566-197899,P,Kai-Wei,Kai-Wei Teng,Teng,19.375,8,6300,LAA@HOU,HOU,LAA,,,,,,P
 "3672245934","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-118202:Kyle Hart,127566-118202,P,Kyle,Kyle Hart,Hart,8.9,20,6300,DET@SD,SD,DET,,,,,,P
-"3672245935","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-200581:Jonathan Cannon,127566-200581,P,Jonathan,Jonathan Cannon,Cannon,18.363636363636363,22,6300,CWS@MIL,CWS,MIL,,,,,,P
+"3672245935","127566-279197667","$6K Thu MLB Wiffle Ball (150 Entries Max)","0.05","","","","","","","","","","",127566-200581:Jonathan Cannon,127566-200581,P,Jonathan,Jonathan Cannon,Cannon,18.363636363636363,22,6300,CWS@MIL,CWS,MIL,,,,,0,P
 "3672245300","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102502:Josiah Gray,127566-102502,P,Josiah,Josiah Gray,Gray,6.5,3,6200,WSH@CHC,WSH,CHC,IL,Elbow,,,,P
 "3672245302","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-198891:Caden Dana,127566-198891,P,Caden,Caden Dana,Dana,18.714285714285715,7,6200,LAA@HOU,LAA,HOU,DTD,Illness,,,,P
 "3672245303","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-82534:Bryse Wilson,127566-82534,P,Bryse,Bryse Wilson,Wilson,6.05,20,6200,TEX@PHI,PHI,TEX,,,,,,P
 "3672245304","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-119398:Yoendrys Gomez,127566-119398,P,Yoendrys,Yoendrys Gomez,Gomez,13.6,21,6200,TB@STL,TB,STL,,,,,,P
 "3672245305","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-170891:Davis Daniel,127566-170891,P,Davis,Davis Daniel,Daniel,13,3,6200,BOS@CIN,CIN,BOS,,,,,,P
-"3672245307","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-68564:Erick Fedde,127566-68564,P,Erick,Erick Fedde,Fedde,14.4375,32,6200,CWS@MIL,CWS,MIL,,,,,,P
+"3672245307","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-68564:Erick Fedde,127566-68564,P,Erick,Erick Fedde,Fedde,14.4375,32,6200,CWS@MIL,CWS,MIL,,,,,0,P
 "3672245309","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-52190:Marco Gonzales,127566-52190,P,Marco,Marco Gonzales,Gonzales,19,7,6200,DET@SD,SD,DET,,,,,,P
 "3672245311","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-197766:Keider Montero,127566-197766,P,Keider,Keider Montero,Montero,18.08695652173913,23,6200,DET@SD,DET,SD,,,,,,P
 "3672245313","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-146717:Mick Abel,127566-146717,P,Mick,Mick Abel,Abel,17.9,11,6200,MIN@BAL,MIN,BAL,,,,,,P
@@ -167,7 +167,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245332","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-165546:Ty Madden,127566-165546,P,Ty,Ty Madden,Madden,13.142857142857142,7,6100,DET@SD,DET,SD,,,,,,P
 "3672245334","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-194242:Carson Spiers,127566-194242,P,Carson,Carson Spiers,Spiers,16.666666666666668,3,6100,BOS@CIN,CIN,BOS,O,Elbow,,,,P
 "3672245337","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-165600:Jake Eder,127566-165600,P,Jake,Jake Eder,Eder,8.75,8,6100,WSH@CHC,WSH,CHC,,,,,,P
-"3672245338","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-194697:Sawyer Gipson-Long,127566-194697,P,Sawyer,Sawyer Gipson-Long,Gipson-Long,12.125,8,6000,DET@SD,DET,SD,DTD,Oblique,,,,P
+"3672245338","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-194697:Sawyer Gipson-Long,127566-194697,P,Sawyer,Sawyer Gipson-Long,Gipson-Long,12.125,8,6000,DET@SD,DET,SD,IL,Oblique,,,,P
 "3672245341","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-198904:Christian Scott,127566-198904,P,Christian,Christian Scott,Scott,22.11111111111111,9,6000,PIT@NYM,NYM,PIT,,,,,,P
 "3672245353","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-119355:Jack Kochanowicz,127566-119355,P,Jack,Jack Kochanowicz,Kochanowicz,14.391304347826088,23,6000,LAA@HOU,LAA,HOU,,,,,,P
 "3672245356","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-119416:Brandon Williamson,127566-119416,P,Brandon,Brandon Williamson,Williamson,15.25,4,6000,BOS@CIN,CIN,BOS,,,,,,P
@@ -175,13 +175,13 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245360","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-68505:Carson Fulmer,127566-68505,P,Carson,Carson Fulmer,Fulmer,8.384615384615385,13,6000,PIT@NYM,PIT,NYM,,,,,,P
 "3672245362","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-209958:Julian Aguiar,127566-209958,P,Julian,Julian Aguiar,Aguiar,15.142857142857142,7,6000,BOS@CIN,CIN,BOS,,,,,,P
 "3672245363","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-156976:Darren McCaughan,127566-156976,P,Darren,Darren McCaughan,McCaughan,10.333333333333334,3,6000,BOS@CIN,CIN,BOS,,,,,,P
-"3672245365","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-79201:Anthony Kay,127566-79201,P,Anthony,Anthony Kay,Kay,,0,6000,CWS@MIL,CWS,MIL,,,,,,P
+"3672245365","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-79201:Anthony Kay,127566-79201,P,Anthony,Anthony Kay,Kay,,0,6000,CWS@MIL,CWS,MIL,,,,,0,P
 "3672245367","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-229085:Troy Melton,127566-229085,P,Troy,Troy Melton,Melton,13.25,20,6000,DET@SD,DET,SD,IL,Elbow,,,,P
 "3672245369","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-165634:Ken Waldichuk,127566-165634,P,Ken,Ken Waldichuk,Waldichuk,0,1,6000,WSH@CHC,WSH,CHC,,,,,,P
 "3672245370","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-135231:Jared Shuster,127566-135231,P,Jared,Jared Shuster,Shuster,3.4166666666666665,12,5900,TB@STL,STL,TB,,,,,,P
 "3672245371","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102569:Michael Mercado,127566-102569,P,Michael,Michael Mercado,Mercado,2,3,5900,TEX@PHI,PHI,TEX,DTD,Shoulder,,,,P
 "3672245372","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-170174:Chase Silseth,127566-170174,P,Chase,Chase Silseth,Silseth,6.6,10,5900,LAA@HOU,LAA,HOU,,,,,,P
-"3672245373","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-219703:Travis Adams,127566-219703,P,Travis,Travis Adams,Adams,6.444444444444445,18,5900,MIN@BAL,MIN,BAL,O,Elbow,,,,P
+"3672245373","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-219703:Travis Adams,127566-219703,P,Travis,Travis Adams,Adams,6.444444444444445,18,5900,MIN@BAL,MIN,BAL,IL,Triceps,,,,P
 "3672245374","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-82537:DL Hall,127566-82537,P,DL,DL Hall,Hall,7.9,20,5900,CWS@MIL,MIL,CWS,,,,,,P
 "3672245375","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-119449:Jackson Rutledge,127566-119449,P,Jackson,Jackson Rutledge,Rutledge,4.73015873015873,63,5900,WSH@CHC,WSH,CHC,,,,,,P
 "3672245377","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-70470:Albert Suarez,127566-70470,P,Albert,Albert Suarez,Suarez,13.6,5,5900,MIN@BAL,BAL,MIN,,,,,,P
@@ -204,13 +204,13 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245402","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-189299:Victor Mederos,127566-189299,P,Victor,Victor Mederos,Mederos,10.2,5,5800,LAA@HOU,LAA,HOU,,,,,,P
 "3672245403","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-158858:Justin Bruihl,127566-158858,P,Justin,Justin Bruihl,Bruihl,4.125,16,5800,TB@STL,STL,TB,,,,,,P
 "3672245404","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-83098:Austin Gomber,127566-83098,P,Austin,Austin Gomber,Gomber,10.916666666666666,12,5800,TEX@PHI,TEX,PHI,,,,,,P
-"3672245406","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-60637:Sean Newcomb,127566-60637,P,Sean,Sean Newcomb,Newcomb,9.958333333333334,48,5800,CWS@MIL,CWS,MIL,,,,,,P
+"3672245406","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-60637:Sean Newcomb,127566-60637,P,Sean,Sean Newcomb,Newcomb,9.958333333333334,48,5800,CWS@MIL,CWS,MIL,,,,,0,P
 "3672245407","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-165528:Joe Rock,127566-165528,P,Joe,Joe Rock,Rock,16.666666666666668,3,5800,TB@STL,TB,STL,,,,,,P
-"3672245408","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-165578:Ky Bush,127566-165578,P,Ky,Ky Bush,Bush,14.25,4,5800,CWS@MIL,CWS,MIL,O,Elbow,,,,P
+"3672245408","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-165578:Ky Bush,127566-165578,P,Ky,Ky Bush,Bush,14.25,4,5800,CWS@MIL,CWS,MIL,O,Elbow,,,0,P
 "3672245409","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-165618:Chase Petty,127566-165618,P,Chase,Chase Petty,Petty,0,3,5800,BOS@CIN,CIN,BOS,,,,,,P
 "3672245410","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102572:Tobias Myers,127566-102572,P,Tobias,Tobias Myers,Myers,9.173913043478262,23,5700,PIT@NYM,NYM,PIT,,,,,,P
 "3672245413","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102574:Jake Woodford,127566-102574,P,Jake,Jake Woodford,Woodford,4.761904761904762,22,5700,CWS@MIL,MIL,CWS,,,,,,P
-"3672245414","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-198905:Mike Vasil,127566-198905,P,Mike,Mike Vasil,Vasil,10.53191489361702,47,5700,CWS@MIL,CWS,MIL,O,Elbow,,,,P
+"3672245414","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-198905:Mike Vasil,127566-198905,P,Mike,Mike Vasil,Vasil,10.53191489361702,47,5700,CWS@MIL,CWS,MIL,IL,Elbow,,,0,P
 "3672245415","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-119423:Zack Thompson,127566-119423,P,Zack,Zack Thompson,Thompson,11.4,7,5700,TB@STL,STL,TB,IL,Shoulder,,,,P
 "3672245416","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-70559:Mike Clevinger,127566-70559,P,Mike,Mike Clevinger,Clevinger,1.375,8,5700,PIT@NYM,PIT,NYM,,,,,,P
 "3672245417","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-79123:Tyler Alexander,127566-79123,P,Tyler,Tyler Alexander,Alexander,8.14,52,5700,TEX@PHI,TEX,PHI,,,,,,P
@@ -239,14 +239,14 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245456","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102448:Brenan Hanifee,127566-102448,P,Brenan,Brenan Hanifee,Hanifee,4.636363636363637,55,5500,DET@SD,DET,SD,,,,,,P
 "3672245458","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102462:Lyon Richardson,127566-102462,P,Lyon,Lyon Richardson,Richardson,4.5625,34,5500,BOS@CIN,CIN,BOS,,,,,,P
 "3672245459","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-200764:Cam Booser,127566-200764,P,Cam,Cam Booser,Booser,3.923076923076923,39,5500,TB@STL,TB,STL,,,,,,P
-"3672245462","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102464:Jacob Heatherly,127566-102464,P,Jacob,Jacob Heatherly,Heatherly,,0,5500,CWS@MIL,CWS,MIL,,,,,,P
+"3672245462","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102464:Jacob Heatherly,127566-102464,P,Jacob,Jacob Heatherly,Heatherly,,0,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "3672245465","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102470:Rico Garcia,127566-102470,P,Rico,Rico Garcia,Garcia,6.241379310344827,29,5500,MIN@BAL,BAL,MIN,,,,,,P
 "3672245467","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-135262:Anthony Misiewicz,127566-135262,P,Anthony,Anthony Misiewicz,Misiewicz,3.5,5,5500,BOS@CIN,CIN,BOS,,,,,,P
 "3672245469","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-73828:Dan Altavilla,127566-73828,P,Dan,Dan Altavilla,Altavilla,4.666666666666667,28,5500,MIN@BAL,MIN,BAL,,,,,,P
 "3672245471","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102500:Robert Dugger,127566-102500,P,Robert,Robert Dugger,Dugger,,0,5500,TEX@PHI,TEX,PHI,,,,,,P
 "3672245472","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102503:John Rooney,127566-102503,P,John,John Rooney,Rooney,7,1,5500,TB@STL,TB,STL,DTD,Elbow,,,,P
 "3672245473","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-157796:Gabe Klobosits,127566-157796,P,Gabe,Gabe Klobosits,Klobosits,,0,5500,WSH@CHC,CHC,WSH,,,,,,P
-"3672245474","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102505:Edwin Uceta,127566-102505,P,Edwin,Edwin Uceta,Uceta,7.1571428571428575,70,5500,TB@STL,TB,STL,O,Shoulder,,,,P
+"3672245474","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102505:Edwin Uceta,127566-102505,P,Edwin,Edwin Uceta,Uceta,7.1571428571428575,70,5500,TB@STL,TB,STL,IL,Shoulder,,,,P
 "3672245475","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-116847:Cole Sulser,127566-116847,P,Cole,Cole Sulser,Sulser,7.277777777777778,18,5500,TB@STL,TB,STL,,,,,,P
 "3672245476","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-194675:Luke Little,127566-194675,P,Luke,Luke Little,Little,8.5,2,5500,WSH@CHC,CHC,WSH,,,,,,P
 "3672245483","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102515:Aaron Ashby,127566-102515,P,Aaron,Aaron Ashby,Ashby,8.78,50,5500,CWS@MIL,MIL,CWS,,,,,,P
@@ -255,7 +255,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245487","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102517:Jhoan Duran,127566-102517,P,Jhoan,Jhoan Duran,Duran,6.52054794520548,75,5500,TEX@PHI,PHI,TEX,,,,,,P
 "3672245488","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102523:Deivi Garcia,127566-102523,P,Deivi,Deivi Garcia,Garcia,4.285714285714286,14,5500,BOS@CIN,CIN,BOS,,,,,,P
 "3672245489","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-135289:Kodi Whitley,127566-135289,P,Kodi,Kodi Whitley,Whitley,,0,5500,TB@STL,TB,STL,,,,,,P
-"3672245490","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-178306:Bryan Hoeing,127566-178306,P,Bryan,Bryan Hoeing,Hoeing,5.142857142857143,7,5500,DET@SD,SD,DET,O,Elbow,,,,P
+"3672245490","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-178306:Bryan Hoeing,127566-178306,P,Bryan,Bryan Hoeing,Hoeing,5.142857142857143,7,5500,DET@SD,SD,DET,IL,Elbow,,,,P
 "3672245491","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-135300:Wandisson Charles,127566-135300,P,Wandisson,Wandisson Charles,Charles,,0,5500,DET@SD,DET,SD,,,,,,P
 "3672245492","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-231563:Dugan Darnell,127566-231563,P,Dugan,Dugan Darnell,Darnell,4.555555555555555,9,5500,DET@SD,DET,SD,DTD,Hip,,,,P
 "3672245493","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-135304:Tyler Baum,127566-135304,P,Tyler,Tyler Baum,Baum,,0,5500,WSH@CHC,WSH,CHC,,,,,,P
@@ -271,13 +271,13 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245510","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102568:Colin Poche,127566-102568,P,Colin,Colin Poche,Poche,2,14,5500,DET@SD,DET,SD,,,,,,P
 "3672245514","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-135339:Clayton Beeter,127566-135339,P,Clayton,Clayton Beeter,Beeter,5.346153846153846,26,5500,WSH@CHC,WSH,CHC,,,,,,P
 "3672245516","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102570:Sandy Gaston,127566-102570,P,Sandy,Sandy Gaston,Gaston,,0,5500,WSH@CHC,WSH,CHC,,,,,,P
-"3672245517","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-209078:Max Lazar,127566-209078,P,Max,Max Lazar,Lazar,3.9444444444444446,36,5500,TEX@PHI,PHI,TEX,O,Oblique,,,,P
+"3672245517","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-209078:Max Lazar,127566-209078,P,Max,Max Lazar,Lazar,3.9444444444444446,36,5500,TEX@PHI,PHI,TEX,IL,Oblique,,,,P
 "3672245519","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102582:Nick Raquet,127566-102582,P,Nick,Nick Raquet,Raquet,4.5,2,5500,TB@STL,STL,TB,,,,,,P
 "3672245520","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-135358:Dylan File,127566-135358,P,Dylan,Dylan File,File,,0,5500,DET@SD,DET,SD,,,,,,P
 "3672245521","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-102590:Joey Gerber,127566-102590,P,Joey,Joey Gerber,Gerber,11,2,5500,PIT@NYM,NYM,PIT,,,,,,P
 "3672245522","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-145610:Angel Zerpa,127566-145610,P,Angel,Angel Zerpa,Zerpa,4.529411764705882,69,5500,CWS@MIL,MIL,CWS,,,,,,P
 "3672245523","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-145609:Peter Solomon,127566-145609,P,Peter,Peter Solomon,Solomon,,0,5500,WSH@CHC,CHC,WSH,,,,,,P
-"3672245525","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-198874:Noah Schultz,127566-198874,P,Noah,Noah Schultz,Schultz,,0,5500,CWS@MIL,CWS,MIL,,,,,,P
+"3672245525","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-198874:Noah Schultz,127566-198874,P,Noah,Noah Schultz,Schultz,,0,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "3672245528","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-145629:Mason Thompson,127566-145629,P,Mason,Mason Thompson,Thompson,2.0714285714285716,14,5500,TEX@PHI,TEX,PHI,,,,,,P
 "3672245532","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-205032:Daniel Robert,127566-205032,P,Daniel,Daniel Robert,Robert,4.4,15,5500,TEX@PHI,PHI,TEX,O,Chest,,,,P
 "3672245534","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-198920:Dylan Lesko,127566-198920,P,Dylan,Dylan Lesko,Lesko,,0,5500,TB@STL,TB,STL,,,,,,P
@@ -286,20 +286,20 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "3672245541","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-157997:Sean Guenther,127566-157997,P,Sean,Sean Guenther,Guenther,4.111111111111111,9,5500,DET@SD,DET,SD,,,,,,P
 "3672245543","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-180540:Easton McGee,127566-180540,P,Easton,Easton McGee,McGee,6.222222222222222,9,5500,CWS@MIL,MIL,CWS,,,,,,P
 "3672245546","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-174406:Huascar Brazoban,127566-174406,P,Huascar,Huascar Brazoban,Brazoban,6.0576923076923075,52,5500,PIT@NYM,NYM,PIT,,,,,,P
-"3672245549","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-203080:Brandon Eisert,127566-203080,P,Brandon,Brandon Eisert,Eisert,4.819444444444445,72,5500,CWS@MIL,CWS,MIL,,,,,,P
+"3672245549","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-203080:Brandon Eisert,127566-203080,P,Brandon,Brandon Eisert,Eisert,4.819444444444445,72,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "3672245552","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-209224:Orlando Ribalta,127566-209224,P,Orlando,Orlando Ribalta,Ribalta,4.136363636363637,22,5500,WSH@CHC,WSH,CHC,,,,,,P
 "3672245555","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-135525:Adam Seminaris,127566-135525,P,Adam,Adam Seminaris,Seminaris,,0,5500,TEX@PHI,PHI,TEX,,,,,,P
 "3672245559","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-153961:Tayler Saucedo,127566-153961,P,Tayler,Tayler Saucedo,Saucedo,4.3,10,5500,LAA@HOU,LAA,HOU,,,,,,P
 "3672245562","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-225666:Paxton Schultz,127566-225666,P,Paxton,Paxton Schultz,Schultz,9.384615384615385,13,5500,WSH@CHC,WSH,CHC,IL,Elbow,,,,P
 "3672245563","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-225665:Sauryn Lao,127566-225665,P,Sauryn,Sauryn Lao,Lao,6,8,5500,MIN@BAL,BAL,MIN,,,,,,P
-"3672245566","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-158131:Tyler Gilbert,127566-158131,P,Tyler,Tyler Gilbert,Gilbert,5.608695652173913,46,5500,CWS@MIL,CWS,MIL,,,,,,P
+"3672245566","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-158131:Tyler Gilbert,127566-158131,P,Tyler,Tyler Gilbert,Gilbert,5.608695652173913,46,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "3672245568","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-188886:Amos Willingham,127566-188886,P,Amos,Amos Willingham,Willingham,0,1,5500,LAA@HOU,HOU,LAA,,,,,,P
-"3672245571","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-225748:Craig Yoho,127566-225748,P,Craig,Craig Yoho,Yoho,3.25,8,5500,CWS@MIL,MIL,CWS,O,Calf,,,,P
+"3672245571","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-225748:Craig Yoho,127566-225748,P,Craig,Craig Yoho,Yoho,3.25,8,5500,CWS@MIL,MIL,CWS,IL,Calf,,,,P
 "3672245573","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-135645:Isaac Mattson,127566-135645,P,Isaac,Isaac Mattson,Mattson,5.976744186046512,44,5500,PIT@NYM,PIT,NYM,,,,,,P
-"3672245574","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-84452:Caleb Ferguson,127566-84452,P,Caleb,Caleb Ferguson,Ferguson,4.225352112676056,73,5500,BOS@CIN,CIN,BOS,O,Oblique,,,,P
+"3672245574","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-84452:Caleb Ferguson,127566-84452,P,Caleb,Caleb Ferguson,Ferguson,4.225352112676056,73,5500,BOS@CIN,CIN,BOS,IL,Oblique,,,,P
 "3672245577","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-145918:Will Vest,127566-145918,P,Will,Will Vest,Vest,6.594202898550725,69,5500,DET@SD,DET,SD,,,,,,P
 "3672245579","127566-279197668","$10K Thu MLB Pinch Hit (Only $0.25 to Enter)","0.25","","","","","","","","","","",127566-145916:Zach Pop,127566-145916,P,Zach,Zach Pop,Pop,-0.8,5,5500,TEX@PHI,PHI,TEX,,,,,,P
-"","","","","","","","","","","","","","",127566-219654:Juan Carela,127566-219654,P,Juan,Juan Carela,Carela,,0,5500,CWS@MIL,CWS,MIL,O,Elbow,,,,P
+"","","","","","","","","","","","","","",127566-219654:Juan Carela,127566-219654,P,Juan,Juan Carela,Carela,,0,5500,CWS@MIL,CWS,MIL,O,Elbow,,,0,P
 "","","","","","","","","","","","","","",127566-119310:Noah Song,127566-119310,P,Noah,Noah Song,Song,,0,5500,BOS@CIN,BOS,CIN,,,,,,P
 "","","","","","","","","","","","","","",127566-119315:Kohl Franklin,127566-119315,P,Kohl,Kohl Franklin,Franklin,,0,5500,WSH@CHC,CHC,WSH,IL,Elbow,,,,P
 "","","","","","","","","","","","","","",127566-170512:Peter Strzelecki,127566-170512,P,Peter,Peter Strzelecki,Strzelecki,5.3,10,5500,CWS@MIL,MIL,CWS,,,,,,P
@@ -343,8 +343,8 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-82584:JB Bukauskas,127566-82584,P,JB,JB Bukauskas,Bukauskas,5.5,6,5500,CWS@MIL,MIL,CWS,DTD,Lat,,,,P
 "","","","","","","","","","","","","","",127566-82587:Richard Lovelady,127566-82587,P,Richard,Richard Lovelady,Lovelady,3.8,10,5500,PIT@NYM,NYM,PIT,,,,,,P
 "","","","","","","","","","","","","","",127566-82592:Dennis Santana,127566-82592,P,Dennis,Dennis Santana,Santana,5.2,70,5500,PIT@NYM,PIT,NYM,,,,,,P
-"","","","","","","","","","","","","","",127566-164517:Chris Murphy,127566-164517,P,Chris,Chris Murphy,Murphy,7.6521739130434785,23,5500,CWS@MIL,CWS,MIL,,,,,,P
-"","","","","","","","","","","","","","",127566-164522:Wikelman Gonzalez,127566-164522,P,Wikelman,Wikelman Gonzalez,Gonzalez,7.75,16,5500,CWS@MIL,CWS,MIL,DTD,Back,,,,P
+"","","","","","","","","","","","","","",127566-164517:Chris Murphy,127566-164517,P,Chris,Chris Murphy,Murphy,7.6521739130434785,23,5500,CWS@MIL,CWS,MIL,,,,,0,P
+"","","","","","","","","","","","","","",127566-164522:Wikelman Gonzalez,127566-164522,P,Wikelman,Wikelman Gonzalez,Gonzalez,7.75,16,5500,CWS@MIL,CWS,MIL,DTD,Back,,,0,P
 "","","","","","","","","","","","","","",127566-84651:Austin Davis,127566-84651,P,Austin,Austin Davis,Davis,2.5714285714285716,7,5500,DET@SD,SD,DET,,,,,,P
 "","","","","","","","","","","","","","",127566-211632:Mason Montgomery,127566-211632,P,Mason,Mason Montgomery,Montgomery,4.5,57,5500,PIT@NYM,PIT,NYM,,,,,,P
 "","","","","","","","","","","","","","",127566-240308:Daison Acosta,127566-240308,P,Daison,Daison Acosta,Acosta,,0,5500,DET@SD,SD,DET,,,,,,P
@@ -359,16 +359,16 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-82649:Hans Crouse,127566-82649,P,Hans,Hans Crouse,Crouse,7.12,25,5500,MIN@BAL,BAL,MIN,,,,,,P
 "","","","","","","","","","","","","","",127566-228057:Jayvien Sandridge,127566-228057,P,Jayvien,Jayvien Sandridge,Sandridge,2,1,5500,LAA@HOU,LAA,HOU,,,,,,P
 "","","","","","","","","","","","","","",127566-228060:Jack Little,127566-228060,P,Jack,Jack Little,Little,4.5,2,5500,DET@SD,DET,SD,,,,,,P
-"","","","","","","","","","","","","","",127566-82656:Nate Pearson,127566-82656,P,Nate,Nate Pearson,Pearson,1.8181818181818181,11,5500,LAA@HOU,HOU,LAA,O,Elbow,,,,P
+"","","","","","","","","","","","","","",127566-82656:Nate Pearson,127566-82656,P,Nate,Nate Pearson,Pearson,1.8181818181818181,11,5500,LAA@HOU,HOU,LAA,IL,Elbow,,,,P
 "","","","","","","","","","","","","","",127566-240353:Griff McGarry,127566-240353,P,Griff,Griff McGarry,McGarry,,0,5500,TEX@PHI,PHI,TEX,,,,,,P
 "","","","","","","","","","","","","","",127566-187105:Joe La Sorsa,127566-187105,P,Joe,Joe La Sorsa,La Sorsa,0.4,5,5500,PIT@NYM,PIT,NYM,,,,,,P
-"","","","","","","","","","","","","","",127566-240352:Jedixson Paez,127566-240352,P,Jedixson,Jedixson Paez,Paez,,0,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-240352:Jedixson Paez,127566-240352,P,Jedixson,Jedixson Paez,Paez,,0,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-187110:Ben Joyce,127566-187110,P,Ben,Ben Joyce,Joyce,2.6,5,5500,LAA@HOU,LAA,HOU,IL,Shoulder,,,,P
 "","","","","","","","","","","","","","",127566-240359:Matt Pushard,127566-240359,P,Matt,Matt Pushard,Pushard,,0,5500,TB@STL,STL,TB,,,,,,P
 "","","","","","","","","","","","","","",127566-240358:Ryan Watson,127566-240358,P,Ryan,Ryan Watson,Watson,,0,5500,BOS@CIN,BOS,CIN,,,,,,P
 "","","","","","","","","","","","","","",127566-240357:Carter Baumler,127566-240357,P,Carter,Carter Baumler,Baumler,,0,5500,TEX@PHI,TEX,PHI,,,,,,P
 "","","","","","","","","","","","","","",127566-240363:Alexander Alberto,127566-240363,P,Alexander,Alexander Alberto,Alberto,,0,5500,TB@STL,TB,STL,,,,,,P
-"","","","","","","","","","","","","","",127566-228072:Jake Palisch,127566-228072,P,Jake,Jake Palisch,Palisch,-3,1,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-228072:Jake Palisch,127566-228072,P,Jake,Jake Palisch,Palisch,-3,1,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-187121:Grant Anderson,127566-187121,P,Grant,Grant Anderson,Anderson,5.617647058823529,68,5500,CWS@MIL,MIL,CWS,,,,,,P
 "","","","","","","","","","","","","","",127566-201456:Chris Roycroft,127566-201456,P,Chris,Chris Roycroft,Roycroft,2.95,20,5500,TB@STL,STL,TB,,,,,,P
 "","","","","","","","","","","","","","",127566-84727:Drew Smith,127566-84727,P,Drew,Drew Smith,Smith,5.7894736842105265,19,5500,WSH@CHC,WSH,CHC,,,,,,P
@@ -376,20 +376,20 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-154368:Vinny Nittoli,127566-154368,P,Vinny,Vinny Nittoli,Nittoli,6,9,5500,BOS@CIN,BOS,CIN,O,Elbow,,,,P
 "","","","","","","","","","","","","","",127566-228101:Jonathan Pintaro,127566-228101,P,Jonathan,Jonathan Pintaro,Pintaro,-1,1,5500,PIT@NYM,NYM,PIT,,,,,,P
 "","","","","","","","","","","","","","",127566-211737:Luis Guerrero,127566-211737,P,Luis,Luis Guerrero,Guerrero,4.461538461538462,13,5500,TB@STL,TB,STL,,,,,,P
-"","","","","","","","","","","","","","",127566-199460:Jordan Leasure,127566-199460,P,Jordan,Jordan Leasure,Leasure,5.746268656716418,68,5500,CWS@MIL,CWS,MIL,,,,,,P
-"","","","","","","","","","","","","","",127566-135976:Bennett Sousa,127566-135976,P,Bennett,Bennett Sousa,Sousa,7.232558139534884,44,5500,LAA@HOU,HOU,LAA,O,Oblique,,,,P
+"","","","","","","","","","","","","","",127566-199460:Jordan Leasure,127566-199460,P,Jordan,Jordan Leasure,Leasure,5.746268656716418,68,5500,CWS@MIL,CWS,MIL,,,,,0,P
+"","","","","","","","","","","","","","",127566-135976:Bennett Sousa,127566-135976,P,Bennett,Bennett Sousa,Sousa,7.232558139534884,44,5500,LAA@HOU,HOU,LAA,IL,Oblique,,,,P
 "","","","","","","","","","","","","","",127566-178997:Greg Weissert,127566-178997,P,Greg,Greg Weissert,Weissert,4.767123287671233,73,5500,BOS@CIN,BOS,CIN,,,,,,P
 "","","","","","","","","","","","","","",127566-213816:Evan Sisk,127566-213816,P,Evan,Evan Sisk,Sisk,5.947368421052632,19,5500,PIT@NYM,PIT,NYM,,,,,,P
 "","","","","","","","","","","","","","",127566-119622:Matt Allan,127566-119622,P,Matt,Matt Allan,Allan,,0,5500,PIT@NYM,NYM,PIT,,,,,,P
-"","","","","","","","","","","","","","",127566-232267:David Sandlin,127566-232267,P,David,David Sandlin,Sandlin,,0,5500,CWS@MIL,CWS,MIL,O,Elbow,,,,P
+"","","","","","","","","","","","","","",127566-232267:David Sandlin,127566-232267,P,David,David Sandlin,Sandlin,,0,5500,CWS@MIL,CWS,MIL,O,Elbow,,,0,P
 "","","","","","","","","","","","","","",127566-70482:J.B. Wendelken,127566-70482,P,J.B.,J.B. Wendelken,Wendelken,,0,5500,DET@SD,SD,DET,,,,,,P
 "","","","","","","","","","","","","","",127566-11108:Aroldis Chapman,127566-11108,P,Aroldis,Aroldis Chapman,Chapman,6.768115942028985,69,5500,BOS@CIN,BOS,CIN,,,,,,P
 "","","","","","","","","","","","","","",127566-68466:Steven Okert,127566-68466,P,Steven,Steven Okert,Okert,6.073529411764706,68,5500,LAA@HOU,HOU,LAA,,,,,,P
 "","","","","","","","","","","","","","",127566-15225:Liam Hendriks,127566-15225,P,Liam,Liam Hendriks,Hendriks,3.357142857142857,14,5500,MIN@BAL,MIN,BAL,,,,,,P
-"","","","","","","","","","","","","","",127566-68474:Josh Hader,127566-68474,P,Josh,Josh Hader,Hader,8.041666666666666,48,5500,LAA@HOU,HOU,LAA,O,Biceps,,,,P
+"","","","","","","","","","","","","","",127566-68474:Josh Hader,127566-68474,P,Josh,Josh Hader,Hader,8.041666666666666,48,5500,LAA@HOU,HOU,LAA,IL,Biceps,,,,P
 "","","","","","","","","","","","","","",127566-68476:Taylor Rogers,127566-68476,P,Taylor,Taylor Rogers,Rogers,5,58,5500,MIN@BAL,MIN,BAL,,,,,,P
 "","","","","","","","","","","","","","",127566-68487:Tayron Guerrero,127566-68487,P,Tayron,Tayron Guerrero,Guerrero,,0,5500,BOS@CIN,BOS,CIN,,,,,,P
-"","","","","","","","","","","","","","",127566-68490:Austin Voth,127566-68490,P,Austin,Austin Voth,Voth,4.661538461538462,68,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-68490:Austin Voth,127566-68490,P,Austin,Austin Voth,Voth,4.661538461538462,68,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-170889:Aneurys Zabala,127566-170889,P,Aneurys,Aneurys Zabala,Zabala,,0,5500,LAA@HOU,LAA,HOU,,,,,,P
 "","","","","","","","","","","","","","",127566-23437:Brooks Raley,127566-23437,P,Brooks,Brooks Raley,Raley,4.966666666666667,30,5500,PIT@NYM,NYM,PIT,,,,,,P
 "","","","","","","","","","","","","","",127566-82836:Julian Fernandez,127566-82836,P,Julian,Julian Fernandez,Fernandez,6.75,4,5500,WSH@CHC,WSH,CHC,,,,,,P
@@ -397,11 +397,11 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-68515:Sam Moll,127566-68515,P,Sam,Sam Moll,Moll,3.8260869565217392,23,5500,BOS@CIN,CIN,BOS,,,,,,P
 "","","","","","","","","","","","","","",127566-39843:Burch Smith,127566-39843,P,Burch,Burch Smith,Smith,4.76,50,5500,DET@SD,DET,SD,,,,,,P
 "","","","","","","","","","","","","","",127566-179118:Zack Kelly,127566-179118,P,Zack,Zack Kelly,Kelly,5.964285714285714,29,5500,BOS@CIN,BOS,CIN,,,,,,P
-"","","","","","","","","","","","","","",127566-52141:Lucas Sims,127566-52141,P,Lucas,Lucas Sims,Sims,1.5625,18,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-52141:Lucas Sims,127566-52141,P,Lucas,Lucas Sims,Sims,1.5625,18,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-52143:Hunter Harvey,127566-52143,P,Hunter,Hunter Harvey,Harvey,5.916666666666667,12,5500,WSH@CHC,CHC,WSH,,,,,,P
 "","","","","","","","","","","","","","",127566-52146:Carl Edwards Jr.,127566-52146,P,Carl,Carl Edwards Jr.,Edwards Jr.,6.75,4,5500,PIT@NYM,NYM,PIT,,,,,,P
 "","","","","","","","","","","","","","",127566-52148:Pierce Johnson,127566-52148,P,Pierce,Pierce Johnson,Johnson,4.8,65,5500,BOS@CIN,CIN,BOS,,,,,,P
-"","","","","","","","","","","","","","",127566-52152:Robert Stephenson,127566-52152,P,Robert,Robert Stephenson,Stephenson,5.7272727272727275,12,5500,LAA@HOU,LAA,HOU,O,Shoulder,,,,P
+"","","","","","","","","","","","","","",127566-52152:Robert Stephenson,127566-52152,P,Robert,Robert Stephenson,Stephenson,5.7272727272727275,12,5500,LAA@HOU,LAA,HOU,IL,Elbow,,,,P
 "","","","","","","","","","","","","","",127566-179129:Jeremiah Estrada,127566-179129,P,Jeremiah,Jeremiah Estrada,Estrada,6.333333333333333,79,5500,DET@SD,SD,DET,,,,,,P
 "","","","","","","","","","","","","","",127566-68551:Tyler Beede,127566-68551,P,Tyler,Tyler Beede,Beede,4.846153846153846,13,5500,WSH@CHC,CHC,WSH,,,,,,P
 "","","","","","","","","","","","","","",127566-68561:Luke Weaver,127566-68561,P,Luke,Luke Weaver,Weaver,5.2615384615384615,67,5500,PIT@NYM,NYM,PIT,,,,,,P
@@ -427,12 +427,12 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-203863:Gordon Graceffo,127566-203863,P,Gordon,Gordon Graceffo,Graceffo,6.8076923076923075,26,5500,TB@STL,STL,TB,,,,,,P
 "","","","","","","","","","","","","","",127566-189528:Robert Garcia,127566-189528,P,Robert,Robert Garcia,Garcia,5.1,71,5500,TEX@PHI,TEX,PHI,,,,,,P
 "","","","","","","","","","","","","","",127566-189529:Alek Jacob,127566-189529,P,Alek,Alek Jacob,Jacob,4.068965517241379,29,5500,DET@SD,SD,DET,,,,,,P
-"","","","","","","","","","","","","","",127566-195682:Orion Kerkering,127566-195682,P,Orion,Orion Kerkering,Kerkering,5.183098591549296,73,5500,TEX@PHI,PHI,TEX,O,Hamstring,,,,P
+"","","","","","","","","","","","","","",127566-195682:Orion Kerkering,127566-195682,P,Orion,Orion Kerkering,Kerkering,5.183098591549296,73,5500,TEX@PHI,PHI,TEX,IL,Hamstring,,,,P
 "","","","","","","","","","","","","","",127566-195681:Jose Espada,127566-195681,P,Jose,Jose Espada,Espada,21,1,5500,MIN@BAL,BAL,MIN,,,,,,P
 "","","","","","","","","","","","","","",127566-226411:David Morgan,127566-226411,P,David,David Morgan,Morgan,6.463414634146342,42,5500,DET@SD,SD,DET,,,,,,P
-"","","","","","","","","","","","","","",127566-83054:Justin Anderson,127566-83054,P,Justin,Justin Anderson,Anderson,4.796296296296297,56,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-83054:Justin Anderson,127566-83054,P,Justin,Justin Anderson,Anderson,4.796296296296297,56,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-232563:Drew Sommers,127566-232563,P,Drew,Drew Sommers,Sommers,0,4,5500,DET@SD,DET,SD,,,,,,P
-"","","","","","","","","","","","","","",127566-85108:Enyel De Los Santos,127566-85108,P,Enyel,Enyel De Los Santos,De Los Santos,5.225806451612903,65,5500,LAA@HOU,HOU,LAA,,,,,,P
+"","","","","","","","","","","","","","",127566-85108:Enyel De Los Santos,127566-85108,P,Enyel,Enyel De Los Santos,De Los Santos,5.225806451612903,65,5500,LAA@HOU,HOU,LAA,IL,Knee,,,,P
 "","","","","","","","","","","","","","",127566-240767:Joel Valdez,127566-240767,P,Joel,Joel Valdez,Valdez,,0,5500,BOS@CIN,CIN,BOS,DTD,Shoulder,,,,P
 "","","","","","","","","","","","","","",127566-13438:Drew Pomeranz,127566-13438,P,Drew,Drew Pomeranz,Pomeranz,5.317460317460317,63,5500,LAA@HOU,LAA,HOU,,,,,,P
 "","","","","","","","","","","","","","",127566-54403:Trevor Gott,127566-54403,P,Trevor,Trevor Gott,Gott,0,1,5500,WSH@CHC,WSH,CHC,,,,,,P
@@ -440,26 +440,26 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-232576:Zach Maxwell,127566-232576,P,Zach,Zach Maxwell,Maxwell,6.75,8,5500,BOS@CIN,CIN,BOS,,,,,,P
 "","","","","","","","","","","","","","",127566-179339:Bryce Montes de Oca,127566-179339,P,Bryce,Bryce Montes de Oca,Montes de Oca,,0,5500,WSH@CHC,WSH,CHC,,,,,,P
 "","","","","","","","","","","","","","",127566-83097:D.J. Snelten,127566-83097,P,D.J.,D.J. Snelten,Snelten,,0,5500,DET@SD,SD,DET,,,,,,P
-"","","","","","","","","","","","","","",127566-81052:Andrew Kittredge,127566-81052,P,Andrew,Andrew Kittredge,Kittredge,5.593220338983051,59,5500,MIN@BAL,BAL,MIN,O,Shoulder,,,,P
+"","","","","","","","","","","","","","",127566-81052:Andrew Kittredge,127566-81052,P,Andrew,Andrew Kittredge,Kittredge,5.593220338983051,59,5500,MIN@BAL,BAL,MIN,IL,Shoulder,,,,P
 "","","","","","","","","","","","","","",127566-152733:Griffin Jax,127566-152733,P,Griffin,Griffin Jax,Jax,5.746478873239437,73,5500,TB@STL,TB,STL,,,,,,P
-"","","","","","","","","","","","","","",127566-83158:Seranthony Dominguez,127566-83158,P,Seranthony,Seranthony Dominguez,Dominguez,5.6923076923076925,79,5500,CWS@MIL,CWS,MIL,,,,,,P
-"","","","","","","","","","","","","","",127566-38106:Kirby Yates,127566-38106,P,Kirby,Kirby Yates,Yates,4.833333333333333,50,5500,LAA@HOU,LAA,HOU,,,,,,P
+"","","","","","","","","","","","","","",127566-83158:Seranthony Dominguez,127566-83158,P,Seranthony,Seranthony Dominguez,Dominguez,5.6923076923076925,79,5500,CWS@MIL,CWS,MIL,,,,,0,P
+"","","","","","","","","","","","","","",127566-38106:Kirby Yates,127566-38106,P,Kirby,Kirby Yates,Yates,4.833333333333333,50,5500,LAA@HOU,LAA,HOU,IL,Knee,,,,P
 "","","","","","","","","","","","","","",127566-79066:Anthony Banda,127566-79066,P,Anthony,Anthony Banda,Banda,4.448717948717949,78,5500,MIN@BAL,MIN,BAL,,,,,,P
 "","","","","","","","","","","","","","",127566-60640:Nick Burdi,127566-60640,P,Nick,Nick Burdi,Burdi,7.75,4,5500,PIT@NYM,NYM,PIT,,,,,,P
 "","","","","","","","","","","","","","",127566-79072:Brad Keller,127566-79072,P,Brad,Brad Keller,Keller,6.013698630136986,73,5500,TEX@PHI,PHI,TEX,,,,,,P
 "","","","","","","","","","","","","","",127566-83170:Thomas Pannone,127566-83170,P,Thomas,Thomas Pannone,Pannone,,0,5500,CWS@MIL,MIL,CWS,DTD,Forearm,,,,P
 "","","","","","","","","","","","","","",127566-83172:Jonathan Hernandez,127566-83172,P,Jonathan,Jonathan Hernandez,Hernandez,6.448275862068965,29,5500,TEX@PHI,PHI,TEX,,,,,,P
 "","","","","","","","","","","","","","",127566-136424:Jake Brentz,127566-136424,P,Jake,Jake Brentz,Brentz,0,1,5500,WSH@CHC,CHC,WSH,,,,,,P
-"","","","","","","","","","","","","","",127566-79085:Keegan Akin,127566-79085,P,Keegan,Keegan Akin,Akin,5.158730158730159,64,5500,MIN@BAL,BAL,MIN,DTD,Thigh,,,,P
+"","","","","","","","","","","","","","",127566-79085:Keegan Akin,127566-79085,P,Keegan,Keegan Akin,Akin,5.158730158730159,64,5500,MIN@BAL,BAL,MIN,IL,Groin,,,,P
 "","","","","","","","","","","","","","",127566-146670:Christian Roa,127566-146670,P,Christian,Christian Roa,Roa,9,2,5500,LAA@HOU,HOU,LAA,,,,,,P
 "","","","","","","","","","","","","","",127566-83184:Julian Merryweather,127566-83184,P,Julian,Julian Merryweather,Merryweather,3.0952380952380953,21,5500,MIN@BAL,MIN,BAL,DTD,Hamstring,,,,P
 "","","","","","","","","","","","","","",127566-79097:Bryan Hudson,127566-79097,P,Bryan,Bryan Hudson,Hudson,4.875,16,5500,PIT@NYM,NYM,PIT,,,,,,P
-"","","","","","","","","","","","","","",127566-197887:Porter Hodge,127566-197887,P,Porter,Porter Hodge,Hodge,4.5,36,5500,WSH@CHC,CHC,WSH,O,Elbow,,,,P
-"","","","","","","","","","","","","","",127566-146684:Jared Kelley,127566-146684,P,Jared,Jared Kelley,Kelley,,0,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-197887:Porter Hodge,127566-197887,P,Porter,Porter Hodge,Hodge,4.5,36,5500,WSH@CHC,CHC,WSH,IL,Elbow,,,,P
+"","","","","","","","","","","","","","",127566-146684:Jared Kelley,127566-146684,P,Jared,Jared Kelley,Kelley,,0,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-197884:Yoniel Curet,127566-197884,P,Yoniel,Yoniel Curet,Curet,0,1,5500,TEX@PHI,PHI,TEX,,,,,,P
 "","","","","","","","","","","","","","",127566-197890:Marc Church,127566-197890,P,Marc,Marc Church,Church,4.6,5,5500,TEX@PHI,TEX,PHI,,,,,,P
 "","","","","","","","","","","","","","",127566-146688:Alex Santos II,127566-146688,P,Alex,Alex Santos II,Santos II,,0,5500,LAA@HOU,HOU,LAA,,,,,,P
-"","","","","","","","","","","","","","",127566-197888:Bailey Horn,127566-197888,P,Bailey,Bailey Horn,Horn,5.8,10,5500,DET@SD,DET,SD,O,Elbow,,,,P
+"","","","","","","","","","","","","","",127566-197888:Bailey Horn,127566-197888,P,Bailey,Bailey Horn,Horn,5.8,10,5500,DET@SD,DET,SD,IL,Elbow,,,,P
 "","","","","","","","","","","","","","",127566-21764:Caleb Thielbar,127566-21764,P,Caleb,Caleb Thielbar,Thielbar,4.652777777777778,72,5500,WSH@CHC,CHC,WSH,,,,,,P
 "","","","","","","","","","","","","","",127566-85255:Shaun Anderson,127566-85255,P,Shaun,Shaun Anderson,Anderson,4.857142857142857,7,5500,LAA@HOU,LAA,HOU,,,,,,P
 "","","","","","","","","","","","","","",127566-72971:Ben Heller,127566-72971,P,Ben,Ben Heller,Heller,4.5,8,5500,WSH@CHC,CHC,WSH,,,,,,P
@@ -468,11 +468,11 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-197900:Luis Perales,127566-197900,P,Luis,Luis Perales,Perales,0,2,5500,WSH@CHC,WSH,CHC,,,,,,P
 "","","","","","","","","","","","","","",127566-146706:Robert Dominguez,127566-146706,P,Robert,Robert Dominguez,Dominguez,,0,5500,PIT@NYM,NYM,PIT,,,,,,P
 "","","","","","","","","","","","","","",127566-187669:Ty Adcock,127566-187669,P,Ty,Ty Adcock,Adcock,7,3,5500,DET@SD,SD,DET,,,,,,P
-"","","","","","","","","","","","","","",127566-197919:Jairo Iriarte,127566-197919,P,Jairo,Jairo Iriarte,Iriarte,5.5,6,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-197919:Jairo Iriarte,127566-197919,P,Jairo,Jairo Iriarte,Iriarte,5.5,6,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-79135:Beau Burrows,127566-79135,P,Beau,Beau Burrows,Burrows,,0,5500,PIT@NYM,PIT,NYM,,,,,,P
 "","","","","","","","","","","","","","",127566-197916:Anthony Maldonado,127566-197916,P,Anthony,Anthony Maldonado,Maldonado,2.5,6,5500,LAA@HOU,HOU,LAA,,,,,,P
 "","","","","","","","","","","","","","",127566-179490:Cole Waites,127566-179490,P,Cole,Cole Waites,Waites,,0,5500,DET@SD,DET,SD,,,,,,P
-"","","","","","","","","","","","","","",127566-83232:Jason Adam,127566-83232,P,Jason,Jason Adam,Adam,6.338461538461538,65,5500,DET@SD,SD,DET,O,Quadriceps,,,,P
+"","","","","","","","","","","","","","",127566-83232:Jason Adam,127566-83232,P,Jason,Jason Adam,Adam,6.338461538461538,65,5500,DET@SD,SD,DET,IL,Quadriceps,,,,P
 "","","","","","","","","","","","","","",127566-146723:Eddy Yean,127566-146723,P,Eddy,Eddy Yean,Yean,,0,5500,WSH@CHC,WSH,CHC,,,,,,P
 "","","","","","","","","","","","","","",127566-85286:Ian Gibaut,127566-85286,P,Ian,Ian Gibaut,Gibaut,3.28,25,5500,BOS@CIN,CIN,BOS,,,,,,P
 "","","","","","","","","","","","","","",127566-79144:Scott Blewett,127566-79144,P,Scott,Scott Blewett,Blewett,6.730769230769231,26,5500,TB@STL,STL,TB,,,,,,P
@@ -485,9 +485,9 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-238911:Jake Bennett,127566-238911,P,Jake,Jake Bennett,Bennett,,0,5500,BOS@CIN,BOS,CIN,,,,,,P
 "","","","","","","","","","","","","","",127566-238909:Riley Cornelio,127566-238909,P,Riley,Riley Cornelio,Cornelio,,0,5500,WSH@CHC,WSH,CHC,,,,,,P
 "","","","","","","","","","","","","","",127566-79171:Phil Bickford,127566-79171,P,Phil,Phil Bickford,Bickford,2.375,8,5500,DET@SD,DET,SD,DTD,Triceps,,,,P
-"","","","","","","","","","","","","","",127566-238913:Duncan Davitt,127566-238913,P,Duncan,Duncan Davitt,Davitt,,0,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-238913:Duncan Davitt,127566-238913,P,Duncan,Duncan Davitt,Davitt,,0,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-228678:Sam Benschoter,127566-228678,P,Sam,Sam Benschoter,Benschoter,,0,5500,BOS@CIN,CIN,BOS,,,,,,P
-"","","","","","","","","","","","","","",127566-181583:Prelander Berroa,127566-181583,P,Prelander,Prelander Berroa,Berroa,7.0588235294117645,17,5500,CWS@MIL,CWS,MIL,O,Elbow,,,,P
+"","","","","","","","","","","","","","",127566-181583:Prelander Berroa,127566-181583,P,Prelander,Prelander Berroa,Berroa,7.0588235294117645,17,5500,CWS@MIL,CWS,MIL,IL,Elbow,,,0,P
 "","","","","","","","","","","","","","",127566-197975:Cooper Hjerpe,127566-197975,P,Cooper,Cooper Hjerpe,Hjerpe,,0,5500,TB@STL,STL,TB,O,Elbow,,,,P
 "","","","","","","","","","","","","","",127566-204119:Jacob Bosiokovic,127566-204119,P,Jacob,Jacob Bosiokovic,Bosiokovic,,0,5500,MIN@BAL,MIN,BAL,,,,,,P
 "","","","","","","","","","","","","","",127566-21846:Chris Devenski,127566-21846,P,Chris,Chris Devenski,Devenski,6.153846153846154,13,5500,PIT@NYM,PIT,NYM,O,Head,,,,P
@@ -521,7 +521,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-101824:Kyle Keller,127566-101824,P,Kyle,Kyle Keller,Keller,,0,5500,BOS@CIN,BOS,CIN,,,,,,P
 "","","","","","","","","","","","","","",127566-101829:Trey Supak,127566-101829,P,Trey,Trey Supak,Supak,,0,5500,TEX@PHI,TEX,PHI,,,,,,P
 "","","","","","","","","","","","","","",127566-118217:Manuel Rodriguez,127566-118217,P,Manuel,Manuel Rodriguez,Rodriguez,4.870967741935484,31,5500,TB@STL,TB,STL,IL,Elbow,,,,P
-"","","","","","","","","","","","","","",127566-118216:Tyson Miller,127566-118216,P,Tyson,Tyson Miller,Miller,5.689655172413793,58,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-118216:Tyson Miller,127566-118216,P,Tyson,Tyson Miller,Miller,5.689655172413793,58,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-239054:Jake Miller,127566-239054,P,Jake,Jake Miller,Miller,,0,5500,DET@SD,DET,SD,O,Hip,,,,P
 "","","","","","","","","","","","","","",127566-239059:Alex McFarlane,127566-239059,P,Alex,Alex McFarlane,McFarlane,,0,5500,TEX@PHI,PHI,TEX,,,,,,P
 "","","","","","","","","","","","","","",127566-118224:Garrett Cleavinger,127566-118224,P,Garrett,Garrett Cleavinger,Cleavinger,5.96969696969697,67,5500,TB@STL,TB,STL,,,,,,P
@@ -546,12 +546,12 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-181803:Zak Kent,127566-181803,P,Zak,Zak Kent,Kent,6.666666666666667,12,5500,MIN@BAL,MIN,BAL,,,,,,P
 "","","","","","","","","","","","","","",127566-79402:Cionel Perez,127566-79402,P,Cionel,Cionel Perez,Perez,3.5789473684210527,19,5500,WSH@CHC,WSH,CHC,,,,,,P
 "","","","","","","","","","","","","","",127566-228913:PJ Poulin,127566-228913,P,PJ,PJ Poulin,Poulin,4.892857142857143,28,5500,WSH@CHC,WSH,CHC,,,,,,P
-"","","","","","","","","","","","","","",127566-222783:Grant Taylor,127566-222783,P,Grant,Grant Taylor,Taylor,6.588235294117647,36,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-222783:Grant Taylor,127566-222783,P,Grant,Grant Taylor,Taylor,6.588235294117647,36,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-239167:Wilber Dotel,127566-239167,P,Wilber,Wilber Dotel,Dotel,,0,5500,PIT@NYM,PIT,NYM,,,,,,P
 "","","","","","","","","","","","","","",127566-239165:Antwone Kelly,127566-239165,P,Antwone,Antwone Kelly,Kelly,,0,5500,PIT@NYM,PIT,NYM,,,,,,P
 "","","","","","","","","","","","","","",127566-222786:Raul Alcantara,127566-222786,P,Raul,Raul Alcantara,Alcantara,,0,5500,CWS@MIL,MIL,CWS,,,,,,P
 "","","","","","","","","","","","","","",127566-239169:Tyler Samaniego,127566-239169,P,Tyler,Tyler Samaniego,Samaniego,,0,5500,BOS@CIN,BOS,CIN,,,,,,P
-"","","","","","","","","","","","","","",127566-222784:Hagen Smith,127566-222784,P,Hagen,Hagen Smith,Smith,,0,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-222784:Hagen Smith,127566-222784,P,Hagen,Hagen Smith,Smith,,0,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-239168:Brandan Bidois,127566-239168,P,Brandan,Brandan Bidois,Bidois,,0,5500,PIT@NYM,PIT,NYM,,,,,,P
 "","","","","","","","","","","","","","",127566-181838:Abner Uribe,127566-181838,P,Abner,Abner Uribe,Uribe,6.275,80,5500,CWS@MIL,MIL,CWS,,,,,,P
 "","","","","","","","","","","","","","",127566-181842:Eli Villalobos,127566-181842,P,Eli,Eli Villalobos,Villalobos,6.333333333333333,3,5500,DET@SD,SD,DET,,,,,,P
@@ -584,7 +584,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-222857:Jackson Baumeister,127566-222857,P,Jackson,Jackson Baumeister,Baumeister,,0,5500,TB@STL,TB,STL,,,,,,P
 "","","","","","","","","","","","","","",127566-222856:Trevor Harrison,127566-222856,P,Trevor,Trevor Harrison,Harrison,,0,5500,TB@STL,TB,STL,,,,,,P
 "","","","","","","","","","","","","","",127566-190092:Devin Sweet,127566-190092,P,Devin,Devin Sweet,Sweet,,0,5500,BOS@CIN,BOS,CIN,,,,,,P
-"","","","","","","","","","","","","","",127566-73362:Rob Zastryzny,127566-73362,P,Rob,Rob Zastryzny,Zastryzny,4.615384615384615,26,5500,CWS@MIL,MIL,CWS,O,Back,,,,P
+"","","","","","","","","","","","","","",127566-73362:Rob Zastryzny,127566-73362,P,Rob,Rob Zastryzny,Zastryzny,4.615384615384615,26,5500,CWS@MIL,MIL,CWS,IL,Shoulder,,,,P
 "","","","","","","","","","","","","","",127566-163480:Anderson Severino,127566-163480,P,Anderson,Anderson Severino,Severino,,0,5500,PIT@NYM,NYM,PIT,,,,,,P
 "","","","","","","","","","","","","","",127566-226969:Brian Van Belle,127566-226969,P,Brian,Brian Van Belle,Van Belle,8.5,4,5500,TB@STL,TB,STL,O,Elbow,,,,P
 "","","","","","","","","","","","","","",127566-226968:Kyle Backhus,127566-226968,P,Kyle,Kyle Backhus,Backhus,3.21875,32,5500,TEX@PHI,PHI,TEX,,,,,,P
@@ -593,7 +593,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-169636:Beau Brieske,127566-169636,P,Beau,Beau Brieske,Brieske,3.272727272727273,22,5500,DET@SD,DET,SD,IL,Groin,,,,P
 "","","","","","","","","","","","","","",127566-220837:Evan Reifert,127566-220837,P,Evan,Evan Reifert,Reifert,,0,5500,TB@STL,TB,STL,,,,,,P
 "","","","","","","","","","","","","","",127566-226980:Andre Granillo,127566-226980,P,Andre,Andre Granillo,Granillo,6.428571428571429,14,5500,WSH@CHC,WSH,CHC,,,,,,P
-"","","","","","","","","","","","","","",127566-165545:Tanner McDougal,127566-165545,P,Tanner,Tanner McDougal,McDougal,,0,5500,CWS@MIL,CWS,MIL,,,,,,P
+"","","","","","","","","","","","","","",127566-165545:Tanner McDougal,127566-165545,P,Tanner,Tanner McDougal,McDougal,,0,5500,CWS@MIL,CWS,MIL,,,,,0,P
 "","","","","","","","","","","","","","",127566-220847:Grant Wolfram,127566-220847,P,Grant,Grant Wolfram,Wolfram,6.809523809523809,21,5500,MIN@BAL,BAL,MIN,,,,,,P
 "","","","","","","","","","","","","","",127566-220845:Juan Nunez,127566-220845,P,Juan,Juan Nunez,Nunez,,0,5500,MIN@BAL,BAL,MIN,,,,,,P
 "","","","","","","","","","","","","","",127566-163507:Alan Rangel,127566-163507,P,Alan,Alan Rangel,Rangel,9.6,5,5500,TEX@PHI,PHI,TEX,,,,,,P
@@ -615,7 +615,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-198356:Justin Slaten,127566-198356,P,Justin,Justin Slaten,Slaten,3.972972972972973,38,5500,BOS@CIN,BOS,CIN,,,,,,P
 "","","","","","","","","","","","","","",127566-141024:Bruce Zimmermann,127566-141024,P,Bruce,Bruce Zimmermann,Zimmermann,6,1,5500,TB@STL,STL,TB,,,,,,P
 "","","","","","","","","","","","","","",127566-81640:Yacksel Rios,127566-81640,P,Yacksel,Yacksel Rios,Rios,,0,5500,WSH@CHC,CHC,WSH,,,,,,P
-"","","","","","","","","","","","","","",127566-81642:A.J. Minter,127566-81642,P,A.J.,A.J. Minter,Minter,5.3076923076923075,13,5500,PIT@NYM,NYM,PIT,O,Lat,,,,P
+"","","","","","","","","","","","","","",127566-81642:A.J. Minter,127566-81642,P,A.J.,A.J. Minter,Minter,5.3076923076923075,13,5500,PIT@NYM,NYM,PIT,IL,Lat,,,,P
 "","","","","","","","","","","","","","",127566-165621:Russell Smith,127566-165621,P,Russell,Russell Smith,Smith,,0,5500,CWS@MIL,MIL,CWS,,,,,,P
 "","","","","","","","","","","","","","",127566-182005:Kevin Kelly,127566-182005,P,Kevin,Kevin Kelly,Kelly,3.95,41,5500,TB@STL,TB,STL,,,,,,P
 "","","","","","","","","","","","","","",127566-165625:Calvin Ziegler,127566-165625,P,Calvin,Calvin Ziegler,Ziegler,,0,5500,PIT@NYM,NYM,PIT,DTD,Elbow,,,,P
@@ -637,7 +637,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-165696:Ian Bedell,127566-165696,P,Ian,Ian Bedell,Bedell,,0,5500,TB@STL,STL,TB,,,,,,P
 "","","","","","","","","","","","","","",127566-163654:Alexis Diaz,127566-163654,P,Alexis,Alexis Diaz,Diaz,3.4444444444444446,18,5500,TEX@PHI,TEX,PHI,,,,,,P
 "","","","","","","","","","","","","","",127566-163655:Daniel Duarte,127566-163655,P,Daniel,Daniel Duarte,Duarte,12,3,5500,PIT@NYM,NYM,PIT,,,,,,P
-"","","","","","","","","","","","","","",127566-163660:Steven Wilson,127566-163660,P,Steven,Steven Wilson,Wilson,4.620689655172414,59,5500,TB@STL,TB,STL,O,Back,,,,P
+"","","","","","","","","","","","","","",127566-163660:Steven Wilson,127566-163660,P,Steven,Steven Wilson,Wilson,4.620689655172414,59,5500,TB@STL,TB,STL,IL,Back,,,,P
 "","","","","","","","","","","","","","",127566-204624:Eric Orze,127566-204624,P,Eric,Eric Orze,Orze,6.333333333333333,33,5500,MIN@BAL,MIN,BAL,,,,,,P
 "","","","","","","","","","","","","","",127566-204631:Hunter Bigge,127566-204631,P,Hunter,Hunter Bigge,Bigge,5.3076923076923075,13,5500,TB@STL,TB,STL,,,,,,P
 "","","","","","","","","","","","","","",127566-165716:Sem Robberse,127566-165716,P,Sem,Sem Robberse,Robberse,0,2,5500,TB@STL,STL,TB,IL,Elbow,,,,P
@@ -655,7 +655,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-102324:Konnor Pilkington,127566-102324,P,Konnor,Konnor Pilkington,Pilkington,4.90625,32,5500,DET@SD,DET,SD,,,,,,P
 "","","","","","","","","","","","","","",127566-102332:Jackson Kowar,127566-102332,P,Jackson,Jackson Kowar,Kowar,5.6,15,5500,MIN@BAL,BAL,MIN,,,,,,P
 "","","","","","","","","","","","","","",127566-102334:Corbin Martin,127566-102334,P,Corbin,Corbin Martin,Martin,5.8125,17,5500,WSH@CHC,CHC,WSH,,,,,,P
-"","","","","","","","","","","","","","",127566-198619:Yuki Matsui,127566-198619,P,Yuki,Yuki Matsui,Matsui,5.203389830508475,61,5500,DET@SD,SD,DET,O,Groin,,,,P
+"","","","","","","","","","","","","","",127566-198619:Yuki Matsui,127566-198619,P,Yuki,Yuki Matsui,Matsui,5.203389830508475,61,5500,DET@SD,SD,DET,IL,Groin,,,,P
 "","","","","","","","","","","","","","",127566-198618:Coleman Crow,127566-198618,P,Coleman,Coleman Crow,Crow,,0,5500,CWS@MIL,MIL,CWS,,,,,,P
 "","","","","","","","","","","","","","",127566-202726:Michel Otanez,127566-202726,P,Michel,Michel Otanez,Otanez,2,6,5500,TEX@PHI,TEX,PHI,,,,,,P
 "","","","","","","","","","","","","","",127566-102376:Garrett Whitlock,127566-102376,P,Garrett,Garrett Whitlock,Whitlock,7.870967741935484,63,5500,BOS@CIN,BOS,CIN,,,,,,P
@@ -677,11 +677,11 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-82614:Pete Alonso,127566-82614,1B,Pete,Pete Alonso,Alonso,11.94074089144483,162,3600,MIN@BAL,BAL,MIN,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-13929:Manny Machado,127566-13929,3B,Manny,Manny Machado,Machado,10.857407558111497,162,3600,DET@SD,SD,DET,,,,,,3B/UTIL
 "","","","","","","","","","","","","","",127566-165661:James Wood,127566-165661,OF,James,James Wood,Wood,11.550318626841163,157,3600,WSH@CHC,WSH,CHC,,,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-167012:Seiya Suzuki,127566-167012,OF,Seiya,Seiya Suzuki,Suzuki,11.04276760269261,159,3500,WSH@CHC,CHC,WSH,O,Knee,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-167012:Seiya Suzuki,127566-167012,OF,Seiya,Seiya Suzuki,Suzuki,11.04276760269261,159,3500,WSH@CHC,CHC,WSH,IL,Knee,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-38412:Corey Seager,127566-38412,SS,Corey,Corey Seager,Seager,11.07058775658701,102,3500,TEX@PHI,TEX,PHI,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-165611:Jackson Chourio,127566-165611,OF,Jackson,Jackson Chourio,Chourio,11.708571079799107,140,3500,CWS@MIL,MIL,CWS,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-135203:Spencer Torkelson,127566-135203,1B,Spencer,Spencer Torkelson,Torkelson,10.024539877300613,163,3400,DET@SD,DET,SD,,,,,,C/1B/UTIL
-"","","","","","","","","","","","","","",127566-119345:Jeremy Pena,127566-119345,SS,Jeremy,Jeremy Pena,Pena,11.2047998046875,125,3400,LAA@HOU,HOU,LAA,DTD,Finger,,,,SS/UTIL
+"","","","","","","","","","","","","","",127566-119345:Jeremy Pena,127566-119345,SS,Jeremy,Jeremy Pena,Pena,11.2047998046875,125,3400,LAA@HOU,HOU,LAA,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-82654:Bo Bichette,127566-82654,SS/3B,Bo,Bo Bichette,Bichette,11.256849315068493,146,3400,PIT@NYM,NYM,PIT,,,,,,3B/SS/UTIL
 "","","","","","","","","","","","","","",127566-52158:Trevor Story,127566-52158,SS,Trevor,Trevor Story,Story,11.094374847412109,160,3400,BOS@CIN,BOS,CIN,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-21609:Christian Yelich,127566-21609,OF,Christian,Christian Yelich,Yelich,11.174213529382861,159,3400,CWS@MIL,MIL,CWS,,,,,,OF/UTIL
@@ -699,7 +699,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-14562:Jose Altuve,127566-14562,2B/OF,Jose,Jose Altuve,Altuve,9.932258064516128,155,3200,LAA@HOU,HOU,LAA,,,,,,2B/OF/UTIL
 "","","","","","","","","","","","","","",127566-119420:Ivan Herrera,127566-119420,C/OF,Ivan,Ivan Herrera,Herrera,10.895327559141355,107,3200,TB@STL,STL,TB,,,,,,C/1B/OF/UTIL
 "","","","","","","","","","","","","","",127566-68522:Alex Bregman,127566-68522,3B,Alex,Alex Bregman,Bregman,10.532479049813034,117,3200,WSH@CHC,CHC,WSH,,,,,,3B/UTIL
-"","","","","","","","","","","","","","",127566-165535:Colson Montgomery,127566-165535,SS,Colson,Colson Montgomery,Montgomery,11.494365853323064,71,3200,CWS@MIL,CWS,MIL,,,,,,SS/UTIL
+"","","","","","","","","","","","","","",127566-165535:Colson Montgomery,127566-165535,SS,Colson,Colson Montgomery,Montgomery,11.494365853323064,71,3200,CWS@MIL,CWS,MIL,,,,,2,SS/UTIL
 "","","","","","","","","","","","","","",127566-102284:William Contreras,127566-102284,C,William,William Contreras,Contreras,10.102516030365566,159,3200,CWS@MIL,MIL,CWS,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-17097:Brandon Nimmo,127566-17097,OF,Brandon,Brandon Nimmo,Nimmo,10.310967426915322,155,3100,TEX@PHI,TEX,PHI,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-82734:Luis Robert Jr.,127566-82734,OF,Luis,Luis Robert Jr.,Robert Jr.,9.935454767400568,110,3100,PIT@NYM,NYM,PIT,,,,,,OF/UTIL
@@ -717,19 +717,19 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-85504:Brandon Lowe,127566-85504,2B,Brandon,Brandon Lowe,Lowe,10.502239170359141,134,3000,PIT@NYM,PIT,NYM,,,,,,2B/UTIL
 "","","","","","","","","","","","","","",127566-163662:Jonathan Aranda,127566-163662,1B,Jonathan,Jonathan Aranda,Aranda,10.18113161482901,106,3000,TB@STL,TB,STL,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-102389:Oneil Cruz,127566-102389,SS/OF,Oneil,Oneil Cruz,Cruz,10.206666847511574,135,3000,PIT@NYM,PIT,NYM,,,,,,SS/OF/UTIL
-"","","","","","","","","","","","","","",127566-81953:Austin Hays,127566-81953,OF,Austin,Austin Hays,Hays,10.28190452938988,105,2900,CWS@MIL,CWS,MIL,,,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-81953:Austin Hays,127566-81953,OF,Austin,Austin Hays,Hays,10.28190452938988,105,2900,CWS@MIL,CWS,MIL,,,,,5,OF/UTIL
 "","","","","","","","","","","","","","",127566-102555:Noelvi Marte,127566-102555,3B/OF,Noelvi,Noelvi Marte,Marte,9.801087089206861,92,2900,BOS@CIN,CIN,BOS,,,,,,3B/OF/UTIL
 "","","","","","","","","","","","","","",127566-119377:Matt Wallner,127566-119377,OF,Matt,Matt Wallner,Wallner,9.080769465519833,104,2900,MIN@BAL,MIN,BAL,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-82580:Jo Adell,127566-82580,OF,Jo,Jo Adell,Adell,9.661841944644326,152,2900,LAA@HOU,LAA,HOU,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-82608:Royce Lewis,127566-82608,3B,Royce,Royce Lewis,Lewis,8.294339737802181,106,2900,MIN@BAL,MIN,BAL,,,,,,3B/UTIL
-"","","","","","","","","","","","","","",127566-232356:Dylan Beavers,127566-232356,OF,Dylan,Dylan Beavers,Beavers,9.205714634486608,35,2900,MIN@BAL,BAL,MIN,DTD,Knee,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-240561:Munetaka Murakami,127566-240561,1B,Munetaka,Munetaka Murakami,Murakami,,0,2900,CWS@MIL,CWS,MIL,,,,,,C/1B/UTIL
+"","","","","","","","","","","","","","",127566-232356:Dylan Beavers,127566-232356,OF,Dylan,Dylan Beavers,Beavers,9.205714634486608,35,2900,MIN@BAL,BAL,MIN,,,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-240561:Munetaka Murakami,127566-240561,1B,Munetaka,Munetaka Murakami,Murakami,,0,2900,CWS@MIL,CWS,MIL,,,,,6,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-68586:Dansby Swanson,127566-68586,SS,Dansby,Dansby Swanson,Swanson,9.425149700598803,167,2900,WSH@CHC,CHC,WSH,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-193598:Nolan Schanuel,127566-193598,1B,Nolan,Nolan Schanuel,Schanuel,9.070454915364584,132,2900,LAA@HOU,LAA,HOU,,,,,,C/1B/UTIL
-"","","","","","","","","","","","","","",127566-154711:Lars Nootbaar,127566-154711,OF,Lars,Lars Nootbaar,Nootbaar,8.67851833767361,135,2900,TB@STL,STL,TB,O,Heel,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-154711:Lars Nootbaar,127566-154711,OF,Lars,Lars Nootbaar,Nootbaar,8.67851833767361,135,2900,TB@STL,STL,TB,IL,Heel,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-37982:Xander Bogaerts,127566-37982,SS/2B,Xander,Xander Bogaerts,Bogaerts,9.047481838747752,139,2900,DET@SD,SD,DET,,,,,,2B/SS/UTIL
 "","","","","","","","","","","","","","",127566-21705:Marcus Semien,127566-21705,2B,Marcus,Marcus Semien,Semien,9.156693105622539,127,2900,PIT@NYM,NYM,PIT,,,,,,2B/UTIL
-"","","","","","","","","","","","","","",127566-197967:Jackson Holliday,127566-197967,2B/SS,Jackson,Jackson Holliday,Holliday,9.157718120805368,149,2900,MIN@BAL,BAL,MIN,O,Hand,,,,2B/SS/UTIL
+"","","","","","","","","","","","","","",127566-197967:Jackson Holliday,127566-197967,2B/SS,Jackson,Jackson Holliday,Holliday,9.157718120805368,149,2900,MIN@BAL,BAL,MIN,IL,Hand,,,,2B/SS/UTIL
 "","","","","","","","","","","","","","",127566-21874:Jorge Polanco,127566-21874,1B/2B/3B,Jorge,Jorge Polanco,Polanco,9.8013330078125,150,2900,PIT@NYM,NYM,PIT,,,,,,C/1B/2B/3B/UTIL
 "","","","","","","","","","","","","","",127566-79230:Bryan Reynolds,127566-79230,OF,Bryan,Bryan Reynolds,Reynolds,9.03311672458401,154,2900,PIT@NYM,PIT,NYM,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-85520:Adolis Garcia,127566-85520,OF,Adolis,Adolis Garcia,Garcia,9.074814633969908,135,2900,TEX@PHI,PHI,TEX,,,,,,OF/UTIL
@@ -739,9 +739,9 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-102301:Nico Hoerner,127566-102301,2B/SS,Nico,Nico Hoerner,Hoerner,9.744512046255716,164,2900,WSH@CHC,CHC,WSH,,,,,,2B/SS/UTIL
 "","","","","","","","","","","","","","",127566-225386:Chandler Simpson,127566-225386,OF,Chandler,Chandler Simpson,Simpson,9.326605280604932,109,2800,TB@STL,TB,STL,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-135366:Masyn Winn,127566-135366,SS,Masyn,Masyn Winn,Winn,8.704651352046996,129,2800,TB@STL,STL,TB,,,,,,SS/UTIL
-"","","","","","","","","","","","","","",127566-198869:Kyle Teel,127566-198869,C,Kyle,Kyle Teel,Teel,8.975640712640224,78,2800,CWS@MIL,CWS,MIL,O,Hamstring,,,,C/1B/UTIL
+"","","","","","","","","","","","","","",127566-198869:Kyle Teel,127566-198869,C,Kyle,Kyle Teel,Teel,8.975640712640224,78,2800,CWS@MIL,CWS,MIL,IL,Hamstring,,,0,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-119341:Wenceel Perez,127566-119341,OF,Wenceel,Wenceel Perez,Perez,8.653773469744989,106,2800,DET@SD,DET,SD,,,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-119372:Miguel Vargas,127566-119372,OF/3B/1B,Miguel,Miguel Vargas,Vargas,9.376811594202898,138,2800,CWS@MIL,CWS,MIL,,,,,,C/1B/3B/OF/UTIL
+"","","","","","","","","","","","","","",127566-119372:Miguel Vargas,127566-119372,OF/3B/1B,Miguel,Miguel Vargas,Vargas,9.376811594202898,138,2800,CWS@MIL,CWS,MIL,,,,,3,C/1B/3B/OF/UTIL
 "","","","","","","","","","","","","","",127566-119405:Bryson Stott,127566-119405,2B/SS,Bryson,Bryson Stott,Stott,8.928476497826987,151,2800,TEX@PHI,PHI,TEX,,,,,,2B/SS/UTIL
 "","","","","","","","","","","","","","",127566-82570:Jake Burger,127566-82570,1B,Jake,Jake Burger,Burger,8.030096850348908,103,2800,TEX@PHI,TEX,PHI,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-119437:Josh Jung,127566-119437,3B,Josh,Josh Jung,Jung,8.077099050274333,131,2800,TEX@PHI,TEX,PHI,,,,,,3B/UTIL
@@ -750,7 +750,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-68547:Tyler O'Neill,127566-68547,OF,Tyler,Tyler O'Neill,O'Neill,8.766666553638599,54,2800,MIN@BAL,BAL,MIN,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-13342:Nick Castellanos,127566-13342,OF,Nick,Nick Castellanos,Castellanos,8.59006606348303,151,2800,DET@SD,SD,DET,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-179272:Spencer Steer,127566-179272,OF/1B/2B,Spencer,Spencer Steer,Steer,8.960810480891046,148,2800,BOS@CIN,CIN,BOS,,,,,,C/1B/2B/OF/UTIL
-"","","","","","","","","","","","","","",127566-146667:Jordan Westburg,127566-146667,3B/2B,Jordan,Jordan Westburg,Westburg,10.085882209329045,85,2800,MIN@BAL,BAL,MIN,O,Elbow,,,,2B/3B/UTIL
+"","","","","","","","","","","","","","",127566-146667:Jordan Westburg,127566-146667,3B/2B,Jordan,Jordan Westburg,Westburg,10.085882209329045,85,2800,MIN@BAL,BAL,MIN,IL,Elbow,,,,2B/3B/UTIL
 "","","","","","","","","","","","","","",127566-79110:Tyler Stephenson,127566-79110,C,Tyler,Tyler Stephenson,Stephenson,9.011111111111111,90,2800,BOS@CIN,CIN,BOS,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-79141:Ryan O'Hearn,127566-79141,1B/OF,Ryan,Ryan O'Hearn,O'Hearn,8.734013771524234,147,2800,PIT@NYM,PIT,NYM,,,,,,C/1B/OF/UTIL
 "","","","","","","","","","","","","","",127566-5456:Andrew McCutchen,127566-5456,OF,Andrew,Andrew McCutchen,McCutchen,8.153332971643518,135,2800,TEX@PHI,TEX,PHI,,,,,,OF/UTIL
@@ -778,7 +778,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-82615:Mark Vientos,127566-82615,3B,Mark,Mark Vientos,Vientos,8.184297419776602,121,2700,PIT@NYM,NYM,PIT,,,,,,3B/UTIL
 "","","","","","","","","","","","","","",127566-119495:Andrew Vaughn,127566-119495,1B,Andrew,Andrew Vaughn,Vaughn,8.357851138784866,121,2700,CWS@MIL,MIL,CWS,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-82660:Luis Garcia Jr.,127566-82660,2B/1B,Luis,Luis Garcia Jr.,Garcia Jr.,8.751079312331385,139,2700,WSH@CHC,WSH,CHC,,,,,,C/1B/2B/UTIL
-"","","","","","","","","","","","","","",127566-68495:Andrew Benintendi,127566-68495,OF,Andrew,Andrew Benintendi,Benintendi,9.318103658741919,116,2700,CWS@MIL,CWS,MIL,,,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-68495:Andrew Benintendi,127566-68495,OF,Andrew,Andrew Benintendi,Benintendi,9.318103658741919,116,2700,CWS@MIL,CWS,MIL,,,,,4,OF/UTIL
 "","","","","","","","","","","","","","",127566-79082:Ryan Mountcastle,127566-79082,1B,Ryan,Ryan Mountcastle,Mountcastle,7.553932447112008,89,2700,MIN@BAL,BAL,MIN,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-232803:Zach Cole,127566-232803,OF,Zach,Zach Cole,Cole,11.886666870117187,15,2700,LAA@HOU,HOU,LAA,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-79257:Josh Lowe,127566-79257,OF,Josh,Josh Lowe,Lowe,8.983333446361401,108,2700,LAA@HOU,LAA,HOU,,,,,,OF/UTIL
@@ -798,10 +798,10 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-13864:Joc Pederson,127566-13864,OF/1B,Joc,Joc Pederson,Pederson,5.943749745686849,96,2600,TEX@PHI,TEX,PHI,,,,,,C/1B/OF/UTIL
 "","","","","","","","","","","","","","",127566-181812:Wilyer Abreu,127566-181812,OF,Wilyer,Wilyer Abreu,Abreu,9.255084538863876,118,2600,BOS@CIN,BOS,CIN,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-181851:Jared Triolo,127566-181851,3B/2B/1B/SS,Jared,Jared Triolo,Triolo,7.198130955205899,107,2600,PIT@NYM,PIT,NYM,,,,,,C/1B/2B/3B/SS/UTIL
-"","","","","","","","","","","","","","",127566-165544:Lenyn Sosa,127566-165544,2B/3B/1B,Lenyn,Lenyn Sosa,Sosa,8.556428745814733,140,2600,CWS@MIL,CWS,MIL,,,,,,C/1B/2B/3B/UTIL
+"","","","","","","","","","","","","","",127566-165544:Lenyn Sosa,127566-165544,2B/3B/1B,Lenyn,Lenyn Sosa,Sosa,8.556428745814733,140,2600,CWS@MIL,CWS,MIL,,,,,0,C/1B/2B/3B/UTIL
 "","","","","","","","","","","","","","",127566-165557:Colt Keith,127566-165557,1B/2B/3B,Colt,Colt Keith,Keith,7.348591549295775,142,2600,DET@SD,DET,SD,,,,,,C/1B/2B/3B/UTIL
 "","","","","","","","","","","","","","",127566-165575:Denzer Guzman,127566-165575,SS,Denzer,Denzer Guzman,Guzman,5.484615619365986,13,2600,LAA@HOU,LAA,HOU,,,,,,SS/UTIL
-"","","","","","","","","","","","","","",127566-102303:Triston Casas,127566-102303,1B,Triston,Triston Casas,Casas,6.327586206896552,29,2600,BOS@CIN,BOS,CIN,O,Knee,,,,C/1B/UTIL
+"","","","","","","","","","","","","","",127566-102303:Triston Casas,127566-102303,1B,Triston,Triston Casas,Casas,6.327586206896552,29,2600,BOS@CIN,BOS,CIN,IL,Knee,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-102435:Blaze Alexander,127566-102435,SS/2B/3B/OF,Blaze,Blaze Alexander,Alexander,7.8540542190139355,74,2500,MIN@BAL,BAL,MIN,,,,,,2B/3B/SS/OF/UTIL
 "","","","","","","","","","","","","","",127566-79918:Kyle Higashioka,127566-79918,C,Kyle,Kyle Higashioka,Higashioka,7.62872314453125,94,2500,TEX@PHI,TEX,PHI,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-102591:Jake Fraley,127566-102591,OF,Jake,Jake Fraley,Fraley,6.588158055355675,76,2500,TB@STL,TB,STL,,,,,,OF/UTIL
@@ -815,11 +815,11 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-164516:Marcelo Mayer,127566-164516,SS/3B/2B,Marcelo,Marcelo Mayer,Mayer,6.2727272727272725,44,2500,BOS@CIN,BOS,CIN,,,,,,2B/3B/SS/UTIL
 "","","","","","","","","","","","","","",127566-82655:Danny Jansen,127566-82655,C,Danny,Danny Jansen,Jansen,7.45510179169324,98,2500,TEX@PHI,TEX,PHI,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-80848:Victor Caratini,127566-80848,C,Victor,Victor Caratini,Caratini,6.995614035087719,114,2500,MIN@BAL,MIN,BAL,,,,,,C/1B/UTIL
-"","","","","","","","","","","","","","",127566-222287:Chase Meidroth,127566-222287,SS/2B,Chase,Chase Meidroth,Meidroth,7.584426129450564,122,2500,CWS@MIL,CWS,MIL,,,,,,2B/SS/UTIL
+"","","","","","","","","","","","","","",127566-222287:Chase Meidroth,127566-222287,SS/2B,Chase,Chase Meidroth,Meidroth,7.584426129450564,122,2500,CWS@MIL,CWS,MIL,,,,,1,2B/SS/UTIL
 "","","","","","","","","","","","","","",127566-85254:Joey Bart,127566-85254,C,Joey,Joey Bart,Bart,6.529032389322917,93,2500,PIT@NYM,PIT,NYM,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-85285:Nathaniel Lowe,127566-85285,1B,Nathaniel,Nathaniel Lowe,Lowe,8.447436210436699,156,2500,BOS@CIN,CIN,BOS,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-79154:Brandon Marsh,127566-79154,OF,Brandon,Brandon Marsh,Marsh,7.386861313868613,137,2500,TEX@PHI,PHI,TEX,,,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-79165:Gavin Lux,127566-79165,2B/OF,Gavin,Gavin Lux,Lux,7.25140810684419,142,2500,TB@STL,TB,STL,O,Shoulder,,,,2B/OF/UTIL
+"","","","","","","","","","","","","","",127566-79165:Gavin Lux,127566-79165,2B/OF,Gavin,Gavin Lux,Lux,7.25140810684419,142,2500,TB@STL,TB,STL,IL,Shoulder,,,,2B/OF/UTIL
 "","","","","","","","","","","","","","",127566-197972:Brooks Lee,127566-197972,SS/3B/2B,Brooks,Brooks Lee,Lee,7.532374100719425,139,2500,MIN@BAL,MIN,BAL,,,,,,2B/3B/SS/UTIL
 "","","","","","","","","","","","","","",127566-21885:Javier Baez,127566-21885,SS/3B/OF,Javier,Javier Baez,Baez,7.683581907357743,134,2500,DET@SD,DET,SD,,,,,,3B/SS/OF/UTIL
 "","","","","","","","","","","","","","",127566-79255:Jake Bauers,127566-79255,1B/OF,Jake,Jake Bauers,Bauers,6.557608562967052,92,2500,CWS@MIL,MIL,CWS,,,,,,C/1B/OF/UTIL
@@ -829,7 +829,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-102325:Parker Meadows,127566-102325,OF,Parker,Parker Meadows,Meadows,6.46969696969697,66,2500,DET@SD,DET,SD,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-102326:Kody Clemens,127566-102326,1B/2B/3B/OF,Kody,Kody Clemens,Clemens,7.6823530437565655,119,2500,MIN@BAL,MIN,BAL,,,,,,C/1B/2B/3B/OF/UTIL
 "","","","","","","","","","","","","","",127566-102348:Jeremiah Jackson,127566-102348,SS,Jeremiah,Jeremiah Jackson,Jackson,8.427083333333334,48,2500,MIN@BAL,BAL,MIN,,,,,,SS/UTIL
-"","","","","","","","","","","","","","",127566-135190:Taylor Walls,127566-135190,SS/2B,Taylor,Taylor Walls,Walls,6.73465358620823,101,2400,TB@STL,TB,STL,O,Oblique,,,,2B/SS/UTIL
+"","","","","","","","","","","","","","",127566-135190:Taylor Walls,127566-135190,SS/2B,Taylor,Taylor Walls,Walls,6.73465358620823,101,2400,TB@STL,TB,STL,IL,Oblique,,,,2B/SS/UTIL
 "","","","","","","","","","","","","","",127566-135524:Austin Martin,127566-135524,OF/2B,Austin,Austin Martin,Martin,8.017999877929688,50,2400,MIN@BAL,MIN,BAL,,,,,,2B/OF/UTIL
 "","","","","","","","","","","","","","",127566-201253:Joey Loperfido,127566-201253,OF,Joey,Joey Loperfido,Loperfido,6.152380807059152,42,2400,LAA@HOU,HOU,LAA,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-82593:Keibert Ruiz,127566-82593,C,Keibert,Keibert Ruiz,Ruiz,6.239705702837775,68,2400,WSH@CHC,WSH,CHC,,,,,,C/1B/UTIL
@@ -844,10 +844,10 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-79247:Edmundo Sosa,127566-79247,3B/SS/2B/OF,Edmundo,Edmundo Sosa,Sosa,6.8076923076923075,91,2400,TEX@PHI,PHI,TEX,,,,,,2B/3B/SS/OF/UTIL
 "","","","","","","","","","","","","","",127566-101817:Luis Rengifo,127566-101817,2B/3B/SS,Luis,Luis Rengifo,Rengifo,6.772108843537415,147,2400,CWS@MIL,MIL,CWS,,,,,,2B/3B/SS/UTIL
 "","","","","","","","","","","","","","",127566-101842:Ty France,127566-101842,1B,Ty,Ty France,France,6.882142857142857,140,2400,DET@SD,SD,DET,,,,,,C/1B/UTIL
-"","","","","","","","","","","","","","",127566-206383:Brooks Baldwin,127566-206383,2B/SS/OF,Brooks,Brooks Baldwin,Baldwin,6.7708740234375,103,2400,CWS@MIL,CWS,MIL,DTD,Elbow,,,,2B/SS/OF/UTIL
+"","","","","","","","","","","","","","",127566-206383:Brooks Baldwin,127566-206383,2B/SS/OF,Brooks,Brooks Baldwin,Baldwin,6.7708740234375,103,2400,CWS@MIL,CWS,MIL,IL,Elbow,,,0,2B/SS/OF/UTIL
 "","","","","","","","","","","","","","",127566-222821:Carson Benge,127566-222821,OF,Carson,Carson Benge,Benge,,0,2400,PIT@NYM,NYM,PIT,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-222860:Christian Moore,127566-222860,2B,Christian,Christian Moore,Moore,7.132075471698113,53,2400,LAA@HOU,LAA,HOU,,,,,,2B/UTIL
-"","","","","","","","","","","","","","",127566-165583:Edgar Quero,127566-165583,C,Edgar,Edgar Quero,Quero,6.51531542528857,111,2400,CWS@MIL,CWS,MIL,,,,,,C/1B/UTIL
+"","","","","","","","","","","","","","",127566-165583:Edgar Quero,127566-165583,C,Edgar,Edgar Quero,Quero,6.51531542528857,111,2400,CWS@MIL,CWS,MIL,,,,,8,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-135194:Freddy Fermin,127566-135194,C,Freddy,Freddy Fermin,Fermin,5.375221454991704,113,2300,DET@SD,SD,DET,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-79896:Luis Torrens,127566-79896,C,Luis,Luis Torrens,Torrens,5.424731182795699,93,2300,PIT@NYM,NYM,PIT,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-38973:Tyrone Taylor,127566-38973,OF,Tyrone,Tyrone Taylor,Taylor,5.728318476043971,113,2300,PIT@NYM,NYM,PIT,,,,,,OF/UTIL
@@ -867,7 +867,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-222825:Kristian Campbell,127566-222825,2B/OF/1B,Kristian,Kristian Campbell,Campbell,7.437313250641324,67,2300,BOS@CIN,BOS,CIN,,,,,,C/1B/2B/OF/UTIL
 "","","","","","","","","","","","","","",127566-222847:Justin Crawford,127566-222847,OF,Justin,Justin Crawford,Crawford,,0,2300,TEX@PHI,PHI,TEX,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-38561:Chris Taylor,127566-38561,OF/3B/2B,Chris,Chris Taylor,Taylor,4.086206896551724,58,2300,LAA@HOU,LAA,HOU,,,,,,2B/3B/OF/UTIL
-"","","","","","","","","","","","","","",127566-165633:Trey Sweeney,127566-165633,SS,Trey,Trey Sweeney,Sweeney,4.925423832262977,118,2300,DET@SD,DET,SD,DTD,Shoulder,,,,SS/UTIL
+"","","","","","","","","","","","","","",127566-165633:Trey Sweeney,127566-165633,SS,Trey,Trey Sweeney,Sweeney,4.925423832262977,118,2300,DET@SD,DET,SD,IL,Shoulder,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-165654:Henry Davis,127566-165654,C/OF,Henry,Henry Davis,Davis,5.149425287356322,87,2300,PIT@NYM,PIT,NYM,,,,,,C/1B/OF/UTIL
 "","","","","","","","","","","","","","",127566-165726:Brady House,127566-165726,3B,Brady,Brady House,House,6.721917975438784,73,2300,WSH@CHC,WSH,CHC,,,,,,3B/UTIL
 "","","","","","","","","","","","","","",127566-161677:Nick Fortes,127566-161677,C,Nick,Nick Fortes,Fortes,4.446391626731637,97,2300,TB@STL,TB,STL,,,,,,C/1B/UTIL
@@ -884,7 +884,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-207557:Nick Sogard,127566-207557,2B/SS/3B,Nick,Nick Sogard,Sogard,6.884375095367432,32,2200,BOS@CIN,BOS,CIN,,,,,,2B/3B/SS/UTIL
 "","","","","","","","","","","","","","",127566-187103:Andruw Monasterio,127566-187103,2B/3B/1B/SS,Andruw,Andruw Monasterio,Monasterio,4.497222052680121,72,2200,BOS@CIN,BOS,CIN,,,,,,C/1B/2B/3B/SS/UTIL
 "","","","","","","","","","","","","","",127566-211757:Bryce Teodosio,127566-211757,OF,Bryce,Bryce Teodosio,Teodosio,5.157999877929687,50,2200,LAA@HOU,LAA,HOU,,,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-119629:Luisangel Acuna,127566-119629,SS/2B/3B,Luisangel,Luisangel Acuna,Acuna,4.3052631578947365,95,2200,CWS@MIL,CWS,MIL,,,,,,2B/3B/SS/UTIL
+"","","","","","","","","","","","","","",127566-119629:Luisangel Acuna,127566-119629,SS/2B/3B,Luisangel,Luisangel Acuna,Acuna,4.3052631578947365,95,2200,CWS@MIL,CWS,MIL,,,,,9,2B/3B/SS/UTIL
 "","","","","","","","","","","","","","",127566-119637:Ezequiel Duran,127566-119637,3B/SS/OF/1B,Ezequiel,Ezequiel Duran,Duran,4.246666802300347,90,2200,TEX@PHI,TEX,PHI,,,,,,C/1B/3B/SS/OF/UTIL
 "","","","","","","","","","","","","","",127566-183187:Christian Encarnacion-Strand,127566-183187,1B/3B,Christian,Christian Encarnacion-Strand,Encarnacion-Strand,7.502777947319879,36,2200,BOS@CIN,CIN,BOS,,,,,,C/1B/3B/UTIL
 "","","","","","","","","","","","","","",127566-232365:Nathan Church,127566-232365,OF,Nathan,Nathan Church,Church,4.548148261176215,27,2200,TB@STL,STL,TB,,,,,,OF/UTIL
@@ -905,29 +905,28 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-102406:Vidal Brujan,127566-102406,2B/SS/3B/OF,Vidal,Vidal Brujan,Brujan,3.06229513199603,61,2100,PIT@NYM,NYM,PIT,,,,,,2B/3B/SS/OF/UTIL
 "","","","","","","","","","","","","","",127566-135216:Chas McCormick,127566-135216,OF,Chas,Chas McCormick,McCormick,2.8500000924775093,66,2100,WSH@CHC,CHC,WSH,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-135284:Riley Adams,127566-135284,C,Riley,Riley Adams,Adams,5.961445636059865,83,2100,WSH@CHC,WSH,CHC,,,,,,C/1B/UTIL
-"","","","","","","","","","","","","","",127566-102537:Everson Pereira,127566-102537,OF,Everson,Everson Pereira,Pereira,5.713043212890625,23,2100,CWS@MIL,CWS,MIL,DTD,Illness,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-102537:Everson Pereira,127566-102537,OF,Everson,Everson Pereira,Pereira,5.713043212890625,23,2100,CWS@MIL,CWS,MIL,,,,,7,OF/UTIL
 "","","","","","","","","","","","","","",127566-192649:Weston Wilson,127566-192649,OF/1B,Weston,Weston Wilson,Wilson,4.93859649122807,57,2100,MIN@BAL,BAL,MIN,,,,,,C/1B/OF/UTIL
 "","","","","","","","","","","","","","",127566-135308:Robert Hassell III,127566-135308,OF,Robert,Robert Hassell III,Hassell III,5.2914284842354915,70,2100,WSH@CHC,WSH,CHC,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-184480:Cesar Salazar,127566-184480,C,Cesar,Cesar Salazar,Salazar,1.9545454545454546,11,2100,LAA@HOU,HOU,LAA,,,,,,C/1B/UTIL
-"","","","","","","","","","","","","","",127566-209179:Will Wagner,127566-209179,1B/2B/3B,Will,Will Wagner,Wagner,4.427272727272728,55,2100,DET@SD,SD,DET,O,Oblique,,,,C/1B/2B/3B/UTIL
+"","","","","","","","","","","","","","",127566-209179:Will Wagner,127566-209179,1B/2B/3B,Will,Will Wagner,Wagner,4.427272727272728,55,2100,DET@SD,SD,DET,IL,Oblique,,,,C/1B/2B/3B/UTIL
 "","","","","","","","","","","","","","",127566-219667:Jhostynxon Garcia,127566-219667,OF,Jhostynxon,Jhostynxon Garcia,Garcia,2.4,5,2100,PIT@NYM,PIT,NYM,,,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-119346:Korey Lee,127566-119346,C,Korey,Korey Lee,Lee,3.826923076923077,26,2100,CWS@MIL,CWS,MIL,,,,,,C/1B/UTIL
+"","","","","","","","","","","","","","",127566-119346:Korey Lee,127566-119346,C,Korey,Korey Lee,Lee,3.826923076923077,26,2100,CWS@MIL,CWS,MIL,,,,,0,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-119390:Kevin Alcantara,127566-119390,OF,Kevin,Kevin Alcantara,Alcantara,3.089999961853027,10,2100,WSH@CHC,CHC,WSH,,,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-80485:Austin Slater,127566-80485,OF,Austin,Austin Slater,Slater,4.921538367638221,65,2100,DET@SD,DET,SD,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-119401:Rafael Marchan,127566-119401,C,Rafael,Rafael Marchan,Marchan,4.840476263137091,42,2100,TEX@PHI,PHI,TEX,,,,,,C/1B/UTIL
-"","","","","","","","","","","","","","",127566-119408:Ji Hwan Bae,127566-119408,2B/OF,Ji Hwan,Ji Hwan Bae,Bae,4.215384556696965,13,2100,PIT@NYM,NYM,PIT,,,,,,2B/OF/UTIL
-"","","","","","","","","","","","","","",127566-164502:Vaughn Grissom,127566-164502,SS/2B,Vaughn,Vaughn Grissom,Grissom,4.787878787878788,33,2100,LAA@HOU,LAA,HOU,IL,Hand,,,,2B/SS/UTIL
+"","","","","","","","","","","","","","",127566-119408:Jihwan Bae,127566-119408,2B/OF,Jihwan,Jihwan Bae,Bae,4.215384556696965,13,2100,PIT@NYM,NYM,PIT,,,,,,2B/OF/UTIL
+"","","","","","","","","","","","","","",127566-164502:Vaughn Grissom,127566-164502,SS/2B,Vaughn,Vaughn Grissom,Grissom,4.787878787878788,33,2100,LAA@HOU,LAA,HOU,IL,Wrist,,,,2B/SS/UTIL
 "","","","","","","","","","","","","","",127566-119634:Liover Peguero,127566-119634,SS/2B,Liover,Liover Peguero,Peguero,5.812121304598722,33,2100,TEX@PHI,PHI,TEX,,,,,,2B/SS/UTIL
-"","","","","","","","","","","","","","",127566-240549:Sung-Mun Song,127566-240549,3B,Sung-Mun,Sung-Mun Song,Song,,0,2100,DET@SD,SD,DET,O,Oblique,,,,3B/UTIL
+"","","","","","","","","","","","","","",127566-240549:Sung-Mun Song,127566-240549,3B,Sung-Mun,Sung-Mun Song,Song,,0,2100,DET@SD,SD,DET,IL,Oblique,,,,3B/UTIL
 "","","","","","","","","","","","","","",127566-211906:Thomas Saggese,127566-211906,3B/2B/SS,Thomas,Thomas Saggese,Saggese,6.323170731707317,82,2100,TB@STL,STL,TB,,,,,,2B/3B/SS/UTIL
-"","","","","","","","","","","","","","",127566-52182:Reese McGuire,127566-52182,C,Reese,Reese McGuire,McGuire,7.275555419921875,45,2100,CWS@MIL,CWS,MIL,,,,,,C/1B/UTIL
+"","","","","","","","","","","","","","",127566-52182:Reese McGuire,127566-52182,C,Reese,Reese McGuire,McGuire,7.275555419921875,45,2100,CWS@MIL,CWS,MIL,,,,,0,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-21666:Mark Canha,127566-21666,OF/1B,Mark,Mark Canha,Canha,3.691304414168648,46,2100,TEX@PHI,TEX,PHI,,,,,,C/1B/OF/UTIL
-"","","","","","","","","","","","","","",127566-60636:Derek Hill,127566-60636,OF,Derek,Derek Hill,Hill,5.4263155753152414,57,2100,CWS@MIL,CWS,MIL,,,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-60636:Derek Hill,127566-60636,OF,Derek,Derek Hill,Hill,5.4263155753152414,57,2100,CWS@MIL,CWS,MIL,,,,,0,OF/UTIL
 "","","","","","","","","","","","","","",127566-197915:Hunter Feduccia,127566-197915,C,Hunter,Hunter Feduccia,Feduccia,3.9210526315789473,38,2100,TB@STL,TB,STL,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-79128:Garrett Stubbs,127566-79128,C,Garrett,Garrett Stubbs,Stubbs,1.2800000190734864,5,2100,TEX@PHI,PHI,TEX,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-197974:Jace Jung,127566-197974,3B,Jace,Jace Jung,Jung,3.576190403529576,21,2100,DET@SD,DET,SD,,,,,,3B/UTIL
 "","","","","","","","","","","","","","",127566-181642:Enmanuel Valdez,127566-181642,2B/OF/1B,Enmanuel,Enmanuel Valdez,Valdez,6.335483674080141,31,2100,PIT@NYM,PIT,NYM,,,,,,C/1B/2B/OF/UTIL
-"","","","","","","","","","","","","","",127566-101787:LaMonte Wade Jr.,127566-101787,1B/OF,LaMonte,LaMonte Wade Jr.,Wade Jr.,4.7349998474121096,80,2100,CWS@MIL,CWS,MIL,,,,,,C/1B/OF/UTIL
+"","","","","","","","","","","","","","",127566-101787:LaMonte Wade Jr.,127566-101787,1B/OF,LaMonte,LaMonte Wade Jr.,Wade Jr.,4.7349998474121096,80,2100,CWS@MIL,CWS,MIL,,,,,0,C/1B/OF/UTIL
 "","","","","","","","","","","","","","",127566-173546:Nate Eaton,127566-173546,OF,Nate,Nate Eaton,Eaton,5.702325510424237,43,2100,BOS@CIN,BOS,CIN,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-175654:Bryce Johnson,127566-175654,OF,Bryce,Bryce Johnson,Johnson,3.470175492136102,57,2100,DET@SD,SD,DET,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-79400:Dylan Carlson,127566-79400,OF,Dylan,Dylan Carlson,Carlson,5.185542095138366,83,2100,WSH@CHC,CHC,WSH,,,,,,OF/UTIL
@@ -935,8 +934,8 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-165550:Ryan Kreidler,127566-165550,2B/3B/SS,Ryan,Ryan Kreidler,Kreidler,3.0588235294117645,17,2100,MIN@BAL,MIN,BAL,,,,,,2B/3B/SS/UTIL
 "","","","","","","","","","","","","","",127566-165606:Tyler Black,127566-165606,1B/3B/OF,Tyler,Tyler Black,Black,6.1400001525878904,5,2100,CWS@MIL,MIL,CWS,,,,,,C/1B/3B/OF/UTIL
 "","","","","","","","","","","","","","",127566-165639:Brandon Lockridge,127566-165639,OF,Brandon,Brandon Lockridge,Lockridge,4.223943576006822,71,2100,CWS@MIL,MIL,CWS,,,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-165701:Curtis Mead,127566-165701,3B/2B/1B,Curtis,Curtis Mead,Mead,5.33000013563368,90,2100,CWS@MIL,CWS,MIL,,,,,,C/1B/2B/3B/UTIL
-"","","","","","","","","","","","","","",127566-208716:Zach Dezenzo,127566-208716,1B/OF,Zach,Zach Dezenzo,Dezenzo,6.952940996955423,34,2100,LAA@HOU,HOU,LAA,O,Elbow,,,,C/1B/OF/UTIL
+"","","","","","","","","","","","","","",127566-165701:Curtis Mead,127566-165701,3B/2B/1B,Curtis,Curtis Mead,Mead,5.33000013563368,90,2100,CWS@MIL,CWS,MIL,,,,,0,C/1B/2B/3B/UTIL
+"","","","","","","","","","","","","","",127566-208716:Zach Dezenzo,127566-208716,1B/OF,Zach,Zach Dezenzo,Dezenzo,6.952940996955423,34,2100,LAA@HOU,HOU,LAA,IL,Elbow,,,,C/1B/OF/UTIL
 "","","","","","","","","","","","","","",127566-159624:Yohel Pozo,127566-159624,C,Yohel,Yohel Pozo,Pozo,4.756716600104944,67,2100,TB@STL,STL,TB,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-102380:Nick Allen,127566-102380,SS,Nick,Nick Allen,Allen,4.506666847511574,135,2100,LAA@HOU,HOU,LAA,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-198658:Ronny Simon,127566-198658,OF/2B,Ronny,Ronny Simon,Simon,5.537037037037037,27,2000,PIT@NYM,PIT,NYM,O,Shoulder,,,,2B/OF/UTIL
@@ -954,7 +953,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-102512:Carlos Rodriguez,127566-102512,OF,Carlos,Carlos Rodriguez,Rodriguez,,0,2000,DET@SD,SD,DET,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-102519:Andrew Bechtold,127566-102519,3B,Andrew,Andrew Bechtold,Bechtold,,0,2000,TEX@PHI,PHI,TEX,,,,,,3B/UTIL
 "","","","","","","","","","","","","","",127566-102518:Jose Miranda,127566-102518,3B/1B,Jose,Jose Miranda,Miranda,4.241666793823242,12,2000,DET@SD,SD,DET,,,,,,C/1B/3B/UTIL
-"","","","","","","","","","","","","","",127566-102521:Josh Breaux,127566-102521,C,Josh,Josh Breaux,Breaux,,0,2000,CWS@MIL,CWS,MIL,,,,,,C/1B/UTIL
+"","","","","","","","","","","","","","",127566-102521:Josh Breaux,127566-102521,C,Josh,Josh Breaux,Breaux,,0,2000,CWS@MIL,CWS,MIL,,,,,0,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-116869:Erick Mejia,127566-116869,SS,Erick,Erick Mejia,Mejia,,0,2000,WSH@CHC,WSH,CHC,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-53401:Trey Mancini,127566-53401,1B/OF,Trey,Trey Mancini,Mancini,,0,2000,LAA@HOU,LAA,HOU,,,,,,C/1B/OF/UTIL
 "","","","","","","","","","","","","","",127566-102584:Tres Barrera,127566-102584,C,Tres,Tres Barrera,Barrera,,0,2000,WSH@CHC,WSH,CHC,,,,,,C/1B/UTIL
@@ -975,7 +974,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-198932:Xavier Isaac,127566-198932,1B,Xavier,Xavier Isaac,Isaac,,0,2000,TB@STL,TB,STL,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-209177:Mickey Gasper,127566-209177,C/2B/1B,Mickey,Mickey Gasper,Gasper,4.522222222222222,45,2000,BOS@CIN,BOS,CIN,,,,,,C/1B/2B/UTIL
 "","","","","","","","","","","","","","",127566-194908:Tristan Gray,127566-194908,SS/2B/3B,Tristan,Tristan Gray,Gray,5.810000101725261,30,2000,MIN@BAL,MIN,BAL,,,,,,2B/3B/SS/UTIL
-"","","","","","","","","","","","","","",127566-211306:Darren Baker,127566-211306,2B,Darren,Darren Baker,Baker,3.355555640326606,9,2000,CWS@MIL,CWS,MIL,,,,,,2B/UTIL
+"","","","","","","","","","","","","","",127566-211306:Darren Baker,127566-211306,2B,Darren,Darren Baker,Baker,3.355555640326606,9,2000,CWS@MIL,CWS,MIL,,,,,0,2B/UTIL
 "","","","","","","","","","","","","","",127566-170350:Dairon Blanco,127566-170350,OF,Dairon,Dairon Blanco,Blanco,3.7666668362087674,9,2000,TEX@PHI,TEX,PHI,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-211339:Logan Driscoll,127566-211339,C,Logan,Logan Driscoll,Driscoll,3.593333435058594,15,2000,TB@STL,TB,STL,DTD,Ankle,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-180644:Nate Mondou,127566-180644,2B,Nate,Nate Mondou,Mondou,0,1,2000,DET@SD,SD,DET,,,,,,2B/UTIL
@@ -989,7 +988,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-119326:Rece Hinds,127566-119326,3B/OF,Rece,Rece Hinds,Hinds,4.579999796549479,15,2000,BOS@CIN,CIN,BOS,,,,,,3B/OF/UTIL
 "","","","","","","","","","","","","","",127566-158244:Yonny Hernandez,127566-158244,3B/2B,Yonny,Yonny Hernandez,Hernandez,,0,2000,PIT@NYM,NYM,PIT,,,,,,2B/3B/UTIL
 "","","","","","","","","","","","","","",127566-119344:Grae Kessinger,127566-119344,SS/2B/3B,Grae,Grae Kessinger,Kessinger,1.0333333015441895,24,2000,PIT@NYM,NYM,PIT,O,Hamstring,,,,2B/3B/SS/UTIL
-"","","","","","","","","","","","","","",127566-16951:Anthony Rendon,127566-16951,3B,Anthony,Anthony Rendon,Rendon,7.038596705386513,57,2000,LAA@HOU,LAA,HOU,O,Hip,,,,3B/UTIL
+"","","","","","","","","","","","","","",127566-16951:Anthony Rendon,127566-16951,3B,Anthony,Anthony Rendon,Rendon,7.038596705386513,57,2000,LAA@HOU,LAA,HOU,IL,Hip,,,,3B/UTIL
 "","","","","","","","","","","","","","",127566-119354:Kyren Paris,127566-119354,SS/2B/OF,Kyren,Kyren Paris,Paris,7.443181818181818,44,2000,LAA@HOU,LAA,HOU,,,,,,2B/SS/OF/UTIL
 "","","","","","","","","","","","","","",127566-219704:Ben Cowles,127566-219704,SS,Ben,Ben Cowles,Cowles,,0,2000,WSH@CHC,CHC,WSH,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-156226:Pedro Leon,127566-156226,OF,Pedro,Pedro Leon,Leon,3.4571429661342075,7,2000,TEX@PHI,PHI,TEX,,,,,,OF/UTIL
@@ -1024,9 +1023,9 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-82613:Thairo Estrada,127566-82613,2B,Thairo,Thairo Estrada,Estrada,8.187179174178686,39,2000,MIN@BAL,BAL,MIN,,,,,,2B/UTIL
 "","","","","","","","","","","","","","",127566-82620:Nick Solak,127566-82620,2B,Nick,Nick Solak,Solak,0.75,4,2000,DET@SD,SD,DET,,,,,,2B/UTIL
 "","","","","","","","","","","","","","",127566-21183:Carlos Perez,127566-21183,C/1B,Carlos,Carlos Perez,Perez,,0,2000,LAA@HOU,HOU,LAA,,,,,,C/1B/UTIL
-"","","","","","","","","","","","","","",127566-203490:Steward Berroa,127566-203490,OF,Steward,Steward Berroa,Berroa,4.5,2,2000,CWS@MIL,MIL,CWS,DTD,Shoulder,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-203490:Steward Berroa,127566-203490,OF,Steward,Steward Berroa,Berroa,4.5,2,2000,CWS@MIL,MIL,CWS,IL,Shoulder,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-232173:Justin Dean,127566-232173,OF,Justin,Justin Dean,Dean,0.4903225744924238,31,2000,WSH@CHC,CHC,WSH,,,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-232218:Tristan Peters,127566-232218,OF,Tristan,Tristan Peters,Peters,0,4,2000,CWS@MIL,CWS,MIL,,,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-232218:Tristan Peters,127566-232218,OF,Tristan,Tristan Peters,Peters,0,4,2000,CWS@MIL,CWS,MIL,,,,,0,OF/UTIL
 "","","","","","","","","","","","","","",127566-199466:Trey Lipscomb,127566-199466,3B/1B,Trey,Trey Lipscomb,Lipscomb,3.066666603088379,3,2000,WSH@CHC,WSH,CHC,,,,,,C/1B/3B/UTIL
 "","","","","","","","","","","","","","",127566-193328:Wade Meckler,127566-193328,OF,Wade,Wade Meckler,Meckler,0,2,2000,LAA@HOU,LAA,HOU,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-211774:Billy Cook,127566-211774,1B/OF,Billy,Billy Cook,Cook,3.066666603088379,3,2000,PIT@NYM,PIT,NYM,,,,,,C/1B/OF/UTIL
@@ -1045,7 +1044,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-13326:Christian Bethancourt,127566-13326,C,Christian,Christian Bethancourt,Bethancourt,5.056250095367432,64,2000,WSH@CHC,CHC,WSH,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-171037:Jason Delay,127566-171037,C,Jason,Jason Delay,Delay,6.400000095367432,8,2000,BOS@CIN,BOS,CIN,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-240711:Kaelen Culpepper,127566-240711,SS,Kaelen,Kaelen Culpepper,Culpepper,,0,2000,MIN@BAL,MIN,BAL,,,,,,SS/UTIL
-"","","","","","","","","","","","","","",127566-222286:Braden Montgomery,127566-222286,OF,Braden,Braden Montgomery,Montgomery,,0,2000,CWS@MIL,CWS,MIL,,,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-222286:Braden Montgomery,127566-222286,OF,Braden,Braden Montgomery,Montgomery,,0,2000,CWS@MIL,CWS,MIL,,,,,0,OF/UTIL
 "","","","","","","","","","","","","","",127566-212070:Gustavo Campero,127566-212070,OF,Gustavo,Gustavo Campero,Campero,5.885714394705636,28,2000,LAA@HOU,LAA,HOU,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-197764:Blake Hunt,127566-197764,C,Blake,Blake Hunt,Hunt,0,1,2000,DET@SD,SD,DET,DTD,Oblique,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-197768:Luis Vazquez,127566-197768,SS/3B,Luis,Luis Vazquez,Vazquez,2.408333248562283,36,2000,MIN@BAL,BAL,MIN,O,Thumb,,,,3B/SS/UTIL
@@ -1055,16 +1054,16 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-226530:Maverick Handley,127566-226530,C,Maverick,Maverick Handley,Handley,2.1812500953674316,16,2000,MIN@BAL,BAL,MIN,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-79075:Kevin Maitan,127566-79075,SS,Kevin,Kevin Maitan,Maitan,,0,2000,MIN@BAL,MIN,BAL,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-83174:Sergio Alcantara,127566-83174,3B,Sergio,Sergio Alcantara,Alcantara,0,1,2000,WSH@CHC,WSH,CHC,,,,,,3B/UTIL
-"","","","","","","","","","","","","","",127566-146666:Heston Kjerstad,127566-146666,OF,Heston,Heston Kjerstad,Kjerstad,5.679629855685764,54,2000,MIN@BAL,BAL,MIN,DTD,Hamstring,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-146666:Heston Kjerstad,127566-146666,OF,Heston,Heston Kjerstad,Kjerstad,5.679629855685764,54,2000,MIN@BAL,BAL,MIN,IL,Hamstring,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-60649:Alex Jackson,127566-60649,C,Alex,Alex Jackson,Jackson,6.443243078283362,37,2000,MIN@BAL,MIN,BAL,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-60652:Christian Arroyo,127566-60652,2B,Christian,Christian Arroyo,Arroyo,,0,2000,PIT@NYM,NYM,PIT,,,,,,2B/UTIL
 "","","","","","","","","","","","","","",127566-146671:Austin Hendrick,127566-146671,OF,Austin,Austin Hendrick,Hendrick,,0,2000,BOS@CIN,CIN,BOS,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-79087:Michael Chavis,127566-79087,1B,Michael,Michael Chavis,Chavis,0,1,2000,BOS@CIN,CIN,BOS,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-146675:Blaze Jordan,127566-146675,3B,Blaze,Blaze Jordan,Jordan,,0,2000,TB@STL,STL,TB,,,,,,3B/UTIL
-"","","","","","","","","","","","","","",127566-197874:Oliver Dunn,127566-197874,2B/3B,Oliver,Oliver Dunn,Dunn,4.985714503696987,14,2000,CWS@MIL,CWS,MIL,,,,,,2B/3B/UTIL
+"","","","","","","","","","","","","","",127566-197874:Oliver Dunn,127566-197874,2B/3B,Oliver,Oliver Dunn,Dunn,4.985714503696987,14,2000,CWS@MIL,CWS,MIL,,,,,0,2B/3B/UTIL
 "","","","","","","","","","","","","","",127566-146672:Reginald Preciado,127566-146672,SS,Reginald,Reginald Preciado,Preciado,,0,2000,WSH@CHC,CHC,WSH,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-146673:Ed Howard,127566-146673,SS,Ed,Ed Howard,Howard,,0,2000,WSH@CHC,CHC,WSH,,,,,,SS/UTIL
-"","","","","","","","","","","","","","",127566-146680:Drew Romo,127566-146680,C,Drew,Drew Romo,Romo,0,3,2000,CWS@MIL,CWS,MIL,,,,,,C/1B/UTIL
+"","","","","","","","","","","","","","",127566-146680:Drew Romo,127566-146680,C,Drew,Drew Romo,Romo,0,3,2000,CWS@MIL,CWS,MIL,,,,,0,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-146694:Arol Vera,127566-146694,SS,Arol,Arol Vera,Vera,,0,2000,LAA@HOU,LAA,HOU,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-146692:David Calabrese,127566-146692,OF,David,David Calabrese,Calabrese,,0,2000,LAA@HOU,LAA,HOU,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-146693:Alexander Ramirez,127566-146693,OF,Alexander,Alexander Ramirez,Ramirez,,0,2000,LAA@HOU,LAA,HOU,,,,,,OF/UTIL
@@ -1093,7 +1092,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-238970:Pedro Ramirez,127566-238970,3B,Pedro,Pedro Ramirez,Ramirez,,0,2000,WSH@CHC,CHC,WSH,,,,,,3B/UTIL
 "","","","","","","","","","","","","","",127566-232834:Rafael Flores,127566-232834,C,Rafael,Rafael Flores,Flores,3,7,2000,PIT@NYM,PIT,NYM,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-21890:Orlando Arcia,127566-21890,SS/1B/3B/2B,Orlando,Orlando Arcia,Arcia,3.8697369224146794,76,2000,MIN@BAL,MIN,BAL,,,,,,C/1B/2B/3B/SS/UTIL
-"","","","","","","","","","","","","","",127566-238977:Tanner Murray,127566-238977,3B,Tanner,Tanner Murray,Murray,,0,2000,CWS@MIL,CWS,MIL,,,,,,3B/UTIL
+"","","","","","","","","","","","","","",127566-238977:Tanner Murray,127566-238977,3B,Tanner,Tanner Murray,Murray,,0,2000,CWS@MIL,CWS,MIL,,,,,0,3B/UTIL
 "","","","","","","","","","","","","","",127566-38297:Austin Barnes,127566-38297,C,Austin,Austin Barnes,Barnes,4.523076864389273,13,2000,PIT@NYM,NYM,PIT,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-193947:Mason McCoy,127566-193947,SS,Mason,Mason McCoy,McCoy,3.0833333333333335,18,2000,DET@SD,SD,DET,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-239013:Hao-Yu Lee,127566-239013,2B,Hao-Yu,Hao-Yu Lee,Lee,,0,2000,DET@SD,DET,SD,DTD,Oblique,,,,2B/UTIL
@@ -1107,7 +1106,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-171482:Bligh Madris,127566-171482,1B,Bligh,Bligh Madris,Madris,6.338095528738839,21,2000,TB@STL,STL,TB,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-136673:Mark Kolozsvary,127566-136673,C,Mark,Mark Kolozsvary,Kolozsvary,0,2,2000,TEX@PHI,PHI,TEX,DTD,Undisclosed,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-71182:Jeimer Candelario,127566-71182,3B/1B,Jeimer,Jeimer Candelario,Candelario,5.572727203369141,22,2000,LAA@HOU,LAA,HOU,,,,,,C/1B/3B/UTIL
-"","","","","","","","","","","","","","",127566-226832:Tim Elko,127566-226832,1B,Tim,Tim Elko,Elko,5.83478247601053,23,2000,CWS@MIL,CWS,MIL,O,Knee,,,,C/1B/UTIL
+"","","","","","","","","","","","","","",127566-226832:Tim Elko,127566-226832,1B,Tim,Tim Elko,Elko,5.83478247601053,23,2000,CWS@MIL,CWS,MIL,O,Knee,,,0,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-95776:Pablo Reyes,127566-95776,2B/SS/3B/OF,Pablo,Pablo Reyes,Reyes,2.111999969482422,25,2000,DET@SD,SD,DET,,,,,,2B/3B/SS/OF/UTIL
 "","","","","","","","","","","","","","",127566-181797:Warming Bernabel,127566-181797,3B,Warming,Warming Bernabel,Bernabel,7.375,40,2000,WSH@CHC,WSH,CHC,,,,,,3B/UTIL
 "","","","","","","","","","","","","","",127566-239166:Jack Brannigan,127566-239166,SS,Jack,Jack Brannigan,Brannigan,,0,2000,PIT@NYM,PIT,NYM,DTD,Nose,,,,SS/UTIL
@@ -1133,7 +1132,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-226928:Jack Winkler,127566-226928,1B/2B/SS/3B,Jack,Jack Winkler,Winkler,2.171428544180734,14,2000,LAA@HOU,HOU,LAA,,,,,,C/1B/2B/3B/SS/UTIL
 "","","","","","","","","","","","","","",127566-222838:Jefferson Rojas,127566-222838,SS,Jefferson,Jefferson Rojas,Rojas,,0,2000,WSH@CHC,CHC,WSH,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-222845:Brice Matthews,127566-222845,SS/2B,Brice,Brice Matthews,Matthews,9.438461303710938,13,2000,LAA@HOU,HOU,LAA,,,,,,2B/SS/UTIL
-"","","","","","","","","","","","","","",127566-222851:Dominic Keegan,127566-222851,C,Dominic,Dominic Keegan,Keegan,,0,2000,TB@STL,TB,STL,,,,,,C/1B/UTIL
+"","","","","","","","","","","","","","",127566-222851:Dom Keegan,127566-222851,C,Dom,Dom Keegan,Keegan,,0,2000,TB@STL,TB,STL,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-222850:Brayden Taylor,127566-222850,3B,Brayden,Brayden Taylor,Taylor,,0,2000,TB@STL,TB,STL,,,,,,3B/UTIL
 "","","","","","","","","","","","","","",127566-222849:Eduardo Tait,127566-222849,C,Eduardo,Eduardo Tait,Tait,,0,2000,MIN@BAL,MIN,BAL,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-222848:Aidan Miller,127566-222848,SS,Aidan,Aidan Miller,Miller,,0,2000,TEX@PHI,PHI,TEX,O,Back,,,,SS/UTIL
@@ -1145,7 +1144,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-165516:Daniel Vellojin,127566-165516,C,Daniel,Daniel Vellojin,Vellojin,,0,2000,TB@STL,TB,STL,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-165517:Ariel Almonte,127566-165517,OF,Ariel,Ariel Almonte,Almonte,,0,2000,BOS@CIN,CIN,BOS,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-222879:Alan Roden,127566-222879,OF,Alan,Alan Roden,Roden,4.616363525390625,55,2000,MIN@BAL,MIN,BAL,,,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-165533:Wes Kath,127566-165533,3B,Wes,Wes Kath,Kath,,0,2000,CWS@MIL,CWS,MIL,,,,,,3B/UTIL
+"","","","","","","","","","","","","","",127566-165533:Wes Kath,127566-165533,3B,Wes,Wes Kath,Kath,,0,2000,CWS@MIL,CWS,MIL,,,,,0,3B/UTIL
 "","","","","","","","","","","","","","",127566-226979:Will Robertson,127566-226979,OF,Will,Will Robertson,Robertson,2.9592593157732927,27,2000,MIN@BAL,BAL,MIN,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-165539:Jose Rodriguez,127566-165539,SS,Jose,Jose Rodriguez,Rodriguez,0,2,2000,TEX@PHI,PHI,TEX,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-222886:Hayden Senger,127566-222886,C,Hayden,Hayden Senger,Senger,2.836363590124882,33,2000,PIT@NYM,NYM,PIT,,,,,,C/1B/UTIL
@@ -1154,7 +1153,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-165549:Roberto Campos,127566-165549,OF,Roberto,Roberto Campos,Campos,,0,2000,DET@SD,DET,SD,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-165554:Trei Cruz,127566-165554,SS,Trei,Trei Cruz,Cruz,,0,2000,DET@SD,DET,SD,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-165552:Izaac Pacheco,127566-165552,3B,Izaac,Izaac Pacheco,Pacheco,,0,2000,DET@SD,DET,SD,,,,,,3B/UTIL
-"","","","","","","","","","","","","","",127566-229041:Cody Freeman,127566-229041,3B,Cody,Cody Freeman,Freeman,6.447222391764323,36,2000,TEX@PHI,TEX,PHI,O,Back,,,,3B/UTIL
+"","","","","","","","","","","","","","",127566-229041:Cody Freeman,127566-229041,3B,Cody,Cody Freeman,Freeman,6.447222391764323,36,2000,TEX@PHI,TEX,PHI,IL,Back,,,,3B/UTIL
 "","","","","","","","","","","","","","",127566-220848:Christian Cairo,127566-220848,SS,Christian,Christian Cairo,Cairo,,0,2000,TEX@PHI,PHI,TEX,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-165558:Tyler Whitaker,127566-165558,OF,Tyler,Tyler Whitaker,Whitaker,,0,2000,LAA@HOU,HOU,LAA,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-165556:Gage Workman,127566-165556,3B,Gage,Gage Workman,Workman,2.3333333333333335,12,2000,DET@SD,DET,SD,,,,,,3B/UTIL
@@ -1178,7 +1177,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-165656:Lonnie White,127566-165656,OF,Lonnie,Lonnie White,White,,0,2000,PIT@NYM,PIT,NYM,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-165663:Victor Acosta,127566-165663,SS,Victor,Victor Acosta,Acosta,,0,2000,BOS@CIN,CIN,BOS,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-237342:Bryan Torres,127566-237342,2B,Bryan,Bryan Torres,Torres,,0,2000,TB@STL,STL,TB,,,,,,2B/UTIL
-"","","","","","","","","","","","","","",127566-165667:Samuel Zavala,127566-165667,OF,Samuel,Samuel Zavala,Zavala,,0,2000,CWS@MIL,CWS,MIL,,,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-165667:Samuel Zavala,127566-165667,OF,Samuel,Samuel Zavala,Zavala,,0,2000,CWS@MIL,CWS,MIL,,,,,0,OF/UTIL
 "","","","","","","","","","","","","","",127566-165669:Max Ferguson,127566-165669,2B,Max,Max Ferguson,Ferguson,,0,2000,BOS@CIN,BOS,CIN,,,,,,2B/UTIL
 "","","","","","","","","","","","","","",127566-165675:Edwin Arroyo,127566-165675,SS,Edwin,Edwin Arroyo,Arroyo,,0,2000,BOS@CIN,CIN,BOS,,,,,,SS/UTIL
 "","","","","","","","","","","","","","",127566-165672:Harry Ford,127566-165672,C,Harry,Harry Ford,Ford,1.7444444232516818,9,2000,WSH@CHC,WSH,CHC,,,,,,C/1B/UTIL
@@ -1194,7 +1193,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-165708:Trevor Hauver,127566-165708,2B,Trevor,Trevor Hauver,Hauver,,0,2000,TEX@PHI,TEX,PHI,,,,,,2B/UTIL
 "","","","","","","","","","","","","","",127566-165709:Yeison Morrobel,127566-165709,OF,Yeison,Yeison Morrobel,Morrobel,,0,2000,TEX@PHI,TEX,PHI,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-163667:Jhonkensy Noel,127566-163667,OF/1B,Jhonkensy,Jhonkensy Noel,Noel,3.575714329310826,70,2000,MIN@BAL,BAL,MIN,,,,,,C/1B/OF/UTIL
-"","","","","","","","","","","","","","",127566-165712:Dustin Harris,127566-165712,3B/OF,Dustin,Dustin Harris,Harris,4.2105263157894735,19,2000,CWS@MIL,CWS,MIL,,,,,,3B/OF/UTIL
+"","","","","","","","","","","","","","",127566-165712:Dustin Harris,127566-165712,3B/OF,Dustin,Dustin Harris,Harris,4.2105263157894735,19,2000,CWS@MIL,CWS,MIL,,,,,0,3B/OF/UTIL
 "","","","","","","","","","","","","","",127566-165713:Aaron Zavala,127566-165713,OF,Aaron,Aaron Zavala,Zavala,,0,2000,TEX@PHI,TEX,PHI,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-165718:Samad Taylor,127566-165718,2B/OF,Samad,Samad Taylor,Taylor,1.5499999523162842,4,2000,DET@SD,SD,DET,,,,,,2B/OF/UTIL
 "","","","","","","","","","","","","","",127566-163672:Jonah Bride,127566-163672,3B/1B,Jonah,Jonah Bride,Bride,3.086666531032986,45,2000,TEX@PHI,TEX,PHI,,,,,,C/1B/3B/UTIL
@@ -1211,7 +1210,7 @@ entry_id,contest_id,contest_name,entry_fee,P,C/1B,2B,3B,SS,OF,OF,OF,UTIL,"","Ins
 "","","","","","","","","","","","","","",127566-102356:Gilberto Celestino,127566-102356,OF,Gilberto,Gilberto Celestino,Celestino,,0,2000,TEX@PHI,TEX,PHI,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-102359:Will Banfield,127566-102359,C,Will,Will Banfield,Banfield,0.42857142857142855,7,2000,BOS@CIN,CIN,BOS,,,,,,C/1B/UTIL
 "","","","","","","","","","","","","","",127566-38872:Jesse Winker,127566-38872,OF,Jesse,Jesse Winker,Winker,6.830769465519832,26,2000,PIT@NYM,NYM,PIT,,,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-102374:Anthony Seigler,127566-102374,C/2B/3B,Anthony,Anthony Seigler,Seigler,3.373529322007123,34,2000,BOS@CIN,BOS,CIN,DTD,Knee,,,,C/1B/2B/3B/UTIL
+"","","","","","","","","","","","","","",127566-102374:Anthony Seigler,127566-102374,C/2B/3B,Anthony,Anthony Seigler,Seigler,3.373529322007123,34,2000,BOS@CIN,BOS,CIN,IL,Knee,,,,C/1B/2B/3B/UTIL
 "","","","","","","","","","","","","","",127566-102391:Tirso Ornelas,127566-102391,OF,Tirso,Tirso Ornelas,Ornelas,1.7857142857142858,7,2000,DET@SD,SD,DET,,,,,,OF/UTIL
 "","","","","","","","","","","","","","",127566-102390:Travis Swaggerty,127566-102390,OF,Travis,Travis Swaggerty,Swaggerty,,0,2000,PIT@NYM,NYM,PIT,,,,,,OF/UTIL
-"","","","","","","","","","","","","","",127566-102398:Jarred Kelenic,127566-102398,OF,Jarred,Jarred Kelenic,Kelenic,4.100000063578288,24,2000,CWS@MIL,CWS,MIL,,,,,,OF/UTIL
+"","","","","","","","","","","","","","",127566-102398:Jarred Kelenic,127566-102398,OF,Jarred,Jarred Kelenic,Kelenic,4.100000063578288,24,2000,CWS@MIL,CWS,MIL,,,,,0,OF/UTIL
