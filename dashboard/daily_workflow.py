@@ -29,7 +29,11 @@ from slate_optimizer.ingestion.vegas import VegasLoader
 from slate_optimizer.optimizer import build_optimizer_dataset, generate_lineups
 from slate_optimizer.optimizer.config import OptimizerConfig
 from slate_optimizer.optimizer.dataset import OPTIMIZER_COLUMNS
-from slate_optimizer.optimizer.export import lineups_to_fanduel_upload
+from slate_optimizer.optimizer.export import (
+    extract_template_entries,
+    lineups_to_fanduel_template,
+    lineups_to_fanduel_upload,
+)
 from slate_optimizer.projection import (
     OwnershipModelConfig,
     blend_projection_sources,
@@ -557,6 +561,8 @@ def _process_slate(
     with tempfile.TemporaryDirectory(prefix="slate_tmp_") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         fd_path = _save_uploaded_file(fanduel_file, temp_dir)
+        # Extract template entry metadata for FanDuel upload format
+        template_entries = extract_template_entries(fd_path)
         bpp_dir = temp_dir / "bpp"
         bpp_dir.mkdir(exist_ok=True)
         _write_multiple(bpp_files, bpp_dir)
@@ -775,6 +781,7 @@ def _process_slate(
             "switch_boost": platoon_switch_boost,
         },
         "projection_config": projection_config,
+        "template_entries": template_entries,
     }
     return workflow_payload
 
@@ -2844,7 +2851,8 @@ def _render_step_five() -> None:
         except Exception as exc:  # pylint: disable=broad-except
             st.error(f"Late swap optimization failed: {exc}")
 
-    fan_duel_df = lineups_to_fanduel_upload(lineups)
+    template_entries = workflow.get("template_entries")
+    fan_duel_df = lineups_to_fanduel_template(lineups, template_entries)
     st.download_button(
         "Download FanDuel Upload CSV",
         data=fan_duel_df.to_csv(index=False).encode("utf-8"),
