@@ -674,13 +674,29 @@ def _process_slate(
 
         # Filter to confirmed starters only when lineup data was provided
         if batting_path is not None and combined["is_confirmed_lineup"].any():
-            before_count = len(combined)
-            combined = combined[combined["is_confirmed_lineup"]].reset_index(drop=True)
-            filtered_count = before_count - len(combined)
-            optional_messages.append(
-                f"Filtered to confirmed starters: {len(combined)} players "
-                f"({filtered_count} bench/inactive players removed)"
-            )
+            confirmed = combined[combined["is_confirmed_lineup"]]
+            n_confirmed_pitchers = (confirmed["player_type"].str.lower() == "pitcher").sum()
+            n_confirmed_hitters = (confirmed["player_type"].str.lower() != "pitcher").sum()
+
+            # Need at least 1 pitcher and 8 hitters (one lineup) to proceed
+            if n_confirmed_pitchers >= 1 and n_confirmed_hitters >= 8:
+                before_count = len(combined)
+                combined = confirmed.reset_index(drop=True)
+                filtered_count = before_count - len(combined)
+                optional_messages.append(
+                    f"Filtered to confirmed starters: {len(combined)} players "
+                    f"({n_confirmed_pitchers} pitchers + {n_confirmed_hitters} hitters, "
+                    f"{filtered_count} bench/inactive removed)"
+                )
+            else:
+                # Not enough matches — name matching may have failed
+                unmatched_count = (~combined["is_confirmed_lineup"]).sum()
+                optional_messages.append(
+                    f"WARNING: Only matched {n_confirmed_pitchers} pitchers + "
+                    f"{n_confirmed_hitters} hitters from lineup data. "
+                    f"Keeping full player pool ({len(combined)} players). "
+                    f"Check that pasted lineup names match FanDuel names."
+                )
 
         projections = compute_baseline_projections(
             combined,
