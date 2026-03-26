@@ -672,6 +672,16 @@ def _process_slate(
             recent_path,
         )
 
+        # Filter to confirmed starters only when lineup data was provided
+        if batting_path is not None and combined["is_confirmed_lineup"].any():
+            before_count = len(combined)
+            combined = combined[combined["is_confirmed_lineup"]].reset_index(drop=True)
+            filtered_count = before_count - len(combined)
+            optional_messages.append(
+                f"Filtered to confirmed starters: {len(combined)} players "
+                f"({filtered_count} bench/inactive players removed)"
+            )
+
         projections = compute_baseline_projections(
             combined,
             recency_blend=recency_blend,

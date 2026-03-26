@@ -77,7 +77,7 @@ class BattingOrderLoader:
             canonical = apply_aliases(canonical, alias_map)
         entries["canonical_name"] = canonical
         entries = entries.dropna(subset=["batting_order_position", "canonical_name"])  # type: ignore[arg-type]
-        entries = entries[entries["batting_order_position"].between(1, 9, inclusive="both")]
+        entries = entries[entries["batting_order_position"].between(0, 9, inclusive="both")]
         entries = entries.drop_duplicates(["team_code", "canonical_name"], keep="first")
         keep_cols = [
             "team_code",
@@ -93,15 +93,17 @@ def parse_lineup_paste(text: str) -> pd.DataFrame:
     Expects a format like:
         Pittsburgh Pirates (-100) @ New York Mets (-120)
         ...
+        Paul Skenes (R) $10.8K
+        Freddy Peralta (R) $9.6K
         Projected Lineup
         * 1 - Oneil Cruz (L) SS/OF $3.0K
-        * 2 - Ryan O'Hearn (L) 1B/OF $2.8K
         ...
         Projected Lineup
         * 1 - Francisco Lindor (B) SS $4.0K
         ...
 
     Returns a DataFrame with columns: team, order_position, player_name
+    Pitchers are included with order_position=0.
     """
     lines = text.strip().splitlines()
     rows: List[Dict[str, object]] = []
@@ -112,13 +114,18 @@ def parse_lineup_paste(text: str) -> pd.DataFrame:
     )
     # Pattern: "* 1 - Player Name (R) POS $X.XK" with optional status flags
     player_re = re.compile(
-        r"^\*?\s*(\d)\s*[-–—]\s*(.+?)\s*\(([RLBS]?)\)\s*"
+        r"^\*?\s*(\d)\s*[-–—]\s*(.+?)\s*\(\s*([RLBS]?)\s*\)\s*"
         r"([\w/]+)\s*\$[\d.]+K?"
+    )
+    # Pattern: "Player Name (R) $X.XK" — pitcher line (no order number, no position)
+    pitcher_re = re.compile(
+        r"^([A-Z][a-zA-Z'.]+(?:\s+[A-Za-z'.]+)+)\s*\(([RLBS]?)\)\s*\$[\d.]+K?\s*$"
     )
 
     current_away: Optional[str] = None
     current_home: Optional[str] = None
     lineup_count = 0  # 0=before first, 1=away, 2=home
+    pitcher_count = 0  # tracks pitchers seen for this matchup
 
     for line in lines:
         line = line.strip()
@@ -133,12 +140,28 @@ def parse_lineup_paste(text: str) -> pd.DataFrame:
             current_away = _TEAM_NAME_TO_CODE.get(away_name, away_name.upper())
             current_home = _TEAM_NAME_TO_CODE.get(home_name, home_name.upper())
             lineup_count = 0
+            pitcher_count = 0
             continue
 
         # Check for "Projected Lineup" or "Confirmed Lineup"
         if re.match(r"^(projected|confirmed)\s+lineup", line, re.IGNORECASE):
             lineup_count += 1
             continue
+
+        # Check for pitcher line (before lineups start)
+        if lineup_count == 0 and (current_away or current_home):
+            pm_pitcher = pitcher_re.match(line)
+            if pm_pitcher:
+                pitcher_name = pm_pitcher.group(1).strip()
+                pitcher_count += 1
+                team = current_away if pitcher_count == 1 else current_home
+                if team:
+                    rows.append({
+                        "team": team,
+                        "order_position": 0,
+                        "player_name": pitcher_name,
+                    })
+                continue
 
         # Check for player line
         pm = player_re.match(line)
