@@ -2853,7 +2853,27 @@ def _render_step_five() -> None:
             st.error(f"Late swap optimization failed: {exc}")
 
     template_entries = workflow.get("template_entries")
-    fan_duel_df = lineups_to_fanduel_template(lineups, template_entries)
+
+    # Shuffle control
+    shuffle_col1, shuffle_col2 = st.columns([2, 1])
+    shuffle_enabled = shuffle_col1.checkbox(
+        "Shuffle lineup order before assigning to entries",
+        value=True,
+        help="Randomizes which lineup goes to which entry, so your best lineups are spread evenly across all contest buy-ins.",
+    )
+    if shuffle_enabled:
+        if shuffle_col2.button("Re-shuffle", help="Generate a new random order"):
+            st.session_state["shuffle_seed"] = st.session_state.get("shuffle_seed", 0) + 1
+            st.rerun()
+        import random
+        seed = st.session_state.get("shuffle_seed", 42)
+        shuffled = list(lineups)
+        random.Random(seed).shuffle(shuffled)
+        export_lineups = shuffled
+    else:
+        export_lineups = lineups
+
+    fan_duel_df = lineups_to_fanduel_template(export_lineups, template_entries)
     st.download_button(
         "Download FanDuel Upload CSV",
         data=fan_duel_df.to_csv(index=False).encode("utf-8"),
