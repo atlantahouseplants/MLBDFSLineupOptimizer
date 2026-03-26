@@ -148,7 +148,9 @@ def generate_lineups(
     df["proj_fd_mean"] = pd.to_numeric(df["proj_fd_mean"], errors="coerce").fillna(0.0)
     df["salary"] = pd.to_numeric(df["salary"], errors="coerce").fillna(0).astype(int)
 
+    MAX_HITTERS_PER_TEAM = 4  # FanDuel hard cap
     stack_sizes = tuple(stack_templates) if stack_templates else ((min_stack_size,) if min_stack_size else tuple())
+    stack_sizes = tuple(min(s, MAX_HITTERS_PER_TEAM) for s in stack_sizes)
     bring_back_count = max(1, int(bring_back_count))
 
     usage_limits = _max_usage(df, num_lineups)
@@ -238,6 +240,12 @@ def generate_lineups(
             if opp_hitters.empty:
                 continue
             prob += lpSum(decision_vars[j] for j in opp_hitters) <= (1 - decision_vars[idx]) * len(opp_hitters)
+
+        # FanDuel rule: max 4 hitters from the same team (pitcher excluded)
+        for team_code in pool.loc[batter_mask, "team_code"].dropna().unique():
+            team_hitter_indices = pool.index[(pool["team_code"] == team_code) & batter_mask]
+            if len(team_hitter_indices) > 4:
+                prob += lpSum(decision_vars[idx] for idx in team_hitter_indices) <= 4
 
         if max_lineup_ownership is not None and "proj_fd_ownership" in pool.columns:
             prob += lpSum(
