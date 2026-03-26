@@ -542,16 +542,17 @@ def _process_slate(
     recent_file,
     ownership_files,
     projection_files,
-    projection_preset: Optional[str],
-    projection_weights_input: Optional[str],
-    projection_baseline_weight: float,
-    ownership_preset: Optional[str],
-    ownership_weights_input: Optional[str],
-    ownership_model_settings: Optional[Dict],
-    recency_blend_input: Optional[str],
-    platoon_opposite_boost: float,
-    platoon_same_penalty: float,
-    platoon_switch_boost: float,
+    lineup_paste_text: str = "",
+    projection_preset: Optional[str] = None,
+    projection_weights_input: Optional[str] = None,
+    projection_baseline_weight: float = 0.5,
+    ownership_preset: Optional[str] = None,
+    ownership_weights_input: Optional[str] = None,
+    ownership_model_settings: Optional[Dict] = None,
+    recency_blend_input: Optional[str] = None,
+    platoon_opposite_boost: float = 1.08,
+    platoon_same_penalty: float = 0.95,
+    platoon_switch_boost: float = 1.03,
 ) -> Dict:
     if not fanduel_file:
         raise ValueError("FanDuel CSV is required.")
@@ -568,7 +569,16 @@ def _process_slate(
         _write_multiple(bpp_files, bpp_dir)
 
         vegas_path = _save_uploaded_file(vegas_file, temp_dir) if vegas_file else None
-        batting_path = _save_uploaded_file(batting_file, temp_dir) if batting_file else None
+        # Handle batting orders: paste text takes priority over CSV upload
+        batting_path = None
+        if lineup_paste_text and lineup_paste_text.strip():
+            from slate_optimizer.ingestion.batting_orders import parse_lineup_paste
+            paste_df = parse_lineup_paste(lineup_paste_text)
+            if not paste_df.empty:
+                batting_path = temp_dir / "pasted_batting_orders.csv"
+                paste_df.to_csv(batting_path, index=False)
+        if batting_path is None and batting_file:
+            batting_path = _save_uploaded_file(batting_file, temp_dir)
         handed_path = _save_uploaded_file(handed_file, temp_dir) if handed_file else None
         recent_path = _save_uploaded_file(recent_file, temp_dir) if recent_file else None
 
@@ -1563,6 +1573,13 @@ def _render_step_one() -> None:
 
     vegas_file = st.file_uploader("Vegas lines CSV (optional)", type=["csv"], key="vegas")
     batting_orders_file = st.file_uploader("Batting orders CSV (optional)", type=["csv"], key="orders")
+    lineup_paste = st.text_area(
+        "Paste lineups from FantasyLabs / RotoGrinders (optional)",
+        height=200,
+        key="lineup_paste",
+        help="Copy and paste the full lineup page from FantasyLabs, RotoGrinders, etc. "
+             "This will be used as batting order data. Overrides the CSV upload above if both are provided.",
+    )
     handedness_file = st.file_uploader(
         "Handedness reference CSV (optional)",
         type=["csv"],
@@ -1714,16 +1731,17 @@ def _render_step_one() -> None:
                     recent_stats_file,
                     ownership_files or [],
                     projection_files or [],
-                    projection_preset,
-                    projection_weights_input,
-                    projection_baseline_weight,
-                    ownership_preset,
-                    ownership_weights_input,
-                    ownership_model_settings,
-                    recency_blend_input,
-                    platoon_opp_input,
-                    platoon_same_input,
-                    platoon_switch_input,
+                    lineup_paste_text=lineup_paste or "",
+                    projection_preset=projection_preset,
+                    projection_weights_input=projection_weights_input,
+                    projection_baseline_weight=projection_baseline_weight,
+                    ownership_preset=ownership_preset,
+                    ownership_weights_input=ownership_weights_input,
+                    ownership_model_settings=ownership_model_settings,
+                    recency_blend_input=recency_blend_input,
+                    platoon_opposite_boost=platoon_opp_input,
+                    platoon_same_penalty=platoon_same_input,
+                    platoon_switch_boost=platoon_switch_input,
                 )
                 session_state = _get_session()
                 session_state.update(workflow_payload)

@@ -1,14 +1,35 @@
-"""Loader utilities for batting order CSVs."""
+"""Loader utilities for batting order CSVs and paste-based lineup data."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 
 from .aliases import CanonicalMap, apply_aliases
 from .text_utils import canonicalize_series
+
+# Full team name → standard abbreviation
+_TEAM_NAME_TO_CODE: Dict[str, str] = {
+    "arizona diamondbacks": "ARI", "atlanta braves": "ATL",
+    "baltimore orioles": "BAL", "boston red sox": "BOS",
+    "chicago cubs": "CHC", "chicago white sox": "CWS",
+    "cincinnati reds": "CIN", "cleveland guardians": "CLE",
+    "colorado rockies": "COL", "detroit tigers": "DET",
+    "houston astros": "HOU", "kansas city royals": "KC",
+    "los angeles angels": "LAA", "los angeles dodgers": "LAD",
+    "miami marlins": "MIA", "milwaukee brewers": "MIL",
+    "minnesota twins": "MIN", "new york mets": "NYM",
+    "new york yankees": "NYY", "oakland athletics": "OAK",
+    "philadelphia phillies": "PHI", "pittsburgh pirates": "PIT",
+    "san diego padres": "SD", "san francisco giants": "SF",
+    "seattle mariners": "SEA", "st. louis cardinals": "STL",
+    "st louis cardinals": "STL", "tampa bay rays": "TB",
+    "texas rangers": "TEX", "toronto blue jays": "TOR",
+    "washington nationals": "WSH",
+}
 
 
 @dataclass
@@ -66,5 +87,76 @@ class BattingOrderLoader:
         return BattingOrderTable(entries=entries[keep_cols], source_path=self.csv_path)
 
 
-__all__ = ["BattingOrderLoader", "BattingOrderTable"]
+def parse_lineup_paste(text: str) -> pd.DataFrame:
+    """Parse pasted lineup data from FantasyLabs or similar sources.
+
+    Expects a format like:
+        Pittsburgh Pirates (-100) @ New York Mets (-120)
+        ...
+        Projected Lineup
+        * 1 - Oneil Cruz (L) SS/OF $3.0K
+        * 2 - Ryan O'Hearn (L) 1B/OF $2.8K
+        ...
+        Projected Lineup
+        * 1 - Francisco Lindor (B) SS $4.0K
+        ...
+
+    Returns a DataFrame with columns: team, order_position, player_name
+    """
+    lines = text.strip().splitlines()
+    rows: List[Dict[str, object]] = []
+
+    # Pattern: "Team A (odds) @ Team B (odds)" or "Team A @ Team B"
+    matchup_re = re.compile(
+        r"^(.+?)\s*\([^)]*\)\s*[@vV][sS]?\.?\s*(.+?)\s*\([^)]*\)\s*$"
+    )
+    # Pattern: "* 1 - Player Name (R) POS $X.XK" with optional status flags
+    player_re = re.compile(
+        r"^\*?\s*(\d)\s*[-–—]\s*(.+?)\s*\(([RLBS]?)\)\s*"
+        r"([\w/]+)\s*\$[\d.]+K?"
+    )
+
+    current_away: Optional[str] = None
+    current_home: Optional[str] = None
+    lineup_count = 0  # 0=before first, 1=away, 2=home
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Check for matchup line
+        m = matchup_re.match(line)
+        if m:
+            away_name = m.group(1).strip().lower()
+            home_name = m.group(2).strip().lower()
+            current_away = _TEAM_NAME_TO_CODE.get(away_name, away_name.upper())
+            current_home = _TEAM_NAME_TO_CODE.get(home_name, home_name.upper())
+            lineup_count = 0
+            continue
+
+        # Check for "Projected Lineup" or "Confirmed Lineup"
+        if re.match(r"^(projected|confirmed)\s+lineup", line, re.IGNORECASE):
+            lineup_count += 1
+            continue
+
+        # Check for player line
+        pm = player_re.match(line)
+        if pm and (current_away or current_home):
+            order_pos = int(pm.group(1))
+            player_name = pm.group(2).strip()
+            # Remove trailing status indicators like "Q", "DTD", "O", "IL"
+            player_name = re.sub(r"\s+[A-Z]{1,3}$", "", player_name)
+            team = current_away if lineup_count <= 1 else current_home
+            if team:
+                rows.append({
+                    "team": team,
+                    "order_position": order_pos,
+                    "player_name": player_name,
+                })
+
+    return pd.DataFrame(rows, columns=["team", "order_position", "player_name"])
+
+
+__all__ = ["BattingOrderLoader", "BattingOrderTable", "parse_lineup_paste"]
 
