@@ -1874,9 +1874,10 @@ def _render_step_three() -> None:
     config_state["num_lineups"] = st.slider(
         "Number of lineups",
         min_value=1,
-        max_value=150,
+        max_value=500,
         value=int(config_state.get("num_lineups", 20) or 20),
         step=1,
+        help="For multi-contest play, generate enough unique lineups to cover all your entries across contests.",
     )
     config_state["salary_cap"] = st.number_input(
         "Salary cap",
@@ -2851,14 +2852,83 @@ def _render_step_five() -> None:
         except Exception as exc:  # pylint: disable=broad-except
             st.error(f"Late swap optimization failed: {exc}")
 
-    template_entries = workflow.get("template_entries")
-    fan_duel_df = lineups_to_fanduel_template(lineups, template_entries)
-    st.download_button(
-        "Download FanDuel Upload CSV",
-        data=fan_duel_df.to_csv(index=False).encode("utf-8"),
-        file_name="fanduel_upload.csv",
-        mime="text/csv",
+    # --- Multi-contest template upload & download ---
+    st.subheader("Download for FanDuel")
+    st.caption(
+        "Upload one or more FanDuel entries upload templates below. "
+        "Each contest gets its own upload CSV with lineups distributed across entries."
     )
+    extra_templates = st.file_uploader(
+        "FanDuel entries upload templates",
+        type=["csv"],
+        accept_multiple_files=True,
+        key="fd_upload_templates",
+        help="Upload the entries upload template CSV for each contest you're entering.",
+    )
+
+    # Collect all templates: the one from Step 1 + any extras uploaded here
+    all_templates: List[tuple] = []
+    step1_entries = workflow.get("template_entries")
+    if step1_entries is not None and not step1_entries.empty:
+        contest_name = step1_entries["contest_name"].iloc[0] if "contest_name" in step1_entries.columns else "Contest"
+        all_templates.append((contest_name, step1_entries))
+
+    if extra_templates:
+        for uploaded in extra_templates:
+            import tempfile as _tmpmod
+            with _tmpmod.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+                tmp.write(uploaded.read())
+                tmp_path = Path(tmp.name)
+            try:
+                entries_df = extract_template_entries(tmp_path)
+                if entries_df is not None and not entries_df.empty:
+                    name = entries_df["contest_name"].iloc[0] if "contest_name" in entries_df.columns else uploaded.name
+                    # Avoid duplicates from Step 1
+                    if step1_entries is not None and not step1_entries.empty:
+                        step1_ids = set(step1_entries["entry_id"].tolist())
+                        if not set(entries_df["entry_id"].tolist()).issubset(step1_ids):
+                            all_templates.append((name, entries_df))
+                    else:
+                        all_templates.append((name, entries_df))
+                else:
+                    st.warning(f"Could not parse template: {uploaded.name}")
+            finally:
+                tmp_path.unlink(missing_ok=True)
+
+    if all_templates:
+        total_entries = sum(len(t[1]) for t in all_templates)
+        st.info(f"{len(all_templates)} contest(s), {total_entries} total entries, {len(lineups)} unique lineups")
+
+        # Distribute lineups across contests
+        lineup_offset = 0
+        for contest_name, entries_df in all_templates:
+            n_entries = len(entries_df)
+            # Slice a portion of lineups for this contest, wrapping if needed
+            contest_lineups = []
+            for i in range(n_entries):
+                idx = (lineup_offset + i) % len(lineups)
+                contest_lineups.append(lineups[idx])
+            lineup_offset += n_entries
+
+            fan_duel_df = lineups_to_fanduel_template(contest_lineups, entries_df)
+            safe_name = contest_name[:40].replace(" ", "_").replace("/", "_")
+            st.download_button(
+                f"Download: {contest_name} ({n_entries} entries)",
+                data=fan_duel_df.to_csv(index=False).encode("utf-8"),
+                file_name=f"fanduel_upload_{safe_name}.csv",
+                mime="text/csv",
+                key=f"dl_{safe_name}_{n_entries}",
+            )
+    else:
+        # Fallback: no template, just output raw lineup IDs
+        fan_duel_df = lineups_to_fanduel_upload(lineups)
+        st.download_button(
+            "Download FanDuel Upload CSV",
+            data=fan_duel_df.to_csv(index=False).encode("utf-8"),
+            file_name="fanduel_upload.csv",
+            mime="text/csv",
+        )
+
     st.download_button(
         "Download Full Lineups CSV",
         data=lineup_df.to_csv(index=False).encode("utf-8"),
