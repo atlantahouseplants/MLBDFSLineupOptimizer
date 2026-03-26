@@ -571,12 +571,18 @@ def _process_slate(
         vegas_path = _save_uploaded_file(vegas_file, temp_dir) if vegas_file else None
         # Handle batting orders: paste text takes priority over CSV upload
         batting_path = None
+        confirmed_player_names = set()
         if lineup_paste_text and lineup_paste_text.strip():
             from slate_optimizer.ingestion.batting_orders import parse_lineup_paste
             paste_df = parse_lineup_paste(lineup_paste_text)
             if not paste_df.empty:
                 batting_path = temp_dir / "pasted_batting_orders.csv"
                 paste_df.to_csv(batting_path, index=False)
+                # Build set of canonical names for direct filtering
+                from slate_optimizer.ingestion.text_utils import canonicalize_series as _canon
+                confirmed_player_names = set(
+                    _canon(paste_df["player_name"]).tolist()
+                )
         if batting_path is None and batting_file:
             batting_path = _save_uploaded_file(batting_file, temp_dir)
         handed_path = _save_uploaded_file(handed_file, temp_dir) if handed_file else None
@@ -673,15 +679,20 @@ def _process_slate(
         )
 
         # Filter to confirmed starters only when lineup data was provided
-        if batting_path is not None and combined["is_confirmed_lineup"].any():
-            confirmed = combined[combined["is_confirmed_lineup"]]
+        if confirmed_player_names:
+            from slate_optimizer.ingestion.text_utils import canonicalize_series as _canon2
+            combined["_canon_check"] = _canon2(combined["full_name"])
+            name_match = combined["_canon_check"].isin(confirmed_player_names)
+            # Also include merge-based matches
+            if "is_confirmed_lineup" in combined.columns:
+                name_match = name_match | combined["is_confirmed_lineup"]
+            confirmed = combined[name_match]
             n_confirmed_pitchers = (confirmed["player_type"].str.lower() == "pitcher").sum()
             n_confirmed_hitters = (confirmed["player_type"].str.lower() != "pitcher").sum()
 
-            # Need at least 1 pitcher and 8 hitters (one lineup) to proceed
             if n_confirmed_pitchers >= 1 and n_confirmed_hitters >= 8:
                 before_count = len(combined)
-                combined = confirmed.reset_index(drop=True)
+                combined = confirmed.drop(columns=["_canon_check"]).reset_index(drop=True)
                 filtered_count = before_count - len(combined)
                 optional_messages.append(
                     f"Filtered to confirmed starters: {len(combined)} players "
@@ -689,13 +700,11 @@ def _process_slate(
                     f"{filtered_count} bench/inactive removed)"
                 )
             else:
-                # Not enough matches — name matching may have failed
-                unmatched_count = (~combined["is_confirmed_lineup"]).sum()
+                combined = combined.drop(columns=["_canon_check"])
                 optional_messages.append(
                     f"WARNING: Only matched {n_confirmed_pitchers} pitchers + "
                     f"{n_confirmed_hitters} hitters from lineup data. "
-                    f"Keeping full player pool ({len(combined)} players). "
-                    f"Check that pasted lineup names match FanDuel names."
+                    f"Keeping full player pool ({len(combined)} players)."
                 )
 
         projections = compute_baseline_projections(
