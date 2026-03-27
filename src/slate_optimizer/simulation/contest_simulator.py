@@ -86,7 +86,15 @@ def simulate_contest(
     candidate_scores = slate_sim.scores[:, candidate_indices]
     candidate_scores = candidate_scores.sum(axis=2)  # (N, C)
 
-    field_scores = slate_sim.scores[:, field_sim.lineups].sum(axis=2)  # (N, M)
+    # Compute field scores in chunks to avoid a huge intermediate array
+    # (N × M × 9 at full expansion would exceed memory on cloud hosts)
+    num_sims = slate_sim.num_simulations
+    num_field = field_sim.num_lineups
+    field_scores = np.empty((num_sims, num_field), dtype=np.float64)
+    _CHUNK = 100
+    for start in range(0, num_field, _CHUNK):
+        end = min(start + _CHUNK, num_field)
+        field_scores[:, start:end] = slate_sim.scores[:, field_sim.lineups[start:end]].sum(axis=2)
 
     all_scores = np.concatenate([field_scores, candidate_scores], axis=1)
     ranks = _rank_scores(all_scores)

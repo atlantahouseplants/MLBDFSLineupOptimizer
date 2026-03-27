@@ -1,9 +1,10 @@
 """Loader utilities for FanDuel player list CSV exports."""
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 import pandas as pd
 
@@ -26,6 +27,52 @@ _COLUMN_MAP: Dict[str, str] = {
     "Batting Order": "batting_order",
     "Roster Position": "roster_position",
 }
+
+_UPLOAD_TEMPLATE_PLAYER_HEADERS = [
+    "Player ID + Player Name", "Id", "Position", "First Name", "Nickname",
+    "Last Name", "FPPG", "Played", "Salary", "Game", "Team", "Opponent",
+    "Injury Indicator", "Injury Details", "Tier", "Probable Pitcher",
+    "Batting Order", "Roster Position",
+]
+
+
+def _is_upload_template(csv_path: Path) -> bool:
+    """Detect if the CSV is a FanDuel entries upload template."""
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.reader(f)
+        header = next(reader, [])
+        return len(header) > 0 and header[0].strip().lower() == "entry_id"
+
+
+def _parse_upload_template(csv_path: Path) -> pd.DataFrame:
+    """Extract player roster data from FanDuel upload template format."""
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.reader(f)
+        rows = list(reader)
+
+    # Find the row containing the player column headers
+    header_row_idx = None
+    player_col_start = None
+    for i, row in enumerate(rows):
+        for j, cell in enumerate(row):
+            if cell.strip() == "Player ID + Player Name":
+                header_row_idx = i
+                player_col_start = j
+                break
+        if header_row_idx is not None:
+            break
+
+    if header_row_idx is None or player_col_start is None:
+        raise ValueError("Could not find player data in FanDuel upload template")
+
+    headers = rows[header_row_idx][player_col_start:]
+    player_data: List[List[str]] = []
+    for row in rows[header_row_idx + 1:]:
+        if len(row) > player_col_start and row[player_col_start].strip():
+            player_data.append(row[player_col_start:player_col_start + len(headers)])
+
+    df = pd.DataFrame(player_data, columns=headers)
+    return df
 
 
 def _rename_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -64,7 +111,10 @@ class FanduelCSVLoader:
             raise FileNotFoundError(f"FanDuel CSV not found: {self.csv_path}")
 
     def load(self) -> FanduelPlayerList:
-        df = pd.read_csv(self.csv_path)
+        if _is_upload_template(self.csv_path):
+            df = _parse_upload_template(self.csv_path)
+        else:
+            df = pd.read_csv(self.csv_path)
         df = _rename_columns(df)
         df["position"] = df["position"].str.upper().fillna("")
         df["team"] = df["team"].str.upper().fillna("")

@@ -27,17 +27,33 @@ POSITION_REQUIREMENTS = {
     "outfield": ("OF", 3, None),
 }
 
+# Maximum players whose ONLY non-UTIL eligibility is within this group.
+# E.g. a pure 1B (roster_position C/1B/UTIL) can only fill C/1B or UTIL.
+# With 1 C/1B slot + 1 UTIL slot, max 2 such players.
+_SLOT_CAPS = {
+    "C/1B": 2,   # C/1B slot + UTIL
+    "2B": 2,     # 2B slot + UTIL
+    "3B": 2,     # 3B slot + UTIL
+    "SS": 2,     # SS slot + UTIL
+    "OF": 4,     # 3 OF slots + UTIL
+}
+
 
 def _position_mask(df: pd.DataFrame, keyword: str) -> pd.Series:
     keyword = keyword.upper()
     tokens = keyword.split("/")
 
+    # Use roster_position (full FanDuel eligibility) when available
+    pos_col = "roster_position" if "roster_position" in df.columns else "position"
+
     def matches(value: str) -> bool:
         text = str(value).upper()
         parts = text.replace("-", "/").split("/")
+        # Exclude UTIL from position matching — UTIL is implicit for all hitters
+        parts = [p for p in parts if p != "UTIL"]
         return any(tok in parts for tok in tokens)
 
-    return df["position"].map(matches)
+    return df[pos_col].map(matches)
 
 
 @dataclass
@@ -132,7 +148,9 @@ def generate_lineups(
     df["proj_fd_mean"] = pd.to_numeric(df["proj_fd_mean"], errors="coerce").fillna(0.0)
     df["salary"] = pd.to_numeric(df["salary"], errors="coerce").fillna(0).astype(int)
 
+    MAX_HITTERS_PER_TEAM = 4  # FanDuel hard cap
     stack_sizes = tuple(stack_templates) if stack_templates else ((min_stack_size,) if min_stack_size else tuple())
+    stack_sizes = tuple(min(s, MAX_HITTERS_PER_TEAM) for s in stack_sizes)
     bring_back_count = max(1, int(bring_back_count))
 
     usage_limits = _max_usage(df, num_lineups)
@@ -170,6 +188,30 @@ def generate_lineups(
                 if maximum:
                     prob += lpSum(decision_vars[idx] for idx in mask[mask].index) <= maximum
 
+        # Ensure at least 8 hitters (= 9 total - 1 pitcher)
+        hitters_mask = pool["player_type"].str.lower() != "pitcher"
+        prob += lpSum(decision_vars[idx] for idx in hitters_mask[hitters_mask].index) == TOTAL_PLAYERS - 1
+
+        # Cap players whose eligibility is limited to a single position group.
+        # Prevents e.g. 3 pure-1B players when only C/1B + UTIL slots exist (max 2).
+        if "roster_position" in pool.columns:
+            _slot_groups = {"C": "C/1B", "1B": "C/1B", "2B": "2B", "3B": "3B", "SS": "SS", "OF": "OF"}
+            for group_label, cap in _SLOT_CAPS.items():
+                group_tokens = set(group_label.split("/"))
+
+                def _is_limited_to_group(roster_pos: str) -> bool:
+                    parts = {p.strip() for p in str(roster_pos).upper().replace("-", "/").split("/")}
+                    parts.discard("UTIL")
+                    parts.discard("")
+                    if not parts:
+                        return False
+                    mapped = {_slot_groups.get(p, p) for p in parts}
+                    return mapped == {group_label}
+
+                limited_mask = pool["roster_position"].map(_is_limited_to_group)
+                if limited_mask.any():
+                    prob += lpSum(decision_vars[idx] for idx in limited_mask[limited_mask].index) <= cap
+
         stack_info = _team_stack_constraints(
             prob,
             pool,
@@ -198,6 +240,12 @@ def generate_lineups(
             if opp_hitters.empty:
                 continue
             prob += lpSum(decision_vars[j] for j in opp_hitters) <= (1 - decision_vars[idx]) * len(opp_hitters)
+
+        # FanDuel rule: max 4 hitters from the same team (pitcher excluded)
+        for team_code in pool.loc[batter_mask, "team_code"].dropna().unique():
+            team_hitter_indices = pool.index[(pool["team_code"] == team_code) & batter_mask]
+            if len(team_hitter_indices) > 4:
+                prob += lpSum(decision_vars[idx] for idx in team_hitter_indices) <= 4
 
         if max_lineup_ownership is not None and "proj_fd_ownership" in pool.columns:
             prob += lpSum(

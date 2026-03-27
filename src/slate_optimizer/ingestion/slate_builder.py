@@ -11,8 +11,23 @@ from .ballparkpal import BallparkPalBundle
 from .text_utils import canonicalize_series
 
 
+_TEAM_ALIASES: dict[str, str] = {
+    "CHW": "CWS",
+    "WAS": "WSH",
+    "WSN": "WSH",
+    "KCR": "KC",
+    "SDP": "SD",
+    "SFG": "SF",
+    "TBR": "TB",
+    "ANA": "LAA",
+    "FLA": "MIA",
+    "MON": "WSH",
+}
+
+
 def _normalize_team(series: pd.Series) -> pd.Series:
-    return series.fillna("").astype(str).str.upper().str.strip()
+    cleaned = series.fillna("").astype(str).str.upper().str.strip()
+    return cleaned.map(lambda t: _TEAM_ALIASES.get(t, t))
 
 
 def _prepare_fanduel_players(

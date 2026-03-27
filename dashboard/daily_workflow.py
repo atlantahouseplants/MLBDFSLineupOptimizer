@@ -29,7 +29,11 @@ from slate_optimizer.ingestion.vegas import VegasLoader
 from slate_optimizer.optimizer import build_optimizer_dataset, generate_lineups
 from slate_optimizer.optimizer.config import OptimizerConfig
 from slate_optimizer.optimizer.dataset import OPTIMIZER_COLUMNS
-from slate_optimizer.optimizer.export import lineups_to_fanduel_upload
+from slate_optimizer.optimizer.export import (
+    extract_template_entries,
+    lineups_to_fanduel_template,
+    lineups_to_fanduel_upload,
+)
 from slate_optimizer.projection import (
     OwnershipModelConfig,
     blend_projection_sources,
@@ -538,16 +542,17 @@ def _process_slate(
     recent_file,
     ownership_files,
     projection_files,
-    projection_preset: Optional[str],
-    projection_weights_input: Optional[str],
-    projection_baseline_weight: float,
-    ownership_preset: Optional[str],
-    ownership_weights_input: Optional[str],
-    ownership_model_settings: Optional[Dict],
-    recency_blend_input: Optional[str],
-    platoon_opposite_boost: float,
-    platoon_same_penalty: float,
-    platoon_switch_boost: float,
+    lineup_paste_text: str = "",
+    projection_preset: Optional[str] = None,
+    projection_weights_input: Optional[str] = None,
+    projection_baseline_weight: float = 0.5,
+    ownership_preset: Optional[str] = None,
+    ownership_weights_input: Optional[str] = None,
+    ownership_model_settings: Optional[Dict] = None,
+    recency_blend_input: Optional[str] = None,
+    platoon_opposite_boost: float = 1.08,
+    platoon_same_penalty: float = 0.95,
+    platoon_switch_boost: float = 1.03,
 ) -> Dict:
     if not fanduel_file:
         raise ValueError("FanDuel CSV is required.")
@@ -557,12 +562,29 @@ def _process_slate(
     with tempfile.TemporaryDirectory(prefix="slate_tmp_") as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         fd_path = _save_uploaded_file(fanduel_file, temp_dir)
+        # Extract template entry metadata for FanDuel upload format
+        template_entries = extract_template_entries(fd_path)
         bpp_dir = temp_dir / "bpp"
         bpp_dir.mkdir(exist_ok=True)
         _write_multiple(bpp_files, bpp_dir)
 
         vegas_path = _save_uploaded_file(vegas_file, temp_dir) if vegas_file else None
-        batting_path = _save_uploaded_file(batting_file, temp_dir) if batting_file else None
+        # Handle batting orders: paste text takes priority over CSV upload
+        batting_path = None
+        confirmed_player_names = set()
+        if lineup_paste_text and lineup_paste_text.strip():
+            from slate_optimizer.ingestion.batting_orders import parse_lineup_paste
+            paste_df = parse_lineup_paste(lineup_paste_text)
+            if not paste_df.empty:
+                batting_path = temp_dir / "pasted_batting_orders.csv"
+                paste_df.to_csv(batting_path, index=False)
+                # Build set of canonical names for direct filtering
+                from slate_optimizer.ingestion.text_utils import canonicalize_series as _canon
+                confirmed_player_names = set(
+                    _canon(paste_df["player_name"]).tolist()
+                )
+        if batting_path is None and batting_file:
+            batting_path = _save_uploaded_file(batting_file, temp_dir)
         handed_path = _save_uploaded_file(handed_file, temp_dir) if handed_file else None
         recent_path = _save_uploaded_file(recent_file, temp_dir) if recent_file else None
 
@@ -640,13 +662,16 @@ def _process_slate(
         fd_players = fd_loader.load()
 
         combined, diagnostics = build_player_dataset(bundle, fd_players.players)
-        combined["is_confirmed_lineup"] = False
-        combined["batting_order_position"] = pd.Series(pd.NA, index=combined.index, dtype="Int64")
-        combined["batter_hand"] = ""
-        combined["pitcher_hand"] = ""
-        combined["recent_last7_fppg"] = 0.0
-        combined["recent_last14_fppg"] = 0.0
-        combined["recent_season_fppg"] = 0.0
+        defaults = pd.DataFrame({
+            "is_confirmed_lineup": False,
+            "batting_order_position": pd.array([pd.NA] * len(combined), dtype="Int64"),
+            "batter_hand": "",
+            "pitcher_hand": "",
+            "recent_last7_fppg": 0.0,
+            "recent_last14_fppg": 0.0,
+            "recent_season_fppg": 0.0,
+        }, index=combined.index)
+        combined = pd.concat([combined, defaults], axis=1)
 
         combined, optional_messages = _merge_optional_sources(
             combined,
@@ -655,6 +680,35 @@ def _process_slate(
             handed_path,
             recent_path,
         )
+
+        # Filter to confirmed starters only when lineup data was provided
+        if confirmed_player_names:
+            from slate_optimizer.ingestion.text_utils import canonicalize_series as _canon2
+            combined["_canon_check"] = _canon2(combined["full_name"])
+            name_match = combined["_canon_check"].isin(confirmed_player_names)
+            # Also include merge-based matches
+            if "is_confirmed_lineup" in combined.columns:
+                name_match = name_match | combined["is_confirmed_lineup"]
+            confirmed = combined[name_match]
+            n_confirmed_pitchers = (confirmed["player_type"].str.lower() == "pitcher").sum()
+            n_confirmed_hitters = (confirmed["player_type"].str.lower() != "pitcher").sum()
+
+            if n_confirmed_pitchers >= 1 and n_confirmed_hitters >= 8:
+                before_count = len(combined)
+                combined = confirmed.drop(columns=["_canon_check"]).reset_index(drop=True)
+                filtered_count = before_count - len(combined)
+                optional_messages.append(
+                    f"Filtered to confirmed starters: {len(combined)} players "
+                    f"({n_confirmed_pitchers} pitchers + {n_confirmed_hitters} hitters, "
+                    f"{filtered_count} bench/inactive removed)"
+                )
+            else:
+                combined = combined.drop(columns=["_canon_check"])
+                optional_messages.append(
+                    f"WARNING: Only matched {n_confirmed_pitchers} pitchers + "
+                    f"{n_confirmed_hitters} hitters from lineup data. "
+                    f"Keeping full player pool ({len(combined)} players)."
+                )
 
         projections = compute_baseline_projections(
             combined,
@@ -775,6 +829,7 @@ def _process_slate(
             "switch_boost": platoon_switch_boost,
         },
         "projection_config": projection_config,
+        "template_entries": template_entries,
     }
     return workflow_payload
 
@@ -1009,7 +1064,7 @@ def _render_game_status_panel(workflow: Dict) -> None:
     display_cols = display_cols.rename(
         columns={"game_key": "Game", "local_start": "Start (ET)", "minutes_to_lock": "Minutes"}
     )
-    st.dataframe(display_cols, use_container_width=True)
+    st.dataframe(display_cols, width="stretch")
 
 
 def _next_lock_info(optimizer_df: Optional[pd.DataFrame]) -> Optional[Dict[str, str]]:
@@ -1108,7 +1163,7 @@ def _render_late_swap_panel(workflow: Dict) -> None:
             st.success("No unconfirmed players approaching lock in the selected window.")
             return
         display_cols = ["lineup_id", "full_name", "team_code", "start_et", "minutes_to_lock"]
-        st.dataframe(candidates[display_cols], use_container_width=True)
+        st.dataframe(candidates[display_cols], width="stretch")
         st.caption("Players with unconfirmed lineups locking soon. Add them to your scratch list or focus view.")
         action_cols = st.columns(3)
         if action_cols[0].button("Focus on these lineups", key="late_swap_focus"):
@@ -1410,12 +1465,12 @@ def _section_leverage(df: pd.DataFrame) -> None:
     st.subheader("Hitter leverage")
     st.dataframe(
         hitters[["full_name", "team_code", "proj_fd_mean", "proj_fd_ownership", "leverage_score"]].head(10),
-        use_container_width=True,
+        width="stretch",
     )
     st.subheader("Pitcher leverage")
     st.dataframe(
         pitchers[["full_name", "team_code", "proj_fd_mean", "proj_fd_ownership", "leverage_score"]].head(10),
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -1556,6 +1611,13 @@ def _render_step_one() -> None:
 
     vegas_file = st.file_uploader("Vegas lines CSV (optional)", type=["csv"], key="vegas")
     batting_orders_file = st.file_uploader("Batting orders CSV (optional)", type=["csv"], key="orders")
+    lineup_paste = st.text_area(
+        "Paste lineups from FantasyLabs / RotoGrinders (optional)",
+        height=200,
+        key="lineup_paste",
+        help="Copy and paste the full lineup page from FantasyLabs, RotoGrinders, etc. "
+             "This will be used as batting order data. Overrides the CSV upload above if both are provided.",
+    )
     handedness_file = st.file_uploader(
         "Handedness reference CSV (optional)",
         type=["csv"],
@@ -1707,16 +1769,17 @@ def _render_step_one() -> None:
                     recent_stats_file,
                     ownership_files or [],
                     projection_files or [],
-                    projection_preset,
-                    projection_weights_input,
-                    projection_baseline_weight,
-                    ownership_preset,
-                    ownership_weights_input,
-                    ownership_model_settings,
-                    recency_blend_input,
-                    platoon_opp_input,
-                    platoon_same_input,
-                    platoon_switch_input,
+                    lineup_paste_text=lineup_paste or "",
+                    projection_preset=projection_preset,
+                    projection_weights_input=projection_weights_input,
+                    projection_baseline_weight=projection_baseline_weight,
+                    ownership_preset=ownership_preset,
+                    ownership_weights_input=ownership_weights_input,
+                    ownership_model_settings=ownership_model_settings,
+                    recency_blend_input=recency_blend_input,
+                    platoon_opposite_boost=platoon_opp_input,
+                    platoon_same_penalty=platoon_same_input,
+                    platoon_switch_boost=platoon_switch_input,
                 )
                 session_state = _get_session()
                 session_state.update(workflow_payload)
@@ -1782,7 +1845,7 @@ def _render_step_two() -> None:
     extra_columns = [factor_options[label] for label in selected_labels if factor_options[label] in filtered_df.columns]
     display_cols = [col for col in base_columns + extra_columns if col in filtered_df.columns]
     st.subheader("Projection table")
-    st.dataframe(filtered_df[display_cols], use_container_width=True)
+    st.dataframe(filtered_df[display_cols], width="stretch")
     st.download_button(
         label="Download filtered projections",
         data=filtered_df.to_csv(index=False).encode("utf-8"),
@@ -1867,9 +1930,10 @@ def _render_step_three() -> None:
     config_state["num_lineups"] = st.slider(
         "Number of lineups",
         min_value=1,
-        max_value=150,
+        max_value=500,
         value=int(config_state.get("num_lineups", 20) or 20),
         step=1,
+        help="For multi-contest play, generate enough unique lineups to cover all your entries across contests.",
     )
     config_state["salary_cap"] = st.number_input(
         "Salary cap",
@@ -2016,7 +2080,7 @@ def _render_lineup_summary(
     if summary_df.empty:
         st.info("No lineups available for this view.")
         return
-    st.dataframe(summary_df, use_container_width=True)
+    st.dataframe(summary_df, width="stretch")
 
     selected_lineup = st.selectbox(
         "View lineup",
@@ -2298,7 +2362,7 @@ def _render_simulation_calibration(date_str: str) -> None:
         )
     st.dataframe(
         latest[["metric_name", "metric_value", "num_players", "created_at"]],
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -2342,7 +2406,7 @@ def _render_lineup_rankings(contest_df: pd.DataFrame, selected_ids: List[int]) -
             "selected": "Selected",
         }
     )
-    st.dataframe(renamed, use_container_width=True)
+    st.dataframe(renamed, width="stretch")
 
 
 
@@ -2407,7 +2471,7 @@ def _render_correlation_heatmap(sim_results: Dict, optimizer_df: pd.DataFrame, t
     labels = top_players.set_index("fd_player_id").loc[ids, "full_name"].tolist()
     heatmap_df = pd.DataFrame(matrix, index=labels, columns=labels)
     styled = heatmap_df.style.background_gradient(cmap="RdBu_r", axis=None)
-    st.dataframe(styled, use_container_width=True)
+    st.dataframe(styled, width="stretch")
 
 
 
@@ -2647,7 +2711,7 @@ def _render_step_four() -> None:
     portfolio_df = sim_results.get("portfolio_df")
     if isinstance(portfolio_df, pd.DataFrame) and not portfolio_df.empty:
         st.subheader("Selected portfolio")
-        st.dataframe(portfolio_df, use_container_width=True)
+        st.dataframe(portfolio_df, width="stretch")
         st.download_button(
             "Download selected lineups",
             data=portfolio_df.to_csv(index=False).encode("utf-8"),
@@ -2658,7 +2722,7 @@ def _render_step_four() -> None:
         if isinstance(selected_players, pd.DataFrame) and not selected_players.empty:
             exposures = _player_exposure_summary(selected_players)
             st.subheader("Portfolio exposure summary")
-            st.dataframe(exposures, use_container_width=True)
+            st.dataframe(exposures, width="stretch")
 
         selected_objects = sim_results.get("selected_lineup_objects") or []
     if selected_objects:
@@ -2779,7 +2843,7 @@ def _render_step_five() -> None:
     if exposures.empty:
         st.info("No lineups available for the selected view.")
     else:
-        st.dataframe(exposures, use_container_width=True)
+        st.dataframe(exposures, width="stretch")
 
     st.subheader("Lineup variance summary")
     _variance_leaderboard(display_df)
@@ -2787,7 +2851,7 @@ def _render_step_five() -> None:
     stack_exposure = _stack_exposure_summary(display_df)
     if not stack_exposure.empty:
         st.subheader("Stack exposure by team")
-        st.dataframe(stack_exposure, use_container_width=True)
+        st.dataframe(stack_exposure, width="stretch")
 
     if not display_df.empty:
         st.subheader("Exposure heatmap (team x position)")
@@ -2803,7 +2867,7 @@ def _render_step_five() -> None:
             else pd.DataFrame()
         )
         if not pivot.empty:
-            st.dataframe(pivot, use_container_width=True)
+            st.dataframe(pivot, width="stretch")
         else:
             st.info("Unable to build exposure heatmap (missing team/position data).")
 
@@ -2842,7 +2906,28 @@ def _render_step_five() -> None:
         except Exception as exc:  # pylint: disable=broad-except
             st.error(f"Late swap optimization failed: {exc}")
 
-    fan_duel_df = lineups_to_fanduel_upload(lineups)
+    template_entries = workflow.get("template_entries")
+
+    # Shuffle control
+    shuffle_col1, shuffle_col2 = st.columns([2, 1])
+    shuffle_enabled = shuffle_col1.checkbox(
+        "Shuffle lineup order before assigning to entries",
+        value=True,
+        help="Randomizes which lineup goes to which entry, so your best lineups are spread evenly across all contest buy-ins.",
+    )
+    if shuffle_enabled:
+        if shuffle_col2.button("Re-shuffle", help="Generate a new random order"):
+            st.session_state["shuffle_seed"] = st.session_state.get("shuffle_seed", 0) + 1
+            st.rerun()
+        import random
+        seed = st.session_state.get("shuffle_seed", 42)
+        shuffled = list(lineups)
+        random.Random(seed).shuffle(shuffled)
+        export_lineups = shuffled
+    else:
+        export_lineups = lineups
+
+    fan_duel_df = lineups_to_fanduel_template(export_lineups, template_entries)
     st.download_button(
         "Download FanDuel Upload CSV",
         data=fan_duel_df.to_csv(index=False).encode("utf-8"),
@@ -2920,7 +3005,7 @@ def _render_step_six() -> None:
                 _render_projection_blend_summary(workflow.get("projection_blend_summary") or projection_cfg.get("projection_blend"))
                 _render_ownership_model_summary(projection_cfg.get("ownership_model"))
             st.subheader("Lineup actual performance")
-            st.dataframe(lineup_points, use_container_width=True)
+            st.dataframe(lineup_points, width="stretch")
         if actuals is not None:
             st.subheader("Ownership accuracy (top 20)")
             comparison_df = actuals.merge(
@@ -2937,7 +3022,7 @@ def _render_step_six() -> None:
                 comparison_df.sort_values("actual_ownership_pct", ascending=False).head(20)[
                     ["full_name", "fd_player_id", "proj_fd_ownership", "actual_ownership_pct", "ownership_diff"]
                 ],
-                use_container_width=True,
+                width="stretch",
             )
         _ownership_accuracy_panel(date_str)
         try:

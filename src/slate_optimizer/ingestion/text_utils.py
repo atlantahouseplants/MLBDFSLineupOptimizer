@@ -5,6 +5,7 @@ import pandas as pd
 import re
 
 _CANONICAL_PATTERN = re.compile(r"[^a-z\s]")
+_SUFFIX_PATTERN = re.compile(r"\b(jr|sr|ii|iii|iv)\s*$")
 
 
 def canonicalize_series(series: pd.Series) -> pd.Series:
@@ -13,6 +14,7 @@ def canonicalize_series(series: pd.Series) -> pd.Series:
         .astype(str)
         .str.lower()
         .str.replace(_CANONICAL_PATTERN, "", regex=True)
+        .str.replace(_SUFFIX_PATTERN, "", regex=True)
         .str.replace(r"\s+", " ", regex=True)
         .str.strip()
     )
