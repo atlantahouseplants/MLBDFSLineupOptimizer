@@ -162,7 +162,8 @@ def main() -> None:
         num_lineups=args.num_select,
         selection_metric=selection_metric,
         max_overlap=config.max_overlap,
-        max_player_exposure=config.max_player_exposure,
+        max_batter_exposure=config.max_batter_exposure,
+        max_pitcher_exposure=config.max_pitcher_exposure,
         diversity_weight=config.diversity_weight,
     )
 

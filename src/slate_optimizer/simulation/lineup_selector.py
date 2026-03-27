@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 from collections import Counter
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, FrozenSet, List, Optional, Set
 
 import numpy as np
 import pandas as pd
@@ -35,9 +35,19 @@ def select_portfolio(
     num_lineups: int = 20,
     selection_metric: str = "top_1pct_rate",
     max_overlap: int = 5,
-    max_player_exposure: float = 0.60,
+    max_batter_exposure: float = 0.40,
+    max_pitcher_exposure: float = 0.60,
+    pitcher_ids: Optional[Set[str]] = None,
     diversity_weight: float = 0.3,
+    # Legacy support
+    max_player_exposure: Optional[float] = None,
 ) -> PortfolioSelection:
+    # Legacy: if caller passes old single value, use it for both
+    if max_player_exposure is not None:
+        max_batter_exposure = max_player_exposure
+        max_pitcher_exposure = max_player_exposure
+    pitcher_set: FrozenSet[str] = frozenset(pitcher_ids or set())
+
     candidates = contest_result.rank_by(selection_metric)
     if not candidates:
         raise ValueError("No candidates available for portfolio selection")
@@ -53,7 +63,7 @@ def select_portfolio(
                 continue
             if not _respects_overlap(candidate, selected, max_overlap):
                 continue
-            if not _respects_exposure(candidate, player_counts, num_lineups, max_player_exposure):
+            if not _respects_exposure(candidate, player_counts, num_lineups, max_batter_exposure, max_pitcher_exposure, pitcher_set):
                 continue
             metric_value = getattr(candidate, selection_metric, 0.0)
             overlap_penalty = _average_overlap(candidate, selected) / 9 if selected else 0.0
@@ -108,12 +118,16 @@ def _respects_exposure(
     candidate: LineupSimResult,
     counts: Counter,
     num_lineups: int,
-    max_exposure: float,
+    max_batter_exposure: float,
+    max_pitcher_exposure: float,
+    pitcher_ids: FrozenSet[str],
 ) -> bool:
-    if max_exposure >= 1.0:
-        return True
-    limit = max(1, int(np.floor(max_exposure * num_lineups)))
     for pid in candidate.player_ids:
+        is_pitcher = pid in pitcher_ids
+        limit_pct = max_pitcher_exposure if is_pitcher else max_batter_exposure
+        if limit_pct >= 1.0:
+            continue
+        limit = max(1, int(np.floor(limit_pct * num_lineups)))
         if counts[pid] + 1 > limit:
             return False
     return True

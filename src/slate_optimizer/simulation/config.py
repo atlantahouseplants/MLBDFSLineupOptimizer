@@ -35,7 +35,8 @@ class SimulationConfig:
     num_candidates: int = 500
     selection_metric: str = "top_1pct_rate"
     max_overlap: int = 5
-    max_player_exposure: float = 0.60
+    max_batter_exposure: float = 0.40
+    max_pitcher_exposure: float = 0.60
     diversity_weight: float = 0.3
 
     def to_dict(self) -> Dict:
@@ -63,7 +64,8 @@ class SimulationConfig:
             num_field_lineups=2000,
             selection_metric="top_1pct_rate",
             diversity_weight=0.4,
-            max_player_exposure=0.50,
+            max_batter_exposure=0.30,
+            max_pitcher_exposure=0.50,
         )
 
     @classmethod
@@ -74,7 +76,8 @@ class SimulationConfig:
             num_field_lineups=500,
             selection_metric="cash_rate",
             diversity_weight=0.1,
-            max_player_exposure=0.80,
+            max_batter_exposure=0.80,
+            max_pitcher_exposure=0.80,
         )
 
     @classmethod
@@ -85,5 +88,6 @@ class SimulationConfig:
             num_field_lineups=2000,
             selection_metric="win_rate",
             diversity_weight=0.0,
-            max_player_exposure=1.0,
+            max_batter_exposure=1.0,
+            max_pitcher_exposure=1.0,
         )

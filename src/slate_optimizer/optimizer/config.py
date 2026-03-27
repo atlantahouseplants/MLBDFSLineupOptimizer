@@ -16,8 +16,12 @@ class OptimizerConfig:
     stack_templates: Optional[List[int]] = None
     player_exposure_overrides: Dict[str, float] = field(default_factory=dict)
     max_lineup_ownership: Optional[float] = None
+    # Batter chalk controls
     chalk_threshold: Optional[float] = None
     chalk_exposure_cap: Optional[float] = None
+    # Pitcher chalk controls (fall back to batter values if None)
+    pitcher_chalk_threshold: Optional[float] = None
+    pitcher_chalk_exposure_cap: Optional[float] = None
     player_ownership_caps: Dict[str, float] = field(default_factory=dict)
     bring_back_enabled: bool = False
     bring_back_count: int = 1
@@ -44,9 +48,22 @@ class OptimizerConfig:
             return dataset
         df = dataset.copy()
         ownership = pd.to_numeric(df["proj_fd_ownership"], errors="coerce").fillna(0.0)
+        player_type = df["player_type"].astype(str).str.lower() if "player_type" in df.columns else pd.Series("batter", index=df.index)
+        is_pitcher = player_type == "pitcher"
+        is_batter = ~is_pitcher
+
+        # Apply batter chalk controls
         if self.chalk_threshold is not None and self.chalk_exposure_cap is not None:
-            mask = ownership >= self.chalk_threshold
-            df.loc[mask, "default_max_exposure"] = df.loc[mask, "default_max_exposure"].clip(upper=self.chalk_exposure_cap)
+            batter_chalk = is_batter & (ownership >= self.chalk_threshold)
+            df.loc[batter_chalk, "default_max_exposure"] = df.loc[batter_chalk, "default_max_exposure"].clip(upper=self.chalk_exposure_cap)
+
+        # Apply pitcher chalk controls (fall back to batter values if not set)
+        p_threshold = self.pitcher_chalk_threshold if self.pitcher_chalk_threshold is not None else self.chalk_threshold
+        p_cap = self.pitcher_chalk_exposure_cap if self.pitcher_chalk_exposure_cap is not None else self.chalk_exposure_cap
+        if p_threshold is not None and p_cap is not None:
+            pitcher_chalk = is_pitcher & (ownership >= p_threshold)
+            df.loc[pitcher_chalk, "default_max_exposure"] = df.loc[pitcher_chalk, "default_max_exposure"].clip(upper=p_cap)
+
         if self.player_ownership_caps:
             for key, cap in self.player_ownership_caps.items():
                 try:

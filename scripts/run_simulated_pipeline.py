@@ -101,7 +101,8 @@ def _apply_sim_overrides(args: argparse.Namespace, config: SimulationConfig) -> 
     if args.diversity_weight is not None:
         config.diversity_weight = float(args.diversity_weight)
     if args.max_player_exposure is not None:
-        config.max_player_exposure = float(args.max_player_exposure)
+        config.max_batter_exposure = float(args.max_player_exposure)
+        config.max_pitcher_exposure = float(args.max_player_exposure)
     if args.volatility_scale is not None:
         config.volatility_scale = float(args.volatility_scale)
     if args.copula_nu is not None:
@@ -185,7 +186,8 @@ def main() -> None:
         num_lineups=final_count,
         selection_metric=sim_config.selection_metric,
         max_overlap=sim_config.max_overlap,
-        max_player_exposure=sim_config.max_player_exposure,
+        max_batter_exposure=sim_config.max_batter_exposure,
+        max_pitcher_exposure=sim_config.max_pitcher_exposure,
         diversity_weight=sim_config.diversity_weight,
     )
     portfolio_df = portfolio.to_dataframe()

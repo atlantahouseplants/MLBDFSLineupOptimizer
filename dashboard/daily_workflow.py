@@ -179,8 +179,10 @@ def _get_config_state() -> Dict:
         "num_lineups": 20,
         "salary_cap": 35000,
         "stack_templates": "4,3",
-        "chalk_threshold": 35.0,
-        "chalk_exposure_cap": 40.0,
+        "batter_chalk_threshold": 25.0,
+        "pitcher_chalk_threshold": 35.0,
+        "batter_chalk_exposure_cap": 30.0,
+        "pitcher_chalk_exposure_cap": 50.0,
         "max_lineup_ownership": 0.0,
         "player_overrides": "",
         "bring_back_enabled": False,
@@ -200,7 +202,8 @@ def _get_sim_config_state() -> Dict:
         "field_size": 1000,
         "selection_metric": "top_1pct_rate",
         "diversity_weight": 0.3,
-        "max_player_exposure": 0.6,
+        "max_batter_exposure": 0.4,
+        "max_pitcher_exposure": 0.6,
         "use_stratified": False,
     }
     return st.session_state.setdefault(SIM_CONFIG_KEY, default_config)
@@ -212,7 +215,8 @@ def _apply_sim_preset(preset: SimulationConfig, state: Dict) -> None:
     state["field_size"] = preset.num_field_lineups
     state["selection_metric"] = preset.selection_metric
     state["diversity_weight"] = preset.diversity_weight
-    state["max_player_exposure"] = preset.max_player_exposure
+    state["max_batter_exposure"] = preset.max_batter_exposure
+    state["max_pitcher_exposure"] = preset.max_pitcher_exposure
 
 
 def _build_simulation_config(state: Dict) -> SimulationConfig:
@@ -222,7 +226,8 @@ def _build_simulation_config(state: Dict) -> SimulationConfig:
         num_field_lineups=int(state.get("field_size", 1000)),
         selection_metric=str(state.get("selection_metric", "top_1pct_rate")),
         diversity_weight=float(state.get("diversity_weight", 0.3)),
-        max_player_exposure=float(state.get("max_player_exposure", 0.6)),
+        max_batter_exposure=float(state.get("max_batter_exposure", 0.4)),
+        max_pitcher_exposure=float(state.get("max_pitcher_exposure", 0.6)),
     )
     config.correlation.teammate_base = float(state.get("teammate_corr", config.correlation.teammate_base))
     config.correlation.pitcher_vs_opposing = float(state.get("pitcher_vs_opposing", config.correlation.pitcher_vs_opposing))
@@ -270,12 +275,21 @@ def _run_simulation_stack(
     contest_df = contest_result.to_dataframe().sort_values(
         sim_config.selection_metric, ascending=False
     )
+    # Build pitcher ID set for position-aware exposure limits
+    pitcher_ids = set(
+        optimizer_df.loc[
+            optimizer_df["player_type"].astype(str).str.lower() == "pitcher",
+            "fd_player_id",
+        ].astype(str).tolist()
+    )
     portfolio = select_portfolio(
         contest_result,
         num_lineups=min(sim_config.num_candidates, len(lineups)),
         selection_metric=sim_config.selection_metric,
         max_overlap=sim_config.max_overlap,
-        max_player_exposure=sim_config.max_player_exposure,
+        max_batter_exposure=sim_config.max_batter_exposure,
+        max_pitcher_exposure=sim_config.max_pitcher_exposure,
+        pitcher_ids=pitcher_ids,
         diversity_weight=sim_config.diversity_weight,
     )
     portfolio_df = portfolio.to_dataframe() if portfolio.selected else pd.DataFrame()
@@ -1297,10 +1311,14 @@ def _run_solver(
         player_overrides = _apply_player_filters(df, overrides)
 
     stack_templates = _parse_stack_templates(config_settings.get("stack_templates", ""))
-    chalk_threshold_value = config_settings.get("chalk_threshold", 0.0)
-    chalk_threshold = chalk_threshold_value / 100.0 if chalk_threshold_value else None
-    chalk_cap_value = config_settings.get("chalk_exposure_cap", 0.0)
-    chalk_exposure_cap = chalk_cap_value / 100.0 if chalk_cap_value else None
+    batter_chalk_val = config_settings.get("batter_chalk_threshold", 0.0)
+    chalk_threshold = batter_chalk_val / 100.0 if batter_chalk_val else None
+    batter_cap_val = config_settings.get("batter_chalk_exposure_cap", 0.0)
+    chalk_exposure_cap = batter_cap_val / 100.0 if batter_cap_val else None
+    pitcher_chalk_val = config_settings.get("pitcher_chalk_threshold", 0.0)
+    pitcher_chalk_threshold = pitcher_chalk_val / 100.0 if pitcher_chalk_val else None
+    pitcher_cap_val = config_settings.get("pitcher_chalk_exposure_cap", 0.0)
+    pitcher_chalk_exposure_cap = pitcher_cap_val / 100.0 if pitcher_cap_val else None
     max_lineup_ownership = config_settings.get("max_lineup_ownership", 0.0)
     if max_lineup_ownership:
         max_lineup_ownership = max_lineup_ownership / 100.0
@@ -1319,6 +1337,8 @@ def _run_solver(
         max_lineup_ownership=max_lineup_ownership,
         chalk_threshold=chalk_threshold,
         chalk_exposure_cap=chalk_exposure_cap,
+        pitcher_chalk_threshold=pitcher_chalk_threshold,
+        pitcher_chalk_exposure_cap=pitcher_chalk_exposure_cap,
         bring_back_enabled=bring_back_enabled,
         bring_back_count=bring_back_count,
         min_game_total_for_stacks=min_game_total,
@@ -1950,20 +1970,44 @@ def _render_step_three() -> None:
         value=config_state.get("stack_templates", "4,3"),
         help="Examples: 4,3 or 5,2. Use comma-separated integers.",
     )
-    config_state["chalk_threshold"] = st.slider(
-        "Chalk threshold (%)",
-        min_value=0.0,
-        max_value=50.0,
-        value=float(config_state.get("chalk_threshold", 35.0) or 0.0),
-        step=1.0,
-    )
-    config_state["chalk_exposure_cap"] = st.slider(
-        "Chalk exposure cap (%)",
-        min_value=0.0,
-        max_value=100.0,
-        value=float(config_state.get("chalk_exposure_cap", 40.0) or 0.0),
-        step=1.0,
-    )
+    st.markdown("**Chalk controls**")
+    chalk_col_left, chalk_col_right = st.columns(2)
+    with chalk_col_left:
+        st.caption("Batters")
+        config_state["batter_chalk_threshold"] = st.slider(
+            "Batter chalk threshold (%)",
+            min_value=0.0,
+            max_value=50.0,
+            value=float(config_state.get("batter_chalk_threshold", 25.0) or 0.0),
+            step=1.0,
+            help="Ownership % above which a batter is considered chalk",
+        )
+        config_state["batter_chalk_exposure_cap"] = st.slider(
+            "Batter chalk exposure cap (%)",
+            min_value=0.0,
+            max_value=100.0,
+            value=float(config_state.get("batter_chalk_exposure_cap", 30.0) or 0.0),
+            step=1.0,
+            help="Max % of lineups a chalky batter can appear in",
+        )
+    with chalk_col_right:
+        st.caption("Pitchers")
+        config_state["pitcher_chalk_threshold"] = st.slider(
+            "Pitcher chalk threshold (%)",
+            min_value=0.0,
+            max_value=50.0,
+            value=float(config_state.get("pitcher_chalk_threshold", 35.0) or 0.0),
+            step=1.0,
+            help="Ownership % above which a pitcher is considered chalk",
+        )
+        config_state["pitcher_chalk_exposure_cap"] = st.slider(
+            "Pitcher chalk exposure cap (%)",
+            min_value=0.0,
+            max_value=100.0,
+            value=float(config_state.get("pitcher_chalk_exposure_cap", 50.0) or 0.0),
+            step=1.0,
+            help="Max % of lineups a chalky pitcher can appear in",
+        )
     config_state["max_lineup_ownership"] = st.number_input(
         "Max lineup ownership (sum %, optional)",
         min_value=0.0,
@@ -2628,11 +2672,18 @@ def _render_step_four() -> None:
             value=float(sim_state.get("diversity_weight", 0.3) or 0.3),
             step=0.1,
         )
-        sim_state["max_player_exposure"] = st.slider(
-            "Max player exposure",
+        sim_state["max_batter_exposure"] = st.slider(
+            "Max batter exposure",
             min_value=0.1,
             max_value=1.0,
-            value=float(sim_state.get("max_player_exposure", 0.6) or 0.6),
+            value=float(sim_state.get("max_batter_exposure", 0.4) or 0.4),
+            step=0.05,
+        )
+        sim_state["max_pitcher_exposure"] = st.slider(
+            "Max pitcher exposure",
+            min_value=0.1,
+            max_value=1.0,
+            value=float(sim_state.get("max_pitcher_exposure", 0.6) or 0.6),
             step=0.05,
         )
     sim_state["use_stratified"] = st.checkbox(

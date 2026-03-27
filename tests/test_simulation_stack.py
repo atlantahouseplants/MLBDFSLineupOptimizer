@@ -143,7 +143,8 @@ class TestSimulationStack(unittest.TestCase):
             num_field_lineups=30,
             selection_metric="win_rate",
             diversity_weight=0.2,
-            max_player_exposure=0.7,
+            max_batter_exposure=0.7,
+            max_pitcher_exposure=0.7,
         )
         distributions = fit_player_distributions(dataset, config.volatility_scale)
         correlation_model = build_correlation_matrix(dataset, config.correlation)
@@ -177,7 +178,8 @@ class TestSimulationStack(unittest.TestCase):
             contest,
             num_lineups=2,
             selection_metric=config.selection_metric,
-            max_player_exposure=config.max_player_exposure,
+            max_batter_exposure=config.max_batter_exposure,
+            max_pitcher_exposure=config.max_pitcher_exposure,
             diversity_weight=config.diversity_weight,
         )
         self.assertGreater(portfolio.num_selected, 0)
