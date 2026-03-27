@@ -11,24 +11,38 @@ import pandas as pd
 from .aliases import CanonicalMap, apply_aliases
 from .text_utils import canonicalize_series
 
-# Full team name → standard abbreviation
+# Full team name → standard abbreviation (includes short names used by FantasyLabs)
 _TEAM_NAME_TO_CODE: Dict[str, str] = {
-    "arizona diamondbacks": "ARI", "atlanta braves": "ATL",
-    "baltimore orioles": "BAL", "boston red sox": "BOS",
-    "chicago cubs": "CHC", "chicago white sox": "CWS",
-    "cincinnati reds": "CIN", "cleveland guardians": "CLE",
-    "colorado rockies": "COL", "detroit tigers": "DET",
-    "houston astros": "HOU", "kansas city royals": "KC",
-    "los angeles angels": "LAA", "los angeles dodgers": "LAD",
-    "miami marlins": "MIA", "milwaukee brewers": "MIL",
-    "minnesota twins": "MIN", "new york mets": "NYM",
-    "new york yankees": "NYY", "oakland athletics": "OAK",
-    "philadelphia phillies": "PHI", "pittsburgh pirates": "PIT",
-    "san diego padres": "SD", "san francisco giants": "SF",
-    "seattle mariners": "SEA", "st. louis cardinals": "STL",
-    "st louis cardinals": "STL", "tampa bay rays": "TB",
-    "texas rangers": "TEX", "toronto blue jays": "TOR",
-    "washington nationals": "WSH",
+    "arizona diamondbacks": "ARI", "diamondbacks": "ARI", "d-backs": "ARI",
+    "atlanta braves": "ATL", "braves": "ATL",
+    "baltimore orioles": "BAL", "orioles": "BAL",
+    "boston red sox": "BOS", "red sox": "BOS",
+    "chicago cubs": "CHC", "cubs": "CHC",
+    "chicago white sox": "CWS", "white sox": "CWS",
+    "cincinnati reds": "CIN", "reds": "CIN",
+    "cleveland guardians": "CLE", "guardians": "CLE",
+    "colorado rockies": "COL", "rockies": "COL",
+    "detroit tigers": "DET", "tigers": "DET",
+    "houston astros": "HOU", "astros": "HOU",
+    "kansas city royals": "KC", "royals": "KC",
+    "los angeles angels": "LAA", "angels": "LAA",
+    "los angeles dodgers": "LAD", "dodgers": "LAD",
+    "miami marlins": "MIA", "marlins": "MIA",
+    "milwaukee brewers": "MIL", "brewers": "MIL",
+    "minnesota twins": "MIN", "twins": "MIN",
+    "new york mets": "NYM", "mets": "NYM",
+    "new york yankees": "NYY", "yankees": "NYY",
+    "oakland athletics": "OAK", "athletics": "OAK",
+    "philadelphia phillies": "PHI", "phillies": "PHI",
+    "pittsburgh pirates": "PIT", "pirates": "PIT",
+    "san diego padres": "SD", "padres": "SD",
+    "san francisco giants": "SF", "giants": "SF",
+    "seattle mariners": "SEA", "mariners": "SEA",
+    "st. louis cardinals": "STL", "st louis cardinals": "STL", "cardinals": "STL",
+    "tampa bay rays": "TB", "rays": "TB",
+    "texas rangers": "TEX", "rangers": "TEX",
+    "toronto blue jays": "TOR", "blue jays": "TOR",
+    "washington nationals": "WSH", "nationals": "WSH",
 }
 
 
@@ -90,17 +104,14 @@ class BattingOrderLoader:
 def parse_lineup_paste(text: str) -> pd.DataFrame:
     """Parse pasted lineup data from FantasyLabs or similar sources.
 
-    Expects a format like:
-        Pittsburgh Pirates (-100) @ New York Mets (-120)
-        ...
-        Paul Skenes (R) $10.8K
-        Freddy Peralta (R) $9.6K
-        Projected Lineup
-        * 1 - Oneil Cruz (L) SS/OF $3.0K
-        ...
-        Projected Lineup
-        * 1 - Francisco Lindor (B) SS $4.0K
-        ...
+    Handles both single-line and multi-line pitcher formats:
+        Single-line:  Paul Skenes (R) $10.8K
+        Multi-line:   Paul Skenes (R)
+                      $10.8K
+
+    Batter lines:
+        1 - Nick Kurtz (L) 1B $4.0K
+        * 1 - Nick Kurtz (L) 1B $4.0K
 
     Returns a DataFrame with columns: team, order_position, player_name
     Pitchers are included with order_position=0.
@@ -117,20 +128,43 @@ def parse_lineup_paste(text: str) -> pd.DataFrame:
         r"^\*?\s*(\d)\s*[-–—]\s*(.+?)\s*\(\s*([RLBS]?)\s*\)\s*"
         r"([\w/]+)\s*\$[\d.]+K?"
     )
-    # Pattern: "Player Name (R) $X.XK" — pitcher line (no order number, no position)
-    pitcher_re = re.compile(
+    # Pattern: "Player Name (R) $X.XK" — pitcher on single line
+    pitcher_single_re = re.compile(
         r"^([A-Z][a-zA-Z'.]+(?:\s+[A-Za-z'.]+)+)\s*\(([RLBS]?)\)\s*\$[\d.]+K?\s*$"
     )
+    # Pattern: "Player Name (R)" — pitcher name only (salary on next line)
+    pitcher_name_re = re.compile(
+        r"^([A-Z][a-zA-Z'.]+(?:\s+[A-Za-z'.]+)+)\s*\(([RLBS]?)\)\s*$"
+    )
+    # Pattern: "$X.XK" — standalone salary line
+    salary_re = re.compile(r"^\$[\d.]+K?\s*$")
 
     current_away: Optional[str] = None
     current_home: Optional[str] = None
     lineup_count = 0  # 0=before first, 1=away, 2=home
     pitcher_count = 0  # tracks pitchers seen for this matchup
+    pending_pitcher_name: Optional[str] = None  # for multi-line pitcher format
 
     for line in lines:
         line = line.strip()
         if not line:
             continue
+
+        # If we have a pending pitcher name, check if this line is the salary
+        if pending_pitcher_name is not None:
+            if salary_re.match(line):
+                pitcher_count += 1
+                team = current_away if pitcher_count == 1 else current_home
+                if team:
+                    rows.append({
+                        "team": team,
+                        "order_position": 0,
+                        "player_name": pending_pitcher_name,
+                    })
+                pending_pitcher_name = None
+                continue
+            # Not a salary line — the pending name wasn't a pitcher, discard it
+            pending_pitcher_name = None
 
         # Check for matchup line
         m = matchup_re.match(line)
@@ -150,7 +184,8 @@ def parse_lineup_paste(text: str) -> pd.DataFrame:
 
         # Check for pitcher line (before lineups start)
         if lineup_count == 0 and (current_away or current_home):
-            pm_pitcher = pitcher_re.match(line)
+            # Try single-line pitcher format first
+            pm_pitcher = pitcher_single_re.match(line)
             if pm_pitcher:
                 pitcher_name = pm_pitcher.group(1).strip()
                 pitcher_count += 1
@@ -161,6 +196,11 @@ def parse_lineup_paste(text: str) -> pd.DataFrame:
                         "order_position": 0,
                         "player_name": pitcher_name,
                     })
+                continue
+            # Try multi-line: name only (salary on next line)
+            pm_name = pitcher_name_re.match(line)
+            if pm_name:
+                pending_pitcher_name = pm_name.group(1).strip()
                 continue
 
         # Check for player line

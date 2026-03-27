@@ -692,22 +692,25 @@ def _process_slate(
             confirmed = combined[name_match]
             n_confirmed_pitchers = (confirmed["player_type"].str.lower() == "pitcher").sum()
             n_confirmed_hitters = (confirmed["player_type"].str.lower() != "pitcher").sum()
+            n_pasted = len(confirmed_player_names)
 
-            if n_confirmed_pitchers >= 1 and n_confirmed_hitters >= 8:
-                before_count = len(combined)
-                combined = confirmed.drop(columns=["_canon_check"]).reset_index(drop=True)
-                filtered_count = before_count - len(combined)
+            # Always filter when lineup data is provided — non-starters skew results
+            before_count = len(combined)
+            combined = confirmed.drop(columns=["_canon_check"]).reset_index(drop=True)
+            filtered_count = before_count - len(combined)
+            optional_messages.append(
+                f"Filtered to confirmed starters: {len(combined)} players "
+                f"({n_confirmed_pitchers} pitchers + {n_confirmed_hitters} hitters, "
+                f"{filtered_count} bench/inactive removed)"
+            )
+            if n_confirmed_pitchers + n_confirmed_hitters < n_pasted * 0.5:
+                # Build list of unmatched names for debugging
+                matched_canon = set(confirmed["_canon_check"].dropna()) if "_canon_check" in confirmed.columns else set()
+                unmatched = sorted(confirmed_player_names - matched_canon)[:10]
                 optional_messages.append(
-                    f"Filtered to confirmed starters: {len(combined)} players "
-                    f"({n_confirmed_pitchers} pitchers + {n_confirmed_hitters} hitters, "
-                    f"{filtered_count} bench/inactive removed)"
-                )
-            else:
-                combined = combined.drop(columns=["_canon_check"])
-                optional_messages.append(
-                    f"WARNING: Only matched {n_confirmed_pitchers} pitchers + "
-                    f"{n_confirmed_hitters} hitters from lineup data. "
-                    f"Keeping full player pool ({len(combined)} players)."
+                    f"LOW MATCH RATE: pasted {n_pasted} names but only matched "
+                    f"{n_confirmed_pitchers + n_confirmed_hitters} in FanDuel pool. "
+                    f"Unmatched sample: {', '.join(unmatched)}"
                 )
 
         projections = compute_baseline_projections(
