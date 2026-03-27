@@ -83,29 +83,40 @@ def simulate_contest(
     player_index = slate_sim.player_id_to_index
 
     candidate_indices = _lineup_indices(candidates, player_index)
-    candidate_scores = slate_sim.scores[:, candidate_indices]
-    candidate_scores = candidate_scores.sum(axis=2)  # (N, C)
 
-    # Compute field scores in chunks to avoid a huge intermediate array
-    # (N × M × 9 at full expansion would exceed memory on cloud hosts)
+    # Compute candidate scores in chunks to avoid huge intermediate arrays
+    # (N × C × 9 with 500 candidates = 360MB spike)
     num_sims = slate_sim.num_simulations
+    num_candidates = len(candidates)
+    candidate_scores = np.empty((num_sims, num_candidates), dtype=np.float64)
+    _CHUNK = 50
+    for start in range(0, num_candidates, _CHUNK):
+        end = min(start + _CHUNK, num_candidates)
+        candidate_scores[:, start:end] = slate_sim.scores[:, candidate_indices[start:end]].sum(axis=2)
+
+    # Compute field scores in chunks (N × M × 9 with 1000 field = 720MB spike)
     num_field = field_sim.num_lineups
     field_scores = np.empty((num_sims, num_field), dtype=np.float64)
-    _CHUNK = 100
-    for start in range(0, num_field, _CHUNK):
-        end = min(start + _CHUNK, num_field)
+    _FCHUNK = 100
+    for start in range(0, num_field, _FCHUNK):
+        end = min(start + _FCHUNK, num_field)
         field_scores[:, start:end] = slate_sim.scores[:, field_sim.lineups[start:end]].sum(axis=2)
 
+    # Rank all lineups together, freeing large intermediates eagerly
     all_scores = np.concatenate([field_scores, candidate_scores], axis=1)
+    del field_scores  # free ~80MB
     ranks = _rank_scores(all_scores)
-    percentiles = (ranks + 1) / all_scores.shape[1] * 100.0
+    total_lineups = all_scores.shape[1]
+    del all_scores  # free ~120MB
+    percentiles = (ranks + 1) / total_lineups * 100.0
+    del ranks  # free ~120MB
 
     field_sets = _field_lineup_sets(field_sim)
 
     lineup_results: List[LineupSimResult] = []
     for lineup_id, (candidate, lineup_idx) in enumerate(zip(candidates, candidate_indices)):
         lineup_scores = candidate_scores[:, lineup_id]
-        lineup_percentiles = percentiles[:, field_scores.shape[1] + lineup_id]
+        lineup_percentiles = percentiles[:, num_field + lineup_id]
         metrics = _aggregate_metrics(
             lineup_scores,
             lineup_percentiles,
