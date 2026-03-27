@@ -662,13 +662,16 @@ def _process_slate(
         fd_players = fd_loader.load()
 
         combined, diagnostics = build_player_dataset(bundle, fd_players.players)
-        combined["is_confirmed_lineup"] = False
-        combined["batting_order_position"] = pd.Series(pd.NA, index=combined.index, dtype="Int64")
-        combined["batter_hand"] = ""
-        combined["pitcher_hand"] = ""
-        combined["recent_last7_fppg"] = 0.0
-        combined["recent_last14_fppg"] = 0.0
-        combined["recent_season_fppg"] = 0.0
+        defaults = pd.DataFrame({
+            "is_confirmed_lineup": False,
+            "batting_order_position": pd.array([pd.NA] * len(combined), dtype="Int64"),
+            "batter_hand": "",
+            "pitcher_hand": "",
+            "recent_last7_fppg": 0.0,
+            "recent_last14_fppg": 0.0,
+            "recent_season_fppg": 0.0,
+        }, index=combined.index)
+        combined = pd.concat([combined, defaults], axis=1)
 
         combined, optional_messages = _merge_optional_sources(
             combined,
@@ -1061,7 +1064,7 @@ def _render_game_status_panel(workflow: Dict) -> None:
     display_cols = display_cols.rename(
         columns={"game_key": "Game", "local_start": "Start (ET)", "minutes_to_lock": "Minutes"}
     )
-    st.dataframe(display_cols, use_container_width=True)
+    st.dataframe(display_cols, width="stretch")
 
 
 def _next_lock_info(optimizer_df: Optional[pd.DataFrame]) -> Optional[Dict[str, str]]:
@@ -1160,7 +1163,7 @@ def _render_late_swap_panel(workflow: Dict) -> None:
             st.success("No unconfirmed players approaching lock in the selected window.")
             return
         display_cols = ["lineup_id", "full_name", "team_code", "start_et", "minutes_to_lock"]
-        st.dataframe(candidates[display_cols], use_container_width=True)
+        st.dataframe(candidates[display_cols], width="stretch")
         st.caption("Players with unconfirmed lineups locking soon. Add them to your scratch list or focus view.")
         action_cols = st.columns(3)
         if action_cols[0].button("Focus on these lineups", key="late_swap_focus"):
@@ -1462,12 +1465,12 @@ def _section_leverage(df: pd.DataFrame) -> None:
     st.subheader("Hitter leverage")
     st.dataframe(
         hitters[["full_name", "team_code", "proj_fd_mean", "proj_fd_ownership", "leverage_score"]].head(10),
-        use_container_width=True,
+        width="stretch",
     )
     st.subheader("Pitcher leverage")
     st.dataframe(
         pitchers[["full_name", "team_code", "proj_fd_mean", "proj_fd_ownership", "leverage_score"]].head(10),
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -1842,7 +1845,7 @@ def _render_step_two() -> None:
     extra_columns = [factor_options[label] for label in selected_labels if factor_options[label] in filtered_df.columns]
     display_cols = [col for col in base_columns + extra_columns if col in filtered_df.columns]
     st.subheader("Projection table")
-    st.dataframe(filtered_df[display_cols], use_container_width=True)
+    st.dataframe(filtered_df[display_cols], width="stretch")
     st.download_button(
         label="Download filtered projections",
         data=filtered_df.to_csv(index=False).encode("utf-8"),
@@ -2077,7 +2080,7 @@ def _render_lineup_summary(
     if summary_df.empty:
         st.info("No lineups available for this view.")
         return
-    st.dataframe(summary_df, use_container_width=True)
+    st.dataframe(summary_df, width="stretch")
 
     selected_lineup = st.selectbox(
         "View lineup",
@@ -2359,7 +2362,7 @@ def _render_simulation_calibration(date_str: str) -> None:
         )
     st.dataframe(
         latest[["metric_name", "metric_value", "num_players", "created_at"]],
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -2403,7 +2406,7 @@ def _render_lineup_rankings(contest_df: pd.DataFrame, selected_ids: List[int]) -
             "selected": "Selected",
         }
     )
-    st.dataframe(renamed, use_container_width=True)
+    st.dataframe(renamed, width="stretch")
 
 
 
@@ -2468,7 +2471,7 @@ def _render_correlation_heatmap(sim_results: Dict, optimizer_df: pd.DataFrame, t
     labels = top_players.set_index("fd_player_id").loc[ids, "full_name"].tolist()
     heatmap_df = pd.DataFrame(matrix, index=labels, columns=labels)
     styled = heatmap_df.style.background_gradient(cmap="RdBu_r", axis=None)
-    st.dataframe(styled, use_container_width=True)
+    st.dataframe(styled, width="stretch")
 
 
 
@@ -2545,7 +2548,6 @@ def _process_results_submission(
 def _render_step_four() -> None:
     st.header("Step 4 – Simulate & Select")
     workflow = _get_session()
-    _render_lock_countdown(workflow)
     _render_lock_countdown(workflow)
     optimizer_df: Optional[pd.DataFrame] = workflow.get("optimizer")
     lineups = workflow.get("lineups")
@@ -2709,7 +2711,7 @@ def _render_step_four() -> None:
     portfolio_df = sim_results.get("portfolio_df")
     if isinstance(portfolio_df, pd.DataFrame) and not portfolio_df.empty:
         st.subheader("Selected portfolio")
-        st.dataframe(portfolio_df, use_container_width=True)
+        st.dataframe(portfolio_df, width="stretch")
         st.download_button(
             "Download selected lineups",
             data=portfolio_df.to_csv(index=False).encode("utf-8"),
@@ -2720,7 +2722,7 @@ def _render_step_four() -> None:
         if isinstance(selected_players, pd.DataFrame) and not selected_players.empty:
             exposures = _player_exposure_summary(selected_players)
             st.subheader("Portfolio exposure summary")
-            st.dataframe(exposures, use_container_width=True)
+            st.dataframe(exposures, width="stretch")
 
         selected_objects = sim_results.get("selected_lineup_objects") or []
     if selected_objects:
@@ -2744,7 +2746,6 @@ def _render_step_four() -> None:
 def _render_step_five() -> None:
     st.header("Step 5 – Review Lineups")
     workflow = _get_session()
-    _render_lock_countdown(workflow)
     _render_lock_countdown(workflow)
     lineups = workflow.get("lineups")
     lineup_df = workflow.get("lineups_df")
@@ -2842,7 +2843,7 @@ def _render_step_five() -> None:
     if exposures.empty:
         st.info("No lineups available for the selected view.")
     else:
-        st.dataframe(exposures, use_container_width=True)
+        st.dataframe(exposures, width="stretch")
 
     st.subheader("Lineup variance summary")
     _variance_leaderboard(display_df)
@@ -2850,7 +2851,7 @@ def _render_step_five() -> None:
     stack_exposure = _stack_exposure_summary(display_df)
     if not stack_exposure.empty:
         st.subheader("Stack exposure by team")
-        st.dataframe(stack_exposure, use_container_width=True)
+        st.dataframe(stack_exposure, width="stretch")
 
     if not display_df.empty:
         st.subheader("Exposure heatmap (team x position)")
@@ -2866,7 +2867,7 @@ def _render_step_five() -> None:
             else pd.DataFrame()
         )
         if not pivot.empty:
-            st.dataframe(pivot, use_container_width=True)
+            st.dataframe(pivot, width="stretch")
         else:
             st.info("Unable to build exposure heatmap (missing team/position data).")
 
@@ -3004,7 +3005,7 @@ def _render_step_six() -> None:
                 _render_projection_blend_summary(workflow.get("projection_blend_summary") or projection_cfg.get("projection_blend"))
                 _render_ownership_model_summary(projection_cfg.get("ownership_model"))
             st.subheader("Lineup actual performance")
-            st.dataframe(lineup_points, use_container_width=True)
+            st.dataframe(lineup_points, width="stretch")
         if actuals is not None:
             st.subheader("Ownership accuracy (top 20)")
             comparison_df = actuals.merge(
@@ -3021,7 +3022,7 @@ def _render_step_six() -> None:
                 comparison_df.sort_values("actual_ownership_pct", ascending=False).head(20)[
                     ["full_name", "fd_player_id", "proj_fd_ownership", "actual_ownership_pct", "ownership_diff"]
                 ],
-                use_container_width=True,
+                width="stretch",
             )
         _ownership_accuracy_panel(date_str)
         try:
