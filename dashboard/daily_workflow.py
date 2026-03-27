@@ -1167,7 +1167,7 @@ def _render_late_swap_panel(workflow: Dict) -> None:
     if lineup_df is None or lineup_df.empty:
         return
     with st.expander("Late Swap Aide", expanded=False):
-        window = st.slider(
+        window = st.number_input(
             "Alert window (minutes)",
             min_value=15,
             max_value=180,
@@ -1740,7 +1740,7 @@ def _render_step_one() -> None:
         placeholder="0.6,0.4",
         help="Overrides the preset weights for projection sources (BallparkPal weight controlled separately).",
     )
-    projection_baseline_weight = st.slider(
+    projection_baseline_weight = st.number_input(
         "BallparkPal baseline weight",
         min_value=0.0,
         max_value=3.0,
@@ -1950,7 +1950,7 @@ def _render_step_three() -> None:
         return
 
     config_state = _get_config_state()
-    config_state["num_lineups"] = st.slider(
+    config_state["num_lineups"] = st.number_input(
         "Number of lineups",
         min_value=1,
         max_value=500,
@@ -1974,7 +1974,7 @@ def _render_step_three() -> None:
     chalk_col_left, chalk_col_right = st.columns(2)
     with chalk_col_left:
         st.caption("Batters")
-        config_state["batter_chalk_threshold"] = st.slider(
+        config_state["batter_chalk_threshold"] = st.number_input(
             "Batter chalk threshold (%)",
             min_value=0.0,
             max_value=50.0,
@@ -1982,7 +1982,7 @@ def _render_step_three() -> None:
             step=1.0,
             help="Ownership % above which a batter is considered chalk",
         )
-        config_state["batter_chalk_exposure_cap"] = st.slider(
+        config_state["batter_chalk_exposure_cap"] = st.number_input(
             "Batter chalk exposure cap (%)",
             min_value=0.0,
             max_value=100.0,
@@ -1992,7 +1992,7 @@ def _render_step_three() -> None:
         )
     with chalk_col_right:
         st.caption("Pitchers")
-        config_state["pitcher_chalk_threshold"] = st.slider(
+        config_state["pitcher_chalk_threshold"] = st.number_input(
             "Pitcher chalk threshold (%)",
             min_value=0.0,
             max_value=50.0,
@@ -2000,7 +2000,7 @@ def _render_step_three() -> None:
             step=1.0,
             help="Ownership % above which a pitcher is considered chalk",
         )
-        config_state["pitcher_chalk_exposure_cap"] = st.slider(
+        config_state["pitcher_chalk_exposure_cap"] = st.number_input(
             "Pitcher chalk exposure cap (%)",
             min_value=0.0,
             max_value=100.0,
@@ -2614,28 +2614,28 @@ def _render_step_four() -> None:
     sim_state = _get_sim_config_state()
     col_left, col_right = st.columns(2)
     with col_left:
-        sim_state["num_simulations"] = st.slider(
+        sim_state["num_simulations"] = st.number_input(
             "Number of simulations",
             min_value=1000,
             max_value=50000,
             value=int(sim_state.get("num_simulations", 10000) or 10000),
             step=1000,
         )
-        sim_state["volatility_scale"] = st.slider(
+        sim_state["volatility_scale"] = st.number_input(
             "Volatility scale",
             min_value=0.5,
             max_value=2.0,
             value=float(sim_state.get("volatility_scale", 1.0) or 1.0),
             step=0.1,
         )
-        sim_state["copula_nu"] = st.slider(
+        sim_state["copula_nu"] = st.number_input(
             "Copula \u03bd",
             min_value=3,
             max_value=20,
             value=int(sim_state.get("copula_nu", 5) or 5),
             step=1,
         )
-        sim_state["teammate_corr"] = st.slider(
+        sim_state["teammate_corr"] = st.number_input(
             "Teammate correlation",
             min_value=0.05,
             max_value=0.50,
@@ -2643,14 +2643,14 @@ def _render_step_four() -> None:
             step=0.01,
         )
     with col_right:
-        sim_state["pitcher_vs_opposing"] = st.slider(
+        sim_state["pitcher_vs_opposing"] = st.number_input(
             "Pitcher vs opposing hitters correlation",
             min_value=-0.30,
             max_value=0.0,
             value=float(sim_state.get("pitcher_vs_opposing", -0.15) or -0.15),
             step=0.01,
         )
-        sim_state["field_size"] = st.slider(
+        sim_state["field_size"] = st.number_input(
             "Field size (opponent lineups)",
             min_value=500,
             max_value=5000,
@@ -2665,21 +2665,21 @@ def _render_step_four() -> None:
             metric_options,
             index=metric_index,
         )
-        sim_state["diversity_weight"] = st.slider(
+        sim_state["diversity_weight"] = st.number_input(
             "Diversity weight",
             min_value=0.0,
             max_value=1.0,
             value=float(sim_state.get("diversity_weight", 0.3) or 0.3),
             step=0.1,
         )
-        sim_state["max_batter_exposure"] = st.slider(
+        sim_state["max_batter_exposure"] = st.number_input(
             "Max batter exposure",
             min_value=0.1,
             max_value=1.0,
             value=float(sim_state.get("max_batter_exposure", 0.4) or 0.4),
             step=0.05,
         )
-        sim_state["max_pitcher_exposure"] = st.slider(
+        sim_state["max_pitcher_exposure"] = st.number_input(
             "Max pitcher exposure",
             min_value=0.1,
             max_value=1.0,
