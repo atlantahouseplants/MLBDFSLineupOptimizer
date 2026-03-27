@@ -30,6 +30,7 @@ from slate_optimizer.optimizer import build_optimizer_dataset, generate_lineups
 from slate_optimizer.optimizer.config import OptimizerConfig
 from slate_optimizer.optimizer.dataset import OPTIMIZER_COLUMNS
 from slate_optimizer.optimizer.export import (
+    FANDUEL_UPLOAD_COLUMNS,
     extract_template_entries,
     lineups_to_fanduel_template,
     lineups_to_fanduel_upload,
@@ -2981,7 +2982,29 @@ def _render_step_five() -> None:
     else:
         export_lineups = lineups
 
+    if template_entries is not None and not template_entries.empty:
+        n_entries = len(template_entries)
+        n_unique = len(export_lineups)
+        if n_unique < n_entries:
+            st.warning(
+                f"You have {n_entries} contest entries but only {n_unique} unique lineups. "
+                f"Each lineup will be repeated up to {-(-n_entries // n_unique)} times. "
+                f"Increase **Number of lineups** in Step 3 to at least {n_entries} to avoid duplicates."
+            )
+
     fan_duel_df = lineups_to_fanduel_template(export_lineups, template_entries)
+
+    # Flag any duplicate lineups in the export
+    if not fan_duel_df.empty:
+        upload_cols = [c for c in FANDUEL_UPLOAD_COLUMNS if c in fan_duel_df.columns]
+        if upload_cols:
+            lineup_strs = fan_duel_df[upload_cols].apply(
+                lambda row: "|".join(sorted(str(v) for v in row)), axis=1
+            )
+            n_dupes = lineup_strs.duplicated().sum()
+            if n_dupes > 0:
+                st.warning(f"{n_dupes} duplicate lineup(s) detected in the export file.")
+
     st.download_button(
         "Download FanDuel Upload CSV",
         data=fan_duel_df.to_csv(index=False).encode("utf-8"),

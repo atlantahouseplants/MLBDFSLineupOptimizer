@@ -157,8 +157,12 @@ def generate_lineups(
     usage_counts: Dict[str, int] = {pid: 0 for pid in usage_limits}
     previous_lineups: List[List[str]] = []
     results: List[LineupResult] = []
+    _seen_sets: set = set()
 
-    for lineup_index in range(num_lineups):
+    max_attempts = num_lineups * 2
+    for lineup_index in range(max_attempts):
+        if len(results) >= num_lineups:
+            break
         eligible_mask = df["fd_player_id"].map(
             lambda pid: usage_counts.get(pid, 0) < usage_limits.get(pid, 0)
         )
@@ -271,6 +275,11 @@ def generate_lineups(
 
         for pid in lineup_df["fd_player_id"]:
             usage_counts[pid] = usage_counts.get(pid, 0) + 1
+
+        player_set = frozenset(lineup_df["fd_player_id"].tolist())
+        if player_set in _seen_sets:
+            continue
+        _seen_sets.add(player_set)
 
         previous_lineups.append(lineup_df["fd_player_id"].tolist())
         results.append(
