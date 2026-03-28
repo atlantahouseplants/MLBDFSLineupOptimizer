@@ -750,7 +750,22 @@ def _process_slate(
                 f"({n_confirmed_pitchers} pitchers + {n_confirmed_hitters} hitters, "
                 f"{filtered_count} bench/inactive removed)"
             )
-            # Check position coverage — LP needs at least one player per required position
+            # Check if pool is viable for optimization
+            n_matched = n_confirmed_pitchers + n_confirmed_hitters
+            match_rate = n_matched / max(n_pasted, 1)
+
+            # Detect slate mismatch: compare teams in paste vs FanDuel pool
+            _paste_teams = set()
+            if hasattr(confirmed_last_team, '__iter__'):
+                _paste_teams = {t for _, t in confirmed_last_team}
+            _fd_teams = set()
+            _fd_team_col = "team_code" if "team_code" in full_pool_backup.columns else "team"
+            if _fd_team_col in full_pool_backup.columns:
+                _fd_teams = set(full_pool_backup[_fd_team_col].dropna().str.upper().str.strip().unique())
+            _team_overlap = _paste_teams & _fd_teams
+            _paste_only = _paste_teams - _fd_teams
+
+            # Check position coverage
             _pos_col = "roster_position" if "roster_position" in combined.columns else "position"
             _positions_present = set()
             if _pos_col in combined.columns:
@@ -761,25 +776,45 @@ def _process_slate(
                             _positions_present.add(_p)
             _required = {"P", "C", "1B", "2B", "3B", "SS", "OF"}
             _missing = _required - _positions_present
-            pool_too_small = len(combined) < 15 or bool(_missing)
+
+            # Pool is non-viable if: too few players, missing positions, OR low match rate
+            pool_too_small = (
+                len(combined) < 40
+                or bool(_missing)
+                or match_rate < 0.5
+            )
 
             if pool_too_small:
-                reason = f"missing positions: {', '.join(sorted(_missing))}" if _missing else f"only {len(combined)} players"
+                reasons = []
+                if bool(_missing):
+                    reasons.append(f"missing positions: {', '.join(sorted(_missing))}")
+                if len(combined) < 40:
+                    reasons.append(f"only {len(combined)} players (need 40+)")
+                if match_rate < 0.5:
+                    reasons.append(f"low match rate: {n_matched}/{n_pasted} ({match_rate:.0%})")
+                reason_str = "; ".join(reasons)
+
+                # Add slate mismatch diagnostic if teams don't overlap
+                if _paste_only:
+                    optional_messages.append(
+                        f"SLATE MISMATCH: Your lineup paste has teams not in the FanDuel CSV: "
+                        f"{', '.join(sorted(_paste_only))}. "
+                        f"Make sure you upload the FanDuel player list for TODAY's slate, "
+                        f"not a previous day's file."
+                    )
+
                 optional_messages.append(
-                    f"WARNING: Confirmed starters pool is not viable ({reason}). "
+                    f"WARNING: Confirmed starters pool is not viable ({reason_str}). "
                     f"Falling back to full player pool ({before_count} players). "
                     f"Check that your lineup paste matches the FanDuel slate."
                 )
                 combined = full_pool_backup.reset_index(drop=True)
 
-            if n_confirmed_pitchers + n_confirmed_hitters < n_pasted * 0.5:
-                # Build list of unmatched names for debugging
-                matched_canon = set(confirmed["_canon_check"].dropna()) if "_canon_check" in confirmed.columns else set()
-                unmatched = sorted(confirmed_player_names - matched_canon)[:10]
+            elif match_rate < 0.75:
+                # Moderate match rate — warn but still use filtered pool
                 optional_messages.append(
-                    f"LOW MATCH RATE: pasted {n_pasted} names but only matched "
-                    f"{n_confirmed_pitchers + n_confirmed_hitters} in FanDuel pool. "
-                    f"Unmatched sample: {', '.join(unmatched)}"
+                    f"NOTE: Matched {n_matched} of {n_pasted} pasted names ({match_rate:.0%}). "
+                    f"Some players may not be in the FanDuel slate or have different name spellings."
                 )
 
         projections = compute_baseline_projections(
