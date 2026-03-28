@@ -267,19 +267,64 @@ def generate_lineups(
 
         status = prob.solve(PULP_CBC_CMD(msg=False))
         if status != LpStatusOptimal:
-            break
+            if lineup_index == 0 and stack_sizes:
+                # First lineup infeasible with stack constraints — retry without
+                import warnings
+                warnings.warn(
+                    "LP infeasible with stack templates; retrying without stack constraints.",
+                    stacklevel=2,
+                )
+                prob2 = LpProblem(f"mlb_lineup_{lineup_index}_nostacks", LpMaximize)
+                vars2 = {
+                    idx: LpVariable(f"y_{idx}", lowBound=0, upBound=1, cat=LpBinary)
+                    for idx in pool.index
+                }
+                prob2 += lpSum(pool.loc[idx, "proj_fd_mean"] * v for idx, v in vars2.items())
+                prob2 += lpSum(pool.loc[idx, "salary"] * v for idx, v in vars2.items()) <= salary_cap
+                prob2 += lpSum(v for v in vars2.values()) == TOTAL_PLAYERS
+                pitcher_mask2 = _position_mask(pool, "P")
+                prob2 += lpSum(vars2[idx] for idx in pitcher_mask2[pitcher_mask2].index) == 1
+                for _, (keyword, minimum, maximum) in POSITION_REQUIREMENTS.items():
+                    if keyword == "P":
+                        continue
+                    mask2 = _position_mask(pool, keyword)
+                    if mask2.any():
+                        prob2 += lpSum(vars2[idx] for idx in mask2[mask2].index) >= minimum
+                        if maximum:
+                            prob2 += lpSum(vars2[idx] for idx in mask2[mask2].index) <= maximum
+                hitters_mask2 = pool["player_type"].str.lower() != "pitcher"
+                prob2 += lpSum(vars2[idx] for idx in hitters_mask2[hitters_mask2].index) == TOTAL_PLAYERS - 1
+                batter_mask2 = pool["player_type"].str.lower() == "batter"
+                for team_code2 in pool.loc[batter_mask2, "team_code"].dropna().unique():
+                    ti = pool.index[(pool["team_code"] == team_code2) & batter_mask2]
+                    if len(ti) > 4:
+                        prob2 += lpSum(vars2[idx] for idx in ti) <= 4
+                if max_lineup_ownership is not None and "proj_fd_ownership" in pool.columns:
+                    prob2 += lpSum(pool.loc[idx, "proj_fd_ownership"] * v for idx, v in vars2.items()) <= max_lineup_ownership
+                status2 = prob2.solve(PULP_CBC_CMD(msg=False))
+                if status2 == LpStatusOptimal:
+                    # Disable stacks for all future iterations
+                    stack_sizes = ()
+                    decision_vars = vars2
+                    # Fall through to extract results
+                else:
+                    break
+            else:
+                break
 
         selected_indices = [idx for idx, var in decision_vars.items() if var.varValue == 1]
         lineup_df = pool.loc[selected_indices].copy()
         lineup_df = lineup_df.sort_values(by=["player_type", "position"], ascending=[True, True])
 
-        for pid in lineup_df["fd_player_id"]:
-            usage_counts[pid] = usage_counts.get(pid, 0) + 1
-
         player_set = frozenset(lineup_df["fd_player_id"].tolist())
         if player_set in _seen_sets:
+            # Still add exclusion constraint so LP doesn't repeat it
+            previous_lineups.append(lineup_df["fd_player_id"].tolist())
             continue
         _seen_sets.add(player_set)
+
+        for pid in lineup_df["fd_player_id"]:
+            usage_counts[pid] = usage_counts.get(pid, 0) + 1
 
         previous_lineups.append(lineup_df["fd_player_id"].tolist())
         results.append(

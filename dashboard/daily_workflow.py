@@ -1385,7 +1385,15 @@ def _run_solver(
     )
 
     if not lineups:
-        raise ValueError("Optimizer could not generate any lineups. Check constraints.")
+        n_players = len(df)
+        n_pitchers = int((df["player_type"].str.lower() == "pitcher").sum()) if "player_type" in df.columns else 0
+        n_batters = n_players - n_pitchers
+        raise ValueError(
+            f"Optimizer could not generate any lineups. "
+            f"Pool has {n_players} players ({n_pitchers} pitchers, {n_batters} batters). "
+            f"Stack templates: {template_tuple}. Salary cap: ${salary_cap_value:,}. "
+            f"Try reducing stack templates (e.g., '3,3' instead of '4,3') or checking your lineup filter."
+        )
 
     if locked_players:
         locked_lower = {p.lower() for p in locked_players}
