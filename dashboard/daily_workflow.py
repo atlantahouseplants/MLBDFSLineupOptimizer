@@ -605,6 +605,7 @@ def _process_slate(
         # Handle batting orders: paste text takes priority over CSV upload
         batting_path = None
         confirmed_player_names = set()
+        confirmed_last_team = set()  # fallback: (canonical_last_name, team_code)
         if lineup_paste_text and lineup_paste_text.strip():
             from slate_optimizer.ingestion.batting_orders import parse_lineup_paste
             paste_df = parse_lineup_paste(lineup_paste_text)
@@ -616,6 +617,10 @@ def _process_slate(
                 confirmed_player_names = set(
                     _canon(paste_df["player_name"]).tolist()
                 )
+                # Build fallback set of (last_name, team) for players that don't match on full name
+                _paste_last_names = _canon(paste_df["player_name"].str.split().str[-1])
+                _paste_teams = paste_df["team"].str.upper().str.strip()
+                confirmed_last_team = set(zip(_paste_last_names, _paste_teams))
         if batting_path is None and batting_file:
             batting_path = _save_uploaded_file(batting_file, temp_dir)
         handed_path = _save_uploaded_file(handed_file, temp_dir) if handed_file else None
@@ -719,6 +724,14 @@ def _process_slate(
             from slate_optimizer.ingestion.text_utils import canonicalize_series as _canon2
             combined["_canon_check"] = _canon2(combined["full_name"])
             name_match = combined["_canon_check"].isin(confirmed_player_names)
+            # Fallback: match on last_name + team_code for players not matched by full name
+            if confirmed_last_team:
+                _last_col = "last_name" if "last_name" in combined.columns else "full_name"
+                _canon_last = _canon2(combined[_last_col].str.split().str[-1] if _last_col == "full_name" else combined[_last_col])
+                _team_col = combined.get("team_code", combined.get("team", pd.Series([""] * len(combined)))).str.upper().str.strip()
+                _last_team_pairs = list(zip(_canon_last, _team_col))
+                _last_team_match = pd.Series([pair in confirmed_last_team for pair in _last_team_pairs], index=combined.index)
+                name_match = name_match | _last_team_match
             # Also include merge-based matches
             if "is_confirmed_lineup" in combined.columns:
                 name_match = name_match | combined["is_confirmed_lineup"]
