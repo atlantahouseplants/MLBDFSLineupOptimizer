@@ -27,6 +27,7 @@ from slate_optimizer.ingestion.recent_stats import RecentStatsLoader
 from slate_optimizer.ingestion.slate_builder import build_player_dataset
 from slate_optimizer.ingestion.vegas import VegasLoader
 from slate_optimizer.optimizer import build_optimizer_dataset, generate_lineups
+from slate_optimizer.optimizer.solver import STACK_PRESETS
 from slate_optimizer.optimizer.config import OptimizerConfig
 from slate_optimizer.optimizer.dataset import OPTIMIZER_COLUMNS
 from slate_optimizer.optimizer.export import (
@@ -179,7 +180,7 @@ def _get_config_state() -> Dict:
     default_config = {
         "num_lineups": 20,
         "salary_cap": 35000,
-        "stack_templates": "4,3",
+        "stack_template_label": "4-3-1",
         "batter_chalk_threshold": 25.0,
         "pitcher_chalk_threshold": 35.0,
         "batter_chalk_exposure_cap": 30.0,
@@ -1262,6 +1263,7 @@ def _reoptimize_scratches(
     return diff_messages
 
 def _parse_stack_templates(value: str) -> List[int]:
+    """Legacy parser — kept for backward compatibility with scripts."""
     templates: List[int] = []
     if not value:
         return templates
@@ -1328,7 +1330,8 @@ def _run_solver(
         overrides = _parse_player_overrides(overrides_input)
         player_overrides = _apply_player_filters(df, overrides)
 
-    stack_templates = _parse_stack_templates(config_settings.get("stack_templates", ""))
+    stack_label = config_settings.get("stack_template_label", "Auto (optimizer's choice)")
+    stack_template = STACK_PRESETS.get(stack_label)
     batter_chalk_val = config_settings.get("batter_chalk_threshold", 0.0)
     chalk_threshold = batter_chalk_val / 100.0 if batter_chalk_val else None
     batter_cap_val = config_settings.get("batter_chalk_exposure_cap", 0.0)
@@ -1350,7 +1353,7 @@ def _run_solver(
     optimizer_config = OptimizerConfig(
         salary_cap=int(config_settings.get("salary_cap", 35000) or 35000),
         min_stack_size=None,
-        stack_templates=stack_templates,
+        stack_templates=None,
         player_exposure_overrides=player_overrides,
         max_lineup_ownership=max_lineup_ownership,
         chalk_threshold=chalk_threshold,
@@ -1366,8 +1369,6 @@ def _run_solver(
     df = optimizer_config.apply_ownership_strategy(df)
 
     num_lineups = int(config_settings.get("num_lineups", 20) or 20)
-    template_tuple = tuple(stack_templates) if stack_templates else None
-    stack_player_types = ("batter",)
     salary_cap_value = optimizer_config.salary_cap or 35000
 
     extra_lineups = num_lineups + (len(locked_players) * 2)
@@ -1375,9 +1376,7 @@ def _run_solver(
         df,
         num_lineups=extra_lineups,
         salary_cap=salary_cap_value,
-        min_stack_size=config_settings.get("min_stack_size", 0) or 0,
-        stack_player_types=stack_player_types,
-        stack_templates=template_tuple,
+        stack_template=stack_template,
         max_lineup_ownership=max_lineup_ownership,
         bring_back_enabled=bring_back_enabled,
         bring_back_count=bring_back_count,
@@ -1391,8 +1390,8 @@ def _run_solver(
         raise ValueError(
             f"Optimizer could not generate any lineups. "
             f"Pool has {n_players} players ({n_pitchers} pitchers, {n_batters} batters). "
-            f"Stack templates: {template_tuple}. Salary cap: ${salary_cap_value:,}. "
-            f"Try reducing stack templates (e.g., '3,3' instead of '4,3') or checking your lineup filter."
+            f"Stack template: {stack_label}. Salary cap: ${salary_cap_value:,}. "
+            f"Try 'Auto' stack template or check your lineup filter."
         )
 
     if locked_players:
@@ -1991,10 +1990,15 @@ def _render_step_three() -> None:
         value=int(config_state.get("salary_cap", 35000) or 35000),
         step=100,
     )
-    config_state["stack_templates"] = st.text_input(
-        "Stack templates (comma-separated)",
-        value=config_state.get("stack_templates", "4,3"),
-        help="Examples: 4,3 or 5,2. Use comma-separated integers.",
+    preset_labels = list(STACK_PRESETS.keys())
+    current_label = config_state.get("stack_template_label", "4-3-1")
+    if current_label not in preset_labels:
+        current_label = preset_labels[0]
+    config_state["stack_template_label"] = st.selectbox(
+        "Stack template",
+        options=preset_labels,
+        index=preset_labels.index(current_label),
+        help="How batters are distributed across teams. Each number is batters from one team (must sum to 8). 'Auto' adds no stacking constraints.",
     )
     st.markdown("**Chalk controls**")
     chalk_col_left, chalk_col_right = st.columns(2)

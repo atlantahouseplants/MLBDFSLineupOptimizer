@@ -1,6 +1,8 @@
 """Simple ILP-based MLB lineup solver."""
 from __future__ import annotations
 
+import warnings
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -17,6 +19,7 @@ from pulp import (
 
 SALARY_CAP = 35000
 TOTAL_PLAYERS = 9
+MAX_HITTERS_PER_TEAM = 4  # FanDuel hard cap
 
 POSITION_REQUIREMENTS = {
     "pitcher": ("P", 1, 1),
@@ -28,8 +31,6 @@ POSITION_REQUIREMENTS = {
 }
 
 # Maximum players whose ONLY non-UTIL eligibility is within this group.
-# E.g. a pure 1B (roster_position C/1B/UTIL) can only fill C/1B or UTIL.
-# With 1 C/1B slot + 1 UTIL slot, max 2 such players.
 _SLOT_CAPS = {
     "C/1B": 2,   # C/1B slot + UTIL
     "2B": 2,     # 2B slot + UTIL
@@ -38,18 +39,33 @@ _SLOT_CAPS = {
     "OF": 4,     # 3 OF slots + UTIL
 }
 
+# ──────────────────────────────────────────────────────────────────────
+# Stack presets: each tuple sums to 8 (total batters in a FanDuel lineup).
+# Groups of 1 need no LP constraint — only groups >= 2 are enforced.
+# ──────────────────────────────────────────────────────────────────────
+STACK_PRESETS: OrderedDict[str, Optional[Tuple[int, ...]]] = OrderedDict([
+    ("Auto (optimizer's choice)", None),
+    ("4-4 (two big stacks)",      (4, 4)),
+    ("4-3-1",                     (4, 3, 1)),
+    ("4-2-2",                     (4, 2, 2)),
+    ("4-2-1-1",                   (4, 2, 1, 1)),
+    ("3-3-2",                     (3, 3, 2)),
+    ("3-3-1-1",                   (3, 3, 1, 1)),
+    ("3-2-2-1",                   (3, 2, 2, 1)),
+    ("3-2-1-1-1",                 (3, 2, 1, 1, 1)),
+    ("2-2-2-2",                   (2, 2, 2, 2)),
+    ("2-2-2-1-1",                 (2, 2, 2, 1, 1)),
+])
+
 
 def _position_mask(df: pd.DataFrame, keyword: str) -> pd.Series:
     keyword = keyword.upper()
     tokens = keyword.split("/")
-
-    # Use roster_position (full FanDuel eligibility) when available
     pos_col = "roster_position" if "roster_position" in df.columns else "position"
 
     def matches(value: str) -> bool:
         text = str(value).upper()
         parts = text.replace("-", "/").split("/")
-        # Exclude UTIL from position matching — UTIL is implicit for all hitters
         parts = [p for p in parts if p != "UTIL"]
         return any(tok in parts for tok in tokens)
 
@@ -76,20 +92,125 @@ def _max_usage(df: pd.DataFrame, num_lineups: int) -> Dict[str, int]:
     return usage
 
 
-def _team_stack_constraints(
+# ──────────────────────────────────────────────────────────────────────
+# Base LP construction (everything except stack constraints)
+# ──────────────────────────────────────────────────────────────────────
+
+def _build_base_lp(
+    pool: pd.DataFrame,
+    lineup_index: int,
+    salary_cap: int,
+    max_lineup_ownership: Optional[float],
+    previous_lineups: List[List[str]],
+    tag: str = "",
+) -> Tuple[LpProblem, Dict[int, LpVariable]]:
+    """Build the LP with all constraints except stack/bring-back."""
+    label = f"mlb_lineup_{lineup_index}{tag}"
+    prob = LpProblem(label, LpMaximize)
+    decision_vars = {
+        idx: LpVariable(f"x{tag}_{idx}", lowBound=0, upBound=1, cat=LpBinary)
+        for idx in pool.index
+    }
+
+    # Objective: maximize projected score
+    prob += lpSum(pool.loc[idx, "proj_fd_mean"] * var for idx, var in decision_vars.items())
+
+    # Salary constraint
+    prob += lpSum(pool.loc[idx, "salary"] * var for idx, var in decision_vars.items()) <= salary_cap
+
+    # Exactly 9 players
+    prob += lpSum(var for var in decision_vars.values()) == TOTAL_PLAYERS
+
+    # Position constraints
+    pitcher_mask = _position_mask(pool, "P")
+    prob += lpSum(decision_vars[idx] for idx in pitcher_mask[pitcher_mask].index) == 1
+
+    for _, (keyword, minimum, maximum) in POSITION_REQUIREMENTS.items():
+        if keyword == "P":
+            continue
+        mask = _position_mask(pool, keyword)
+        if mask.any():
+            prob += lpSum(decision_vars[idx] for idx in mask[mask].index) >= minimum
+            if maximum:
+                prob += lpSum(decision_vars[idx] for idx in mask[mask].index) <= maximum
+
+    # Exactly 8 hitters
+    hitters_mask = pool["player_type"].str.lower() != "pitcher"
+    prob += lpSum(decision_vars[idx] for idx in hitters_mask[hitters_mask].index) == TOTAL_PLAYERS - 1
+
+    # Slot caps for position-limited players
+    if "roster_position" in pool.columns:
+        _slot_groups = {"C": "C/1B", "1B": "C/1B", "2B": "2B", "3B": "3B", "SS": "SS", "OF": "OF"}
+        for group_label, cap in _SLOT_CAPS.items():
+            group_tokens = set(group_label.split("/"))
+
+            def _is_limited_to_group(roster_pos: str, _tokens=group_tokens, _label=group_label) -> bool:
+                parts = {p.strip() for p in str(roster_pos).upper().replace("-", "/").split("/")}
+                parts.discard("UTIL")
+                parts.discard("")
+                if not parts:
+                    return False
+                mapped = {_slot_groups.get(p, p) for p in parts}
+                return mapped == {_label}
+
+            limited_mask = pool["roster_position"].map(_is_limited_to_group)
+            if limited_mask.any():
+                prob += lpSum(decision_vars[idx] for idx in limited_mask[limited_mask].index) <= cap
+
+    # No opposing hitters for the selected pitcher
+    batter_mask = pool["player_type"].str.lower() == "batter"
+    for idx in pitcher_mask[pitcher_mask].index:
+        opponent_team = str(pool.loc[idx, "opponent_code"] or "")
+        if not opponent_team:
+            continue
+        opp_hitters = pool.index[(pool["team_code"] == opponent_team) & batter_mask]
+        if opp_hitters.empty:
+            continue
+        prob += lpSum(decision_vars[j] for j in opp_hitters) <= (1 - decision_vars[idx]) * len(opp_hitters)
+
+    # FanDuel rule: max 4 hitters from the same team
+    for team_code in pool.loc[batter_mask, "team_code"].dropna().unique():
+        team_hitter_indices = pool.index[(pool["team_code"] == team_code) & batter_mask]
+        if len(team_hitter_indices) > MAX_HITTERS_PER_TEAM:
+            prob += lpSum(decision_vars[idx] for idx in team_hitter_indices) <= MAX_HITTERS_PER_TEAM
+
+    # Ownership cap
+    if max_lineup_ownership is not None and "proj_fd_ownership" in pool.columns:
+        prob += lpSum(
+            pool.loc[idx, "proj_fd_ownership"] * var for idx, var in decision_vars.items()
+        ) <= max_lineup_ownership
+
+    # Exclusion constraints for previous lineups
+    for lineup in previous_lineups:
+        indices = [
+            pool.index[pool["fd_player_id"] == pid][0]
+            for pid in lineup
+            if pid in pool["fd_player_id"].values
+        ]
+        if indices:
+            prob += lpSum(decision_vars[idx] for idx in indices) <= len(indices) - 1
+
+    return prob, decision_vars
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Stack constraints (assignment-based formulation)
+# ──────────────────────────────────────────────────────────────────────
+
+def _add_stack_constraints(
     prob: LpProblem,
     pool: pd.DataFrame,
     decision_vars: Dict[int, LpVariable],
-    stack_sizes: Sequence[int],
-    stack_player_types: Sequence[str],
+    stack_template: Tuple[int, ...],
     min_game_total: Optional[float] = None,
 ) -> List[Tuple[str, str, LpVariable]]:
-    valid_sizes = [size for size in stack_sizes if size and size > 0]
-    if not valid_sizes:
+    """Add assignment-based stack constraints ensuring distinct teams per group."""
+    # Only constrain groups with >= 2 batters
+    constrained = [(slot_idx, size) for slot_idx, size in enumerate(stack_template) if size >= 2]
+    if not constrained:
         return []
 
-    stack_types = {t.lower() for t in stack_player_types}
-    type_mask = pool["player_type"].str.lower().isin(stack_types)
+    type_mask = pool["player_type"].str.lower() == "batter"
     cols = ["team_code", "opponent_code"]
     if "vegas_game_total" in pool.columns:
         cols.append("vegas_game_total")
@@ -99,46 +220,81 @@ def _team_stack_constraints(
     if "vegas_game_total" not in hitters.columns:
         hitters["vegas_game_total"] = float("nan")
     hitters["vegas_game_total"] = pd.to_numeric(hitters["vegas_game_total"], errors="coerce")
+
     team_meta = hitters.drop_duplicates("team_code").set_index("team_code")
     team_codes = [code for code in team_meta.index if code]
+
     if min_game_total is not None:
         team_codes = [
-            code
-            for code in team_codes
-            if pd.notna(team_meta.loc[code, "vegas_game_total"]) and team_meta.loc[code, "vegas_game_total"] >= min_game_total
+            code for code in team_codes
+            if pd.notna(team_meta.loc[code, "vegas_game_total"])
+            and team_meta.loc[code, "vegas_game_total"] >= min_game_total
         ]
     if not team_codes:
         return []
 
+    # Count available batters per team to skip teams that can't fill any slot
+    team_batter_count: Dict[str, int] = {}
+    team_batter_indices: Dict[str, pd.Index] = {}
+    for tc in team_codes:
+        indices = pool.index[(pool["team_code"] == tc) & type_mask]
+        team_batter_count[tc] = len(indices)
+        team_batter_indices[tc] = indices
+
+    assign_vars: Dict[Tuple[str, int], LpVariable] = {}
     stack_details: List[Tuple[str, str, LpVariable]] = []
-    for size in valid_sizes:
-        stack_vars = {}
-        for team_code in team_codes:
-            indices = pool.index[(pool["team_code"] == team_code) & type_mask]
-            if indices.empty:
-                continue
-            stack_var = LpVariable(f"stack_{size}_{team_code}", lowBound=0, upBound=1, cat=LpBinary)
-            stack_vars[team_code] = stack_var
-            prob += (
-                lpSum(decision_vars[idx] for idx in indices)
-                - size * stack_var
-                >= 0
-            )
-            opponent_code = team_meta.loc[team_code, "opponent_code"] if team_code in team_meta.index else ""
-            opponent_code = opponent_code if isinstance(opponent_code, str) else ""
-            stack_details.append((team_code, opponent_code, stack_var))
-        if stack_vars:
-            prob += lpSum(stack_vars.values()) >= 1
+
+    for tc in team_codes:
+        team_sum = lpSum(decision_vars[idx] for idx in team_batter_indices[tc])
+        slots_for_team = []
+
+        for slot_idx, group_size in constrained:
+            capped_size = min(group_size, MAX_HITTERS_PER_TEAM)
+            if team_batter_count[tc] < capped_size:
+                continue  # team can't fill this slot
+            var = LpVariable(f"assign_{tc}_s{slot_idx}", cat=LpBinary)
+            assign_vars[(tc, slot_idx)] = var
+            slots_for_team.append(var)
+
+            # If this team is assigned to this slot, enforce >= group_size batters
+            prob += team_sum >= capped_size * var
+
+        # Each team can fill at most one slot
+        if len(slots_for_team) > 1:
+            prob += lpSum(slots_for_team) <= 1
+
+    # Each slot must be filled by exactly one team
+    for slot_idx, group_size in constrained:
+        slot_vars = [assign_vars[(tc, slot_idx)] for tc in team_codes if (tc, slot_idx) in assign_vars]
+        if slot_vars:
+            prob += lpSum(slot_vars) >= 1
+        else:
+            # No team can fill this slot — template is infeasible
+            return []
+
+    # Build stack_details for bring-back (use the primary/largest slot)
+    primary_slot = constrained[0][0]
+    for tc in team_codes:
+        if (tc, primary_slot) in assign_vars:
+            opp = team_meta.loc[tc, "opponent_code"] if tc in team_meta.index else ""
+            opp = opp if isinstance(opp, str) else ""
+            stack_details.append((tc, opp, assign_vars[(tc, primary_slot)]))
+
     return stack_details
 
+
+# ──────────────────────────────────────────────────────────────────────
+# Main lineup generation
+# ──────────────────────────────────────────────────────────────────────
 
 def generate_lineups(
     dataset: pd.DataFrame,
     num_lineups: int = 20,
     salary_cap: int = SALARY_CAP,
-    min_stack_size: int = 4,
+    min_stack_size: int = 0,
     stack_player_types: Sequence[str] = ("batter",),
     stack_templates: Optional[Sequence[int]] = None,
+    stack_template: Optional[Tuple[int, ...]] = None,
     max_lineup_ownership: Optional[float] = None,
     bring_back_enabled: bool = False,
     bring_back_count: int = 1,
@@ -148,9 +304,12 @@ def generate_lineups(
     df["proj_fd_mean"] = pd.to_numeric(df["proj_fd_mean"], errors="coerce").fillna(0.0)
     df["salary"] = pd.to_numeric(df["salary"], errors="coerce").fillna(0).astype(int)
 
-    MAX_HITTERS_PER_TEAM = 4  # FanDuel hard cap
-    stack_sizes = tuple(stack_templates) if stack_templates else ((min_stack_size,) if min_stack_size else tuple())
-    stack_sizes = tuple(min(s, MAX_HITTERS_PER_TEAM) for s in stack_sizes)
+    # Resolve stack template: new param takes priority, legacy fallback
+    if stack_template is None and stack_templates:
+        stack_template = tuple(min(s, MAX_HITTERS_PER_TEAM) for s in stack_templates if s and s > 0)
+        if not stack_template:
+            stack_template = None
+
     bring_back_count = max(1, int(bring_back_count))
 
     usage_limits = _max_usage(df, num_lineups)
@@ -170,61 +329,21 @@ def generate_lineups(
         if len(pool) < TOTAL_PLAYERS:
             break
 
-        prob = LpProblem(f"mlb_lineup_{lineup_index}", LpMaximize)
-        decision_vars = {
-            idx: LpVariable(f"x_{idx}", lowBound=0, upBound=1, cat=LpBinary)
-            for idx in pool.index
-        }
-
-        prob += lpSum(pool.loc[idx, "proj_fd_mean"] * var for idx, var in decision_vars.items())
-        prob += lpSum(pool.loc[idx, "salary"] * var for idx, var in decision_vars.items()) <= salary_cap
-        prob += lpSum(var for var in decision_vars.values()) == TOTAL_PLAYERS
-
-        pitcher_mask = _position_mask(pool, "P")
-        prob += lpSum(decision_vars[idx] for idx in pitcher_mask[pitcher_mask].index) == 1
-
-        for _, (keyword, minimum, maximum) in POSITION_REQUIREMENTS.items():
-            if keyword == "P":
-                continue
-            mask = _position_mask(pool, keyword)
-            if mask.any():
-                prob += lpSum(decision_vars[idx] for idx in mask[mask].index) >= minimum
-                if maximum:
-                    prob += lpSum(decision_vars[idx] for idx in mask[mask].index) <= maximum
-
-        # Ensure at least 8 hitters (= 9 total - 1 pitcher)
-        hitters_mask = pool["player_type"].str.lower() != "pitcher"
-        prob += lpSum(decision_vars[idx] for idx in hitters_mask[hitters_mask].index) == TOTAL_PLAYERS - 1
-
-        # Cap players whose eligibility is limited to a single position group.
-        # Prevents e.g. 3 pure-1B players when only C/1B + UTIL slots exist (max 2).
-        if "roster_position" in pool.columns:
-            _slot_groups = {"C": "C/1B", "1B": "C/1B", "2B": "2B", "3B": "3B", "SS": "SS", "OF": "OF"}
-            for group_label, cap in _SLOT_CAPS.items():
-                group_tokens = set(group_label.split("/"))
-
-                def _is_limited_to_group(roster_pos: str) -> bool:
-                    parts = {p.strip() for p in str(roster_pos).upper().replace("-", "/").split("/")}
-                    parts.discard("UTIL")
-                    parts.discard("")
-                    if not parts:
-                        return False
-                    mapped = {_slot_groups.get(p, p) for p in parts}
-                    return mapped == {group_label}
-
-                limited_mask = pool["roster_position"].map(_is_limited_to_group)
-                if limited_mask.any():
-                    prob += lpSum(decision_vars[idx] for idx in limited_mask[limited_mask].index) <= cap
-
-        stack_info = _team_stack_constraints(
-            prob,
-            pool,
-            decision_vars,
-            stack_sizes,
-            stack_player_types,
-            min_game_total=min_game_total_for_stacks,
+        # Build base LP (no stacks)
+        prob, decision_vars = _build_base_lp(
+            pool, lineup_index, salary_cap, max_lineup_ownership, previous_lineups,
         )
 
+        # Try adding stack constraints
+        stack_info: List[Tuple[str, str, LpVariable]] = []
+        used_stacks = stack_template is not None
+        if used_stacks:
+            stack_info = _add_stack_constraints(
+                prob, pool, decision_vars, stack_template,
+                min_game_total=min_game_total_for_stacks,
+            )
+
+        # Bring-back constraints (only when stacks applied)
         if bring_back_enabled and stack_info:
             batter_mask = pool["player_type"].str.lower() == "batter"
             for team_code, opponent_code, stack_var in stack_info:
@@ -235,82 +354,21 @@ def generate_lineups(
                     continue
                 prob += lpSum(decision_vars[idx] for idx in opp_indices) >= bring_back_count * stack_var
 
-        batter_mask = pool["player_type"].str.lower() == "batter"
-        for idx in pitcher_mask[pitcher_mask].index:
-            opponent_team = str(pool.loc[idx, "opponent_code"] or "")
-            if not opponent_team:
-                continue
-            opp_hitters = pool.index[(pool["team_code"] == opponent_team) & batter_mask]
-            if opp_hitters.empty:
-                continue
-            prob += lpSum(decision_vars[j] for j in opp_hitters) <= (1 - decision_vars[idx]) * len(opp_hitters)
-
-        # FanDuel rule: max 4 hitters from the same team (pitcher excluded)
-        for team_code in pool.loc[batter_mask, "team_code"].dropna().unique():
-            team_hitter_indices = pool.index[(pool["team_code"] == team_code) & batter_mask]
-            if len(team_hitter_indices) > 4:
-                prob += lpSum(decision_vars[idx] for idx in team_hitter_indices) <= 4
-
-        if max_lineup_ownership is not None and "proj_fd_ownership" in pool.columns:
-            prob += lpSum(
-                pool.loc[idx, "proj_fd_ownership"] * var for idx, var in decision_vars.items()
-            ) <= max_lineup_ownership
-
-        for lineup in previous_lineups:
-            indices = [
-                pool.index[pool["fd_player_id"] == pid][0]
-                for pid in lineup
-                if pid in pool["fd_player_id"].values
-            ]
-            if indices:
-                prob += lpSum(decision_vars[idx] for idx in indices) <= len(indices) - 1
-
         status = prob.solve(PULP_CBC_CMD(msg=False))
+
+        # Fallback: if stacks made it infeasible, solve without stacks
+        if status != LpStatusOptimal and used_stacks:
+            warnings.warn(
+                f"Lineup {lineup_index}: stack template {stack_template} infeasible, solving without stacks.",
+                stacklevel=2,
+            )
+            prob, decision_vars = _build_base_lp(
+                pool, lineup_index, salary_cap, max_lineup_ownership, previous_lineups, tag="_ns",
+            )
+            status = prob.solve(PULP_CBC_CMD(msg=False))
+
         if status != LpStatusOptimal:
-            if lineup_index == 0 and stack_sizes:
-                # First lineup infeasible with stack constraints — retry without
-                import warnings
-                warnings.warn(
-                    "LP infeasible with stack templates; retrying without stack constraints.",
-                    stacklevel=2,
-                )
-                prob2 = LpProblem(f"mlb_lineup_{lineup_index}_nostacks", LpMaximize)
-                vars2 = {
-                    idx: LpVariable(f"y_{idx}", lowBound=0, upBound=1, cat=LpBinary)
-                    for idx in pool.index
-                }
-                prob2 += lpSum(pool.loc[idx, "proj_fd_mean"] * v for idx, v in vars2.items())
-                prob2 += lpSum(pool.loc[idx, "salary"] * v for idx, v in vars2.items()) <= salary_cap
-                prob2 += lpSum(v for v in vars2.values()) == TOTAL_PLAYERS
-                pitcher_mask2 = _position_mask(pool, "P")
-                prob2 += lpSum(vars2[idx] for idx in pitcher_mask2[pitcher_mask2].index) == 1
-                for _, (keyword, minimum, maximum) in POSITION_REQUIREMENTS.items():
-                    if keyword == "P":
-                        continue
-                    mask2 = _position_mask(pool, keyword)
-                    if mask2.any():
-                        prob2 += lpSum(vars2[idx] for idx in mask2[mask2].index) >= minimum
-                        if maximum:
-                            prob2 += lpSum(vars2[idx] for idx in mask2[mask2].index) <= maximum
-                hitters_mask2 = pool["player_type"].str.lower() != "pitcher"
-                prob2 += lpSum(vars2[idx] for idx in hitters_mask2[hitters_mask2].index) == TOTAL_PLAYERS - 1
-                batter_mask2 = pool["player_type"].str.lower() == "batter"
-                for team_code2 in pool.loc[batter_mask2, "team_code"].dropna().unique():
-                    ti = pool.index[(pool["team_code"] == team_code2) & batter_mask2]
-                    if len(ti) > 4:
-                        prob2 += lpSum(vars2[idx] for idx in ti) <= 4
-                if max_lineup_ownership is not None and "proj_fd_ownership" in pool.columns:
-                    prob2 += lpSum(pool.loc[idx, "proj_fd_ownership"] * v for idx, v in vars2.items()) <= max_lineup_ownership
-                status2 = prob2.solve(PULP_CBC_CMD(msg=False))
-                if status2 == LpStatusOptimal:
-                    # Disable stacks for all future iterations
-                    stack_sizes = ()
-                    decision_vars = vars2
-                    # Fall through to extract results
-                else:
-                    break
-            else:
-                break
+            break
 
         selected_indices = [idx for idx, var in decision_vars.items() if var.varValue == 1]
         lineup_df = pool.loc[selected_indices].copy()
@@ -318,7 +376,6 @@ def generate_lineups(
 
         player_set = frozenset(lineup_df["fd_player_id"].tolist())
         if player_set in _seen_sets:
-            # Still add exclusion constraint so LP doesn't repeat it
             previous_lineups.append(lineup_df["fd_player_id"].tolist())
             continue
         _seen_sets.add(player_set)
@@ -338,4 +395,4 @@ def generate_lineups(
     return results
 
 
-__all__ = ["generate_lineups", "LineupResult"]
+__all__ = ["generate_lineups", "LineupResult", "STACK_PRESETS"]
