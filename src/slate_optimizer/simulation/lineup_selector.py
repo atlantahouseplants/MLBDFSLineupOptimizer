@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, FrozenSet, List, Optional, Set
 
 import numpy as np
@@ -25,6 +25,7 @@ class PortfolioSelection:
     avg_pairwise_overlap: float
     unique_players_used: int
     max_player_exposure: float
+    stack_exposure: Dict[str, float] = field(default_factory=dict)
 
     def to_dataframe(self) -> pd.DataFrame:
         return pd.DataFrame([vars(lineup) for lineup in self.selected])
@@ -37,8 +38,12 @@ def select_portfolio(
     max_overlap: int = 5,
     max_batter_exposure: float = 0.40,
     max_pitcher_exposure: float = 0.60,
+    min_batter_exposure: float = 0.0,
+    min_pitcher_exposure: float = 0.0,
     pitcher_ids: Optional[Set[str]] = None,
     diversity_weight: float = 0.3,
+    min_stack_exposure: float = 0.0,
+    max_stack_exposure: float = 1.0,
     # Legacy support
     max_player_exposure: Optional[float] = None,
 ) -> PortfolioSelection:
@@ -52,10 +57,46 @@ def select_portfolio(
     if not candidates:
         raise ValueError("No candidates available for portfolio selection")
 
+    # Collect all stack teams and all player IDs that appear across candidates
+    all_stack_teams: Set[str] = set()
+    all_player_ids: Set[str] = set()
+    for c in candidates:
+        all_stack_teams.update(c.stack_teams)
+        all_player_ids.update(c.player_ids)
+
     selected: List[LineupSimResult] = []
     player_counts: Counter[str] = Counter()
+    stack_counts: Counter[str] = Counter()
 
+    # Compute minimum counts needed
+    min_player_counts: Dict[str, int] = {}
+    if min_batter_exposure > 0 or min_pitcher_exposure > 0:
+        for pid in all_player_ids:
+            is_pitcher = pid in pitcher_set
+            min_pct = min_pitcher_exposure if is_pitcher else min_batter_exposure
+            if min_pct > 0:
+                min_player_counts[pid] = max(1, int(np.ceil(min_pct * num_lineups)))
+
+    min_stack_count = max(1, int(np.ceil(min_stack_exposure * num_lineups))) if min_stack_exposure > 0 else 0
+
+    # Two-pass greedy selection
     while len(selected) < num_lineups:
+        remaining = num_lineups - len(selected)
+
+        # Determine what still needs filling
+        needed_players: Set[str] = set()
+        for pid, min_ct in min_player_counts.items():
+            if player_counts[pid] < min_ct and (min_ct - player_counts[pid]) >= remaining * 0.1:
+                needed_players.add(pid)
+
+        needed_stacks: Set[str] = set()
+        if min_stack_count > 0:
+            for team in all_stack_teams:
+                if stack_counts[team] < min_stack_count:
+                    needed_stacks.add(team)
+
+        has_needs = bool(needed_players or needed_stacks)
+
         best_candidate = None
         best_score = -np.inf
         for candidate in candidates:
@@ -63,21 +104,37 @@ def select_portfolio(
                 continue
             if not _respects_overlap(candidate, selected, max_overlap):
                 continue
-            if not _respects_exposure(candidate, player_counts, num_lineups, max_batter_exposure, max_pitcher_exposure, pitcher_set):
+            if not _respects_max_exposure(candidate, player_counts, num_lineups, max_batter_exposure, max_pitcher_exposure, pitcher_set):
                 continue
+            if not _respects_max_stack_exposure(candidate, stack_counts, num_lineups, max_stack_exposure):
+                continue
+
             metric_value = getattr(candidate, selection_metric, 0.0)
             overlap_penalty = _average_overlap(candidate, selected) / 9 if selected else 0.0
             combined = metric_value * (1 - diversity_weight * overlap_penalty)
+
+            # Bonus for satisfying minimums that are still needed
+            if has_needs:
+                need_bonus = 0.0
+                cand_players = set(candidate.player_ids)
+                cand_stacks = set(candidate.stack_teams)
+                player_hits = len(cand_players & needed_players)
+                stack_hits = len(cand_stacks & needed_stacks)
+                need_bonus = (player_hits + stack_hits) * 0.5
+                combined += need_bonus
+
             if combined > best_score:
                 best_score = combined
                 best_candidate = candidate
+
         if best_candidate is None:
             break
         selected.append(best_candidate)
         for pid in best_candidate.player_ids:
             player_counts[pid] += 1
+        for team in best_candidate.stack_teams:
+            stack_counts[team] += 1
 
-    exposures = player_counts.copy()
     total_entries = max(1, len(selected))
     portfolio = _portfolio_metrics(selected, contest_result.entry_fee)
 
@@ -85,6 +142,10 @@ def select_portfolio(
     max_exposure_val = 0.0
     if player_counts:
         max_exposure_val = max(count / total_entries for count in player_counts.values())
+
+    stack_exposure_pcts: Dict[str, float] = {}
+    for team, count in stack_counts.items():
+        stack_exposure_pcts[team] = count / total_entries
 
     return PortfolioSelection(
         selected=selected,
@@ -97,6 +158,7 @@ def select_portfolio(
         avg_pairwise_overlap=_average_pairwise_overlap(selected),
         unique_players_used=unique_players,
         max_player_exposure=max_exposure_val,
+        stack_exposure=stack_exposure_pcts,
     )
 
 
@@ -114,7 +176,7 @@ def _respects_overlap(
     return True
 
 
-def _respects_exposure(
+def _respects_max_exposure(
     candidate: LineupSimResult,
     counts: Counter,
     num_lineups: int,
@@ -129,6 +191,21 @@ def _respects_exposure(
             continue
         limit = max(1, int(np.floor(limit_pct * num_lineups)))
         if counts[pid] + 1 > limit:
+            return False
+    return True
+
+
+def _respects_max_stack_exposure(
+    candidate: LineupSimResult,
+    stack_counts: Counter,
+    num_lineups: int,
+    max_stack_exposure: float,
+) -> bool:
+    if max_stack_exposure >= 1.0:
+        return True
+    limit = max(1, int(np.floor(max_stack_exposure * num_lineups)))
+    for team in candidate.stack_teams:
+        if stack_counts[team] + 1 > limit:
             return False
     return True
 

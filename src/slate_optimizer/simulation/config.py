@@ -37,6 +37,10 @@ class SimulationConfig:
     max_overlap: int = 5
     max_batter_exposure: float = 0.40
     max_pitcher_exposure: float = 0.60
+    min_batter_exposure: float = 0.0
+    min_pitcher_exposure: float = 0.0
+    min_stack_exposure: float = 0.0
+    max_stack_exposure: float = 1.0
     diversity_weight: float = 0.3
 
     def to_dict(self) -> Dict:
@@ -66,6 +70,7 @@ class SimulationConfig:
             diversity_weight=0.4,
             max_batter_exposure=0.30,
             max_pitcher_exposure=0.50,
+            max_stack_exposure=0.50,
         )
 
     @classmethod

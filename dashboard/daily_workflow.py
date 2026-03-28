@@ -205,6 +205,10 @@ def _get_sim_config_state() -> Dict:
         "diversity_weight": 0.3,
         "max_batter_exposure": 0.4,
         "max_pitcher_exposure": 0.6,
+        "min_batter_exposure": 0.0,
+        "min_pitcher_exposure": 0.0,
+        "min_stack_exposure": 0.0,
+        "max_stack_exposure": 1.0,
         "use_stratified": False,
     }
     return st.session_state.setdefault(SIM_CONFIG_KEY, default_config)
@@ -218,6 +222,10 @@ def _apply_sim_preset(preset: SimulationConfig, state: Dict) -> None:
     state["diversity_weight"] = preset.diversity_weight
     state["max_batter_exposure"] = preset.max_batter_exposure
     state["max_pitcher_exposure"] = preset.max_pitcher_exposure
+    state["min_batter_exposure"] = preset.min_batter_exposure
+    state["min_pitcher_exposure"] = preset.min_pitcher_exposure
+    state["min_stack_exposure"] = preset.min_stack_exposure
+    state["max_stack_exposure"] = preset.max_stack_exposure
 
 
 def _build_simulation_config(state: Dict) -> SimulationConfig:
@@ -229,6 +237,10 @@ def _build_simulation_config(state: Dict) -> SimulationConfig:
         diversity_weight=float(state.get("diversity_weight", 0.3)),
         max_batter_exposure=float(state.get("max_batter_exposure", 0.4)),
         max_pitcher_exposure=float(state.get("max_pitcher_exposure", 0.6)),
+        min_batter_exposure=float(state.get("min_batter_exposure", 0.0)),
+        min_pitcher_exposure=float(state.get("min_pitcher_exposure", 0.0)),
+        min_stack_exposure=float(state.get("min_stack_exposure", 0.0)),
+        max_stack_exposure=float(state.get("max_stack_exposure", 1.0)),
     )
     config.correlation.teammate_base = float(state.get("teammate_corr", config.correlation.teammate_base))
     config.correlation.pitcher_vs_opposing = float(state.get("pitcher_vs_opposing", config.correlation.pitcher_vs_opposing))
@@ -292,6 +304,10 @@ def _run_simulation_stack(
         max_pitcher_exposure=sim_config.max_pitcher_exposure,
         pitcher_ids=pitcher_ids,
         diversity_weight=sim_config.diversity_weight,
+        min_batter_exposure=sim_config.min_batter_exposure,
+        min_pitcher_exposure=sim_config.min_pitcher_exposure,
+        min_stack_exposure=sim_config.min_stack_exposure,
+        max_stack_exposure=sim_config.max_stack_exposure,
     )
     portfolio_df = portfolio.to_dataframe() if portfolio.selected else pd.DataFrame()
     raw_ids: List[int] = []
@@ -306,6 +322,7 @@ def _run_simulation_stack(
         "top1": portfolio.portfolio_top1pct_rate,
         "cash": portfolio.portfolio_cash_rate,
         "roi": portfolio.portfolio_expected_roi,
+        "stack_exposure": portfolio.stack_exposure,
     }
     selected_objects = []
     if selected_ids:
@@ -2687,6 +2704,42 @@ def _render_step_four() -> None:
             value=float(sim_state.get("max_pitcher_exposure", 0.6) or 0.6),
             step=0.05,
         )
+    st.markdown("**Minimum Exposure Floors**")
+    min_col_left, min_col_right = st.columns(2)
+    with min_col_left:
+        sim_state["min_batter_exposure"] = st.number_input(
+            "Min batter exposure",
+            min_value=0.0,
+            max_value=0.5,
+            value=float(sim_state.get("min_batter_exposure", 0.0) or 0.0),
+            step=0.05,
+            help="Minimum % of lineups each batter should appear in. 0 = no minimum.",
+        )
+        sim_state["min_pitcher_exposure"] = st.number_input(
+            "Min pitcher exposure",
+            min_value=0.0,
+            max_value=0.5,
+            value=float(sim_state.get("min_pitcher_exposure", 0.0) or 0.0),
+            step=0.05,
+            help="Minimum % of lineups each pitcher should appear in. 0 = no minimum.",
+        )
+    with min_col_right:
+        sim_state["min_stack_exposure"] = st.number_input(
+            "Min stack exposure (per team)",
+            min_value=0.0,
+            max_value=0.5,
+            value=float(sim_state.get("min_stack_exposure", 0.0) or 0.0),
+            step=0.05,
+            help="Minimum % of lineups that must include a 3+ batter stack from each team. 0 = no minimum.",
+        )
+        sim_state["max_stack_exposure"] = st.number_input(
+            "Max stack exposure (per team)",
+            min_value=0.1,
+            max_value=1.0,
+            value=float(sim_state.get("max_stack_exposure", 1.0) or 1.0),
+            step=0.05,
+            help="Maximum % of lineups that can include a stack from any single team.",
+        )
     sim_state["use_stratified"] = st.checkbox(
         "Advanced: stratified sampling",
         value=bool(sim_state.get("use_stratified", False)),
@@ -2778,6 +2831,12 @@ def _render_step_four() -> None:
             exposures = _player_exposure_summary(selected_players)
             st.subheader("Portfolio exposure summary")
             st.dataframe(exposures, width="stretch")
+
+        stack_exp = summary.get("stack_exposure") or {}
+        if stack_exp:
+            st.subheader("Portfolio stack exposure")
+            stack_rows = [{"Team": team, "Exposure": f"{pct:.0%}"} for team, pct in sorted(stack_exp.items(), key=lambda x: x[1], reverse=True)]
+            st.dataframe(pd.DataFrame(stack_rows), width="stretch")
 
         selected_objects = sim_results.get("selected_lineup_objects") or []
     if selected_objects:

@@ -48,6 +48,7 @@ class LineupSimResult:
     total_ownership: float
     leverage_score: float
     field_duplication_rate: float
+    stack_teams: List[str]
 
 
 @dataclass
@@ -134,6 +135,7 @@ def simulate_contest(
         else:
             leverage_score = 0.0
         dup_rate = _duplication_rate(player_ids, field_sets)
+        stack_teams = _extract_stack_teams(lineup_df)
         lineup_results.append(
             LineupSimResult(
                 lineup_id=lineup_id,
@@ -155,6 +157,7 @@ def simulate_contest(
                 total_ownership=total_ownership,
                 leverage_score=leverage_score,
                 field_duplication_rate=dup_rate,
+                stack_teams=stack_teams,
             )
         )
 
@@ -258,6 +261,14 @@ def _prepare_payout_structure(payout_structure: Optional[Dict[tuple, float]]):
 def _field_lineup_sets(field_sim: SimulatedField) -> List[set[str]]:
     player_ids = np.array(field_sim.player_ids, dtype=object)
     return [set(player_ids[lineup]) for lineup in field_sim.lineups]
+
+
+def _extract_stack_teams(lineup_df: pd.DataFrame, min_stack_size: int = 3) -> List[str]:
+    if "team_code" not in lineup_df.columns or "player_type" not in lineup_df.columns:
+        return []
+    batters = lineup_df[lineup_df["player_type"].astype(str).str.lower() != "pitcher"]
+    counts = batters["team_code"].value_counts()
+    return counts[counts >= min_stack_size].index.tolist()
 
 
 def _duplication_rate(player_ids: List[str], field_sets: List[set[str]]) -> float:

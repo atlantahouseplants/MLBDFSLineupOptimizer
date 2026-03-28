@@ -43,6 +43,7 @@ class TestLineupSelector(unittest.TestCase):
                     total_ownership=50 + lineup_id,
                     leverage_score=1.0,
                     field_duplication_rate=rng.uniform(0, 0.1),
+                    stack_teams=["TEAM_A"] if lineup_id % 2 == 0 else ["TEAM_B"],
                 )
             )
         return ContestSimResult(
