@@ -180,7 +180,7 @@ def _get_config_state() -> Dict:
     default_config = {
         "num_lineups": 20,
         "salary_cap": 35000,
-        "stack_template_label": "4-3-1",
+        "stack_template_selections": ["4-3-1"],
         "batter_chalk_threshold": 25.0,
         "pitcher_chalk_threshold": 35.0,
         "batter_chalk_exposure_cap": 30.0,
@@ -1330,8 +1330,25 @@ def _run_solver(
         overrides = _parse_player_overrides(overrides_input)
         player_overrides = _apply_player_filters(df, overrides)
 
-    stack_label = config_settings.get("stack_template_label", "Auto (optimizer's choice)")
-    stack_template = STACK_PRESETS.get(stack_label)
+    # Build stack rotation from multi-select + counts
+    selected_templates = config_settings.get("stack_template_selections", ["4-3-1"])
+    template_counts = config_settings.get("template_counts", {})
+    stack_rotation: Optional[List] = None
+    stack_template: Optional[Tuple] = None
+
+    if len(selected_templates) == 1:
+        # Single template mode
+        stack_template = STACK_PRESETS.get(selected_templates[0])
+    elif len(selected_templates) > 1:
+        # Multi-template mode: build rotation list
+        rotation: List = []
+        for label in selected_templates:
+            tmpl = STACK_PRESETS.get(label)
+            count = int(template_counts.get(label, 1))
+            rotation.extend([tmpl] * max(1, count))
+        stack_rotation = rotation if rotation else None
+    else:
+        stack_template = None  # Auto
     batter_chalk_val = config_settings.get("batter_chalk_threshold", 0.0)
     chalk_threshold = batter_chalk_val / 100.0 if batter_chalk_val else None
     batter_cap_val = config_settings.get("batter_chalk_exposure_cap", 0.0)
@@ -1377,6 +1394,7 @@ def _run_solver(
         num_lineups=extra_lineups,
         salary_cap=salary_cap_value,
         stack_template=stack_template,
+        stack_rotation=stack_rotation,
         max_lineup_ownership=max_lineup_ownership,
         bring_back_enabled=bring_back_enabled,
         bring_back_count=bring_back_count,
@@ -1387,10 +1405,11 @@ def _run_solver(
         n_players = len(df)
         n_pitchers = int((df["player_type"].str.lower() == "pitcher").sum()) if "player_type" in df.columns else 0
         n_batters = n_players - n_pitchers
+        templates_str = ", ".join(selected_templates)
         raise ValueError(
             f"Optimizer could not generate any lineups. "
             f"Pool has {n_players} players ({n_pitchers} pitchers, {n_batters} batters). "
-            f"Stack template: {stack_label}. Salary cap: ${salary_cap_value:,}. "
+            f"Stack templates: {templates_str}. Salary cap: ${salary_cap_value:,}. "
             f"Try 'Auto' stack template or check your lineup filter."
         )
 
@@ -1991,15 +2010,42 @@ def _render_step_three() -> None:
         step=100,
     )
     preset_labels = list(STACK_PRESETS.keys())
-    current_label = config_state.get("stack_template_label", "4-3-1")
-    if current_label not in preset_labels:
-        current_label = preset_labels[0]
-    config_state["stack_template_label"] = st.selectbox(
-        "Stack template",
+    current_selected = config_state.get("stack_template_selections", ["4-3-1"])
+    valid_selections = [s for s in current_selected if s in preset_labels]
+    if not valid_selections:
+        valid_selections = ["4-3-1"]
+    config_state["stack_template_selections"] = st.multiselect(
+        "Stack templates",
         options=preset_labels,
-        index=preset_labels.index(current_label),
-        help="How batters are distributed across teams. Each number is batters from one team (must sum to 8). 'Auto' adds no stacking constraints.",
+        default=valid_selections,
+        help="Select one or more stacking strategies. Lineups are distributed across your selections. Each number is batters from one team (sum to 8). 'Auto' = no stacking constraints.",
     )
+    selected_templates = config_state["stack_template_selections"]
+    if not selected_templates:
+        selected_templates = ["Auto (optimizer's choice)"]
+        config_state["stack_template_selections"] = selected_templates
+
+    # Show per-template lineup counts when multiple selected
+    if len(selected_templates) > 1:
+        st.caption("Lineups per template")
+        num_lineups_total = int(config_state.get("num_lineups", 20) or 20)
+        template_counts: Dict[str, int] = config_state.get("template_counts", {})
+        even_share = max(1, num_lineups_total // len(selected_templates))
+        remainder = num_lineups_total - even_share * len(selected_templates)
+        count_cols = st.columns(min(len(selected_templates), 4))
+        new_counts: Dict[str, int] = {}
+        for i, label in enumerate(selected_templates):
+            default_ct = template_counts.get(label, even_share + (1 if i < remainder else 0))
+            with count_cols[i % len(count_cols)]:
+                new_counts[label] = st.number_input(
+                    label.split("(")[0].strip(),
+                    min_value=0,
+                    max_value=500,
+                    value=int(default_ct),
+                    step=1,
+                    key=f"stack_ct_{label}",
+                )
+        config_state["template_counts"] = new_counts
     st.markdown("**Chalk controls**")
     chalk_col_left, chalk_col_right = st.columns(2)
     with chalk_col_left:

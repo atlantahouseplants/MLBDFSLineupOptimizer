@@ -295,6 +295,7 @@ def generate_lineups(
     stack_player_types: Sequence[str] = ("batter",),
     stack_templates: Optional[Sequence[int]] = None,
     stack_template: Optional[Tuple[int, ...]] = None,
+    stack_rotation: Optional[List[Optional[Tuple[int, ...]]]] = None,
     max_lineup_ownership: Optional[float] = None,
     bring_back_enabled: bool = False,
     bring_back_count: int = 1,
@@ -304,8 +305,11 @@ def generate_lineups(
     df["proj_fd_mean"] = pd.to_numeric(df["proj_fd_mean"], errors="coerce").fillna(0.0)
     df["salary"] = pd.to_numeric(df["salary"], errors="coerce").fillna(0).astype(int)
 
-    # Resolve stack template: new param takes priority, legacy fallback
-    if stack_template is None and stack_templates:
+    # Resolve stack template: rotation > single template > legacy fallback
+    if stack_rotation is not None:
+        # Multi-template mode: cycle through the rotation list
+        pass  # handled per-lineup below
+    elif stack_template is None and stack_templates:
         stack_template = tuple(min(s, MAX_HITTERS_PER_TEAM) for s in stack_templates if s and s > 0)
         if not stack_template:
             stack_template = None
@@ -334,12 +338,18 @@ def generate_lineups(
             pool, lineup_index, salary_cap, max_lineup_ownership, previous_lineups,
         )
 
+        # Pick the template for this lineup (rotation or single)
+        if stack_rotation:
+            current_template = stack_rotation[len(results) % len(stack_rotation)]
+        else:
+            current_template = stack_template
+
         # Try adding stack constraints
         stack_info: List[Tuple[str, str, LpVariable]] = []
-        used_stacks = stack_template is not None
+        used_stacks = current_template is not None
         if used_stacks:
             stack_info = _add_stack_constraints(
-                prob, pool, decision_vars, stack_template,
+                prob, pool, decision_vars, current_template,
                 min_game_total=min_game_total_for_stacks,
             )
 
@@ -359,7 +369,7 @@ def generate_lineups(
         # Fallback: if stacks made it infeasible, solve without stacks
         if status != LpStatusOptimal and used_stacks:
             warnings.warn(
-                f"Lineup {lineup_index}: stack template {stack_template} infeasible, solving without stacks.",
+                f"Lineup {lineup_index}: stack template {current_template} infeasible, solving without stacks.",
                 stacklevel=2,
             )
             prob, decision_vars = _build_base_lp(
