@@ -2076,6 +2076,8 @@ def _render_step_three() -> None:
         st.info("Process a slate first (Step 1) to configure and run the optimizer.")
         return
 
+    _render_optimizer_settings_guide()
+
     config_state = _get_config_state()
     config_state["num_lineups"] = st.number_input(
         "Number of lineups",
@@ -2510,6 +2512,148 @@ def _save_run_snapshot(lineup_df: pd.DataFrame, config_settings: Dict, num_reque
         "avg_salary": avg_salary,
         "avg_projection": avg_proj,
     })
+
+
+def _render_optimizer_settings_guide() -> None:
+    """Collapsible plain-English guide for every Step 3 optimizer setting."""
+    with st.expander("? What do these settings do?", expanded=False):
+        st.markdown("""
+**Number of lineups**
+How many different lineups you want to build. Match this to the number of contest entries you plan to submit. If you have 150 entries, set this to 150. The optimizer will try to make every lineup unique.
+
+---
+
+**Salary cap**
+FanDuel gives you $35,000 to spend. Leave this at 35,000 unless you want to force the optimizer to spend less (rarely useful — spending up is almost always better).
+
+---
+
+**Stack templates**
+A "stack" means putting multiple batters from the same team in a lineup. When hitters in your lineup are teammates, their scores correlate — if the team has a big inning, multiple players benefit at once.
+
+| Template | What it means |
+|---|---|
+| **4-3-1** | 4 batters from one team, 3 from another, 1 from a third. The most popular GPP structure. |
+| **4-4** | 4 batters from two different teams. Maximizes correlation but is a riskier, boom-or-bust structure. |
+| **3-3-2** | Two medium stacks plus a pair. More diversity across teams, slightly safer. |
+| **4-2-2** | One big stack plus two smaller pairs. Common balance play. |
+| **Auto** | No stacking requirement — optimizer picks freely. Good for cash games, not ideal for GPP. |
+
+You can select **multiple templates** and set how many lineups use each. Example: 50 lineups on 4-3-1 and 50 on 3-3-2 gives you a mixed portfolio.
+
+---
+
+**Batter chalk threshold / Batter chalk exposure cap**
+"Chalk" = high-ownership players (everyone is playing them). The threshold sets the ownership % that defines chalk (e.g., 25% means any batter owned by 25%+ of the field is chalk). The cap limits how many of your lineups can include that player (e.g., 30% cap means chalk batters appear in at most 30% of your lineups). This keeps you from being too correlated with the field.
+
+*Lower the cap → more contrarian, more differentiated lineups. Higher the cap → safer, more chalk-heavy lineups.*
+
+---
+
+**Pitcher chalk threshold / Pitcher chalk exposure cap**
+Same concept but for pitchers. Pitchers are usually higher ownership, so the default threshold is higher (35%). Pitchers also anchor lineups more, so the default cap is looser (50%).
+
+---
+
+**Max lineup ownership**
+Caps the total combined ownership of all players in a single lineup. For example, if set to 200%, no lineup can have players whose ownerships sum to more than 200%. This forces the optimizer to avoid "super-chalky" lineups where every player is heavily owned. Leave at 0 to disable.
+
+---
+
+**Player-specific exposure overrides**
+Type a player name and a decimal to set their exact exposure cap. Example:
+```
+Aaron Judge:0.3
+Shohei Ohtani:0.5
+```
+This caps Aaron Judge to 30% of lineups and Ohtani to 50%, regardless of other settings. Useful when you want to fade or limit a specific player.
+
+---
+
+**Bring-back requirement**
+When enabled, every lineup that uses a pitcher must also include at least N batters from the team that pitcher is facing (the opposing team). Example: if you use Gerrit Cole (NYY) as a pitcher, you must bring back at least 1 Boston batter. This leverages the fact that when a pitcher dominates, the opposing team often still scores a couple runs.
+
+*Bring-back count* = minimum number of opposing batters required (1 is standard, 2 is aggressive).
+
+---
+
+**Min Vegas total for stacks**
+Excludes teams from being used in stacks if their game's over/under is below this number. Example: setting 8.0 means you won't stack batters from a game projected to score fewer than 8 total runs. Filters out low-ceiling games from your stacking pool. Leave at 0 to include all games.
+""")
+
+
+def _render_simulation_settings_guide() -> None:
+    """Collapsible plain-English guide for every Step 4 simulation setting."""
+    with st.expander("? What do these settings do?", expanded=False):
+        st.markdown("""
+**What Step 4 actually does**
+Step 3 builds the lineups using an optimizer (it finds the highest-projected combinations). Step 4 then *tests* those lineups by simulating thousands of contest scenarios — asking "if this slate were played 10,000 times with realistic randomness, which of my lineups perform best?" The simulation picks the subset of lineups most likely to win.
+
+---
+
+**Number of simulations**
+How many times to simulate the full slate. More simulations = more accurate results but slower. 10,000 is a good default. Go up to 25,000–50,000 for important contests. Don't go below 5,000 or the results get noisy.
+
+---
+
+**Volatility scale**
+Multiplies the randomness (variance) in player scores. 1.0 = realistic historical variance. Higher values (1.5–2.0) model more chaotic, boom-or-bust slates. Lower (0.5–0.8) model more predictable slates. For large GPPs, consider bumping this up slightly since upsets are more common in big fields.
+
+---
+
+**Copula ν (nu)**
+Controls how often multiple correlated players have a big game at the same time. Lower values (3–5) mean "fat tails" — big correlated outcomes happen more often, so stacks can go nuclear or go bust together. Higher values (10–30) means scores are more independent. For GPP, keep this low (3–7) to reward good stacks.
+
+---
+
+**Teammate correlation**
+How much a batter's score is linked to his teammates' scores. 0.25 = mild correlation (realistic). 0.40–0.50 = strong correlation (if the team has a big inning, everyone benefits a lot). Higher values reward team stacking more. Don't go above 0.6 or the simulation becomes unrealistic.
+
+---
+
+**Pitcher vs. opposing correlation**
+How a pitcher's score moves relative to the batters he's facing. This is always negative — when a pitcher throws a shutout, the opposing batters score nothing. Default is -0.15. More negative (e.g., -0.30) makes pitcher/opposing batter correlation stronger. This affects how the simulation values "bring-back" strategies.
+
+---
+
+**Field size**
+How many opponent lineups to simulate against. 1,000 is a standard GPP approximation. If you're entering a 100-person tournament, 1,000 still works well. Larger values (5,000+) give more accurate win rates but run much slower.
+
+---
+
+**Selection metric**
+How the simulation ranks and selects your best lineups:
+
+| Metric | Best for |
+|---|---|
+| **top_1pct_rate** | Large GPPs — picks lineups most likely to land in the top 1% (max score, winner mentality) |
+| **win_rate** | Head-to-head / very small contests — which lineup wins outright most often |
+| **cash_rate** | Cash games / 50-50s — which lineup finishes in the top half most often |
+| **expected_roi** | Balanced — maximizes expected return across all outcome scenarios |
+| **p99_score** | Pure ceiling — picks lineups with the highest 99th percentile possible score |
+
+For large GPPs, use **top_1pct_rate**. For cash games, use **cash_rate**.
+
+---
+
+**Diversity weight**
+Tradeoff between "pick the highest-scoring lineup every time" vs. "spread across different constructions." 0 = pure score maximization (all your selected lineups will look similar). 1 = pure diversity (lineups spread as differently as possible). 0.3 is a good GPP default — mostly score-focused with some variety.
+
+---
+
+**Max batter / pitcher exposure**
+After simulation selects your best lineups, these caps limit how often any single player appears across your final portfolio. Max batter exposure of 0.4 means no batter appears in more than 40% of your selected lineups. This forces differentiation — you're not putting all your eggs in one basket. *Too low → lineups feel random. Too high → over-concentrated on a few players.*
+
+---
+
+**Min batter / pitcher exposure**
+Floor — ensures a player appears in at least X% of your final lineups. Use this to guarantee a player you really like shows up meaningfully across your entries. Leave at 0 unless you have a strong conviction play.
+
+---
+
+**Min / Max stack exposure per team**
+Controls how spread out your team stacks are across the portfolio. Min stack exposure of 0.05 means every team used in a stack must appear in at least 5% of lineups (no one-lineup wonders). Max of 0.35 means no single team can anchor more than 35% of your lineups. Use these to avoid over-concentrating on one game.
+""")
 
 
 def _render_run_history() -> None:
@@ -3049,6 +3193,8 @@ def _render_step_four() -> None:
     _render_projection_config_summary(config=projection_cfg)
     _render_projection_blend_summary(workflow.get("projection_blend_summary") or projection_cfg.get("projection_blend"))
     _render_ownership_model_summary(projection_cfg.get("ownership_model"))
+
+    _render_simulation_settings_guide()
 
     sim_state = _get_sim_config_state()
     col_left, col_right = st.columns(2)
