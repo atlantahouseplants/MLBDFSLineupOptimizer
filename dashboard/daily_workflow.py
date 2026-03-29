@@ -2847,6 +2847,17 @@ Floor — ensures a player appears in at least X% of your final lineups. Use thi
 
 **Min / Max stack exposure per team**
 Controls how spread out your team stacks are across the portfolio. Min stack exposure of 0.05 means every team used in a stack must appear in at least 5% of lineups (no one-lineup wonders). Max of 0.35 means no single team can anchor more than 35% of your lineups. Use these to avoid over-concentrating on one game.
+
+---
+
+**Advanced: stratified sampling**
+Normally, the simulation draws random numbers like throwing darts at a board — purely random, so sometimes they cluster together by chance. Stratified sampling divides the probability space into equal sections and forces one draw per section, so the samples are more evenly spread across all possible outcomes. Think of it like making sure you test every range of scenarios rather than accidentally oversampling the same range.
+
+**When to turn it ON:** If you're running a small number of simulations (under 5,000) and you notice the win rates or ROI numbers change a lot between runs, stratified sampling will make your results more consistent.
+
+**When to leave it OFF (the default):** With 10,000+ simulations, regular random sampling already converges to stable results and stratified sampling adds no meaningful benefit. For typical use — 10,000 simulations on a full slate — leave this unchecked.
+
+**Bottom line:** Leave it off. Only turn it on if you're running quick/small sim counts and want tighter, more repeatable numbers.
 """)
 
 
@@ -3504,6 +3515,13 @@ def _render_step_four() -> None:
     sim_state["use_stratified"] = st.checkbox(
         "Advanced: stratified sampling",
         value=bool(sim_state.get("use_stratified", False)),
+        help=(
+            "Makes random draws more evenly spread across all possible outcomes, "
+            "reducing noise in the results. Useful when running fewer simulations "
+            "(under 5,000). With 10,000+ simulations the benefit is minimal — "
+            "leave this OFF unless you're running a small sim count and getting "
+            "inconsistent results between runs."
+        ),
     )
 
     st.markdown("**Presets**")
