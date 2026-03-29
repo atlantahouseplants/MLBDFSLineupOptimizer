@@ -64,6 +64,9 @@ RUN_HISTORY_KEY = "run_history"
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "data" / "slates.db"
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "processed"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_CACHE_DIR = Path(__file__).resolve().parents[1] / "data" / "uploads"
+UPLOAD_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_MANIFEST = UPLOAD_CACHE_DIR / "manifest.json"
 
 MANUAL_WEIGHT_PRESET = "Manual weights"
 DEFAULT_WEIGHT_PRESET = "Balanced (equal blend)"
@@ -350,6 +353,127 @@ def _save_uploaded_file(uploaded, directory: Path) -> Path:
     with open(path, "wb") as temp_file:
         temp_file.write(uploaded.getbuffer())
     return path
+
+
+class _FileProxy:
+    """Wraps saved bytes on disk so they look like a Streamlit UploadedFile."""
+
+    def __init__(self, path: Path) -> None:
+        self._path = path
+        self.name = path.name
+
+    def getbuffer(self):
+        return self._path.read_bytes()
+
+    def read(self):
+        return self._path.read_bytes()
+
+
+def _persist_slate_files(
+    fanduel_file,
+    bpp_files,
+    vegas_file,
+    batting_file,
+    handedness_file,
+    recent_file,
+    ownership_files,
+    projection_files,
+    lineup_paste: str,
+) -> None:
+    """Save all uploaded slate files to UPLOAD_CACHE_DIR and write a manifest."""
+    import datetime, json, shutil
+
+    # Clear old cached files before saving new ones
+    for f in UPLOAD_CACHE_DIR.iterdir():
+        if f.name != "manifest.json":
+            f.unlink(missing_ok=True)
+
+    manifest: Dict[str, object] = {
+        "saved_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "fanduel": None,
+        "bpp_files": [],
+        "vegas": None,
+        "batting_orders": None,
+        "handedness": None,
+        "recent_stats": None,
+        "ownership_files": [],
+        "projection_files": [],
+        "lineup_paste": lineup_paste or "",
+    }
+
+    def _cache(uploaded) -> str:
+        dest = UPLOAD_CACHE_DIR / uploaded.name
+        dest.write_bytes(uploaded.getbuffer())
+        return uploaded.name
+
+    if fanduel_file:
+        manifest["fanduel"] = _cache(fanduel_file)
+    for f in (bpp_files or []):
+        manifest["bpp_files"].append(_cache(f))
+    if vegas_file:
+        manifest["vegas"] = _cache(vegas_file)
+    if batting_file:
+        manifest["batting_orders"] = _cache(batting_file)
+    if handedness_file:
+        manifest["handedness"] = _cache(handedness_file)
+    if recent_file:
+        manifest["recent_stats"] = _cache(recent_file)
+    for f in (ownership_files or []):
+        manifest["ownership_files"].append(_cache(f))
+    for f in (projection_files or []):
+        manifest["projection_files"].append(_cache(f))
+
+    UPLOAD_MANIFEST.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+
+def _load_slate_cache() -> Optional[Dict]:
+    """Return the cache manifest dict if it exists and all required files are present, else None."""
+    import json
+    if not UPLOAD_MANIFEST.exists():
+        return None
+    try:
+        manifest = json.loads(UPLOAD_MANIFEST.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    # Require at minimum the FanDuel file and at least one BPP file
+    if not manifest.get("fanduel"):
+        return None
+    if not manifest.get("bpp_files"):
+        return None
+    # Verify all listed files actually exist on disk
+    all_files = (
+        [manifest["fanduel"]]
+        + manifest["bpp_files"]
+        + ([manifest["vegas"]] if manifest.get("vegas") else [])
+        + ([manifest["batting_orders"]] if manifest.get("batting_orders") else [])
+        + ([manifest["handedness"]] if manifest.get("handedness") else [])
+        + ([manifest["recent_stats"]] if manifest.get("recent_stats") else [])
+        + manifest.get("ownership_files", [])
+        + manifest.get("projection_files", [])
+    )
+    for fname in all_files:
+        if not (UPLOAD_CACHE_DIR / fname).exists():
+            return None
+    return manifest
+
+
+def _proxies_from_manifest(manifest: Dict) -> Dict:
+    """Convert a manifest dict into _FileProxy objects ready for _process_slate."""
+
+    def _p(name: Optional[str]):
+        return _FileProxy(UPLOAD_CACHE_DIR / name) if name else None
+
+    return {
+        "fanduel_file": _p(manifest.get("fanduel")),
+        "bpp_files": [_FileProxy(UPLOAD_CACHE_DIR / n) for n in manifest.get("bpp_files", [])],
+        "vegas_file": _p(manifest.get("vegas")),
+        "batting_file": _p(manifest.get("batting_orders")),
+        "handedness_file": _p(manifest.get("handedness")),
+        "recent_file": _p(manifest.get("recent_stats")),
+        "ownership_files": [_FileProxy(UPLOAD_CACHE_DIR / n) for n in manifest.get("ownership_files", [])],
+        "projection_files": [_FileProxy(UPLOAD_CACHE_DIR / n) for n in manifest.get("projection_files", [])],
+        "lineup_paste": manifest.get("lineup_paste", ""),
+    }
 
 
 def _combine_lineups(lineups) -> pd.DataFrame:
@@ -1751,6 +1875,63 @@ def _render_step_one() -> None:
     st.header("Step 1 · Slate Setup")
     st.write("Upload the required files and run the ingestion + projection pipeline.")
 
+    # ── Saved slate panel ─────────────────────────────────────────────
+    cache = _load_slate_cache()
+    if cache:
+        with st.container(border=True):
+            st.markdown(f"**Saved slate detected** — saved {cache['saved_at']}")
+            bpp_names = ", ".join(cache.get("bpp_files", []))
+            st.caption(
+                f"FanDuel: `{cache['fanduel']}`  \n"
+                f"BallparkPal: `{bpp_names}`"
+                + (f"  \nVegas: `{cache['vegas']}`" if cache.get("vegas") else "")
+                + (f"  \nBatting orders: `{cache['batting_orders']}`" if cache.get("batting_orders") else "")
+                + (f"  \nOwnership files: `{', '.join(cache['ownership_files'])}`" if cache.get("ownership_files") else "")
+                + (f"  \nProjection files: `{', '.join(cache['projection_files'])}`" if cache.get("projection_files") else "")
+                + (f"  \nLineup paste: {len(cache['lineup_paste'])} characters saved" if cache.get("lineup_paste") else "")
+            )
+            btn_col, clear_col = st.columns([2, 1])
+            if btn_col.button("Re-use saved slate", type="primary", key="reuse_slate"):
+                try:
+                    proxies = _proxies_from_manifest(cache)
+                    config_state = _get_config_state()
+                    with st.spinner("Re-processing saved slate..."):
+                        workflow_payload = _process_slate(
+                            proxies["fanduel_file"],
+                            proxies["bpp_files"],
+                            proxies["vegas_file"],
+                            proxies["batting_file"],
+                            proxies["handedness_file"],
+                            proxies["recent_file"],
+                            proxies["ownership_files"],
+                            proxies["projection_files"],
+                            lineup_paste_text=proxies["lineup_paste"],
+                            projection_preset=config_state.get("projection_preset"),
+                            projection_weights_input=config_state.get("projection_weights_input"),
+                            projection_baseline_weight=float(config_state.get("projection_baseline_weight", 1.0)),
+                            ownership_preset=config_state.get("ownership_preset"),
+                            ownership_weights_input=config_state.get("ownership_weights_input"),
+                            ownership_model_settings=config_state.get("ownership_model_settings"),
+                            recency_blend_input=config_state.get("recency_blend_input", "0.7,0.3"),
+                            platoon_opposite_boost=float(config_state.get("platoon_opp", 1.06)),
+                            platoon_same_penalty=float(config_state.get("platoon_same", 0.95)),
+                            platoon_switch_boost=float(config_state.get("platoon_switch", 1.03)),
+                        )
+                        session_state = _get_session()
+                        session_state.update(workflow_payload)
+                    st.success("Slate re-loaded from saved files. Proceed to Step 2.")
+                    st.rerun()
+                except Exception as exc:  # pylint: disable=broad-except
+                    st.error(f"Failed to reload saved slate: {exc}")
+            if clear_col.button("Clear saved slate", type="secondary", key="clear_slate"):
+                import shutil
+                for f in UPLOAD_CACHE_DIR.iterdir():
+                    f.unlink(missing_ok=True)
+                st.success("Saved slate cleared.")
+                st.rerun()
+        st.divider()
+        st.caption("Or upload new files below to replace the saved slate:")
+
     col1, col2 = st.columns(2)
     fanduel_file = col1.file_uploader("FanDuel player CSV", type=["csv"], accept_multiple_files=False)
     bpp_files = col2.file_uploader(
@@ -1933,7 +2114,20 @@ def _render_step_one() -> None:
                 )
                 session_state = _get_session()
                 session_state.update(workflow_payload)
-            st.success("Slate processed successfully.")
+                # Auto-save all uploaded files for one-click reload next session
+                if fanduel_file and bpp_files:
+                    _persist_slate_files(
+                        fanduel_file,
+                        bpp_files or [],
+                        vegas_file,
+                        batting_orders_file,
+                        handedness_file,
+                        recent_stats_file,
+                        ownership_files or [],
+                        projection_files or [],
+                        lineup_paste or "",
+                    )
+            st.success("Slate processed and saved. Next time, use **Re-use saved slate** to skip re-uploading.")
         except Exception as exc:  # pylint: disable=broad-except
             st.error(f"Failed to process slate: {exc}")
 
