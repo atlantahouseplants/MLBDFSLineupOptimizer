@@ -60,6 +60,7 @@ CONFIG_KEY = "optimizer_config"
 LINEUPS_KEY = "lineup_results"
 SIM_CONFIG_KEY = "simulation_config"
 SIM_RESULTS_KEY = "simulation_results"
+RUN_HISTORY_KEY = "run_history"
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "data" / "slates.db"
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "processed"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -2235,6 +2236,7 @@ def _render_step_three() -> None:
                 workflow.pop("optimizer_lineups_backup", None)
                 workflow.pop("optimizer_lineups_df_backup", None)
                 workflow["active_lineup_source"] = "optimizer"
+                _save_run_snapshot(lineup_df, config_state, int(config_state.get("num_lineups", 20) or 20))
             st.success(f"Generated {len(lineups)} lineups. Proceed to Step 4.")
         except Exception as exc:  # pylint: disable=broad-except
             st.error(f"Optimizer failed: {exc}")
@@ -2447,6 +2449,182 @@ def _render_stack_breakdown(lineup_df: pd.DataFrame) -> None:
             label = f"{size}-man stacks — {len(size_rows)} team(s) used"
             with st.expander(label, expanded=(size >= 4)):
                 st.dataframe(size_rows, use_container_width=True, hide_index=True)
+
+
+# ── Run History ───────────────────────────────────────────────────────────────
+
+_SETTINGS_LABELS = {
+    "stack_template_selections": "Stack Templates",
+    "num_lineups": "Lineups Requested",
+    "batter_chalk_threshold": "Batter Chalk Threshold (%)",
+    "batter_chalk_exposure_cap": "Batter Chalk Cap (%)",
+    "pitcher_chalk_threshold": "Pitcher Chalk Threshold (%)",
+    "pitcher_chalk_exposure_cap": "Pitcher Chalk Cap (%)",
+    "max_lineup_ownership": "Max Lineup Ownership (%)",
+    "bring_back_enabled": "Bring-Back",
+    "bring_back_count": "Bring-Back Count",
+    "min_game_total": "Min Game Total",
+}
+
+
+def _save_run_snapshot(lineup_df: pd.DataFrame, config_settings: Dict, num_requested: int) -> None:
+    """Save a lightweight snapshot of this optimizer run to session state history."""
+    import datetime
+
+    history = st.session_state.setdefault(RUN_HISTORY_KEY, [])
+    run_id = len(history) + 1
+
+    composition, _ = _stack_composition_breakdown(lineup_df)
+    stack_summary = composition.to_dict("records") if not composition.empty else []
+
+    exposures = _player_exposure_summary(lineup_df)
+    top_players = (
+        exposures[["full_name", "team_code", "exposure_pct"]]
+        .head(10)
+        .to_dict("records")
+        if not exposures.empty
+        else []
+    )
+
+    avg_salary = 0.0
+    avg_proj = 0.0
+    if not lineup_df.empty and "lineup_id" in lineup_df.columns:
+        per_lineup = lineup_df.groupby("lineup_id").agg(
+            salary=("salary", "sum"),
+            proj=("proj_fd_mean", "sum"),
+        )
+        avg_salary = float(per_lineup["salary"].mean())
+        avg_proj = float(per_lineup["proj"].mean())
+
+    settings_snapshot = {k: config_settings.get(k) for k in _SETTINGS_LABELS}
+
+    history.append({
+        "run_id": run_id,
+        "label": f"Run {run_id}",
+        "timestamp": datetime.datetime.now().strftime("%H:%M:%S"),
+        "requested": num_requested,
+        "generated": lineup_df["lineup_id"].nunique() if not lineup_df.empty else 0,
+        "settings": settings_snapshot,
+        "stack_summary": stack_summary,
+        "top_players": top_players,
+        "avg_salary": avg_salary,
+        "avg_projection": avg_proj,
+    })
+
+
+def _render_run_history() -> None:
+    """Render the run history table and side-by-side comparison UI."""
+    history = st.session_state.get(RUN_HISTORY_KEY, [])
+    if not history:
+        return
+
+    st.subheader("Run history")
+
+    # ── Summary table of all runs ──────────────────────────────────────
+    summary_rows = []
+    for r in history:
+        top_stack = r["stack_summary"][0]["Stack Type"] if r["stack_summary"] else "—"
+        summary_rows.append({
+            "Run": r["label"],
+            "Time": r["timestamp"],
+            "Requested": r["requested"],
+            "Generated": r["generated"],
+            "Duplicates": max(0, r["requested"] - r["generated"]),
+            "Top Stack": top_stack,
+            "Avg Salary": f"${r['avg_salary']:,.0f}",
+            "Avg Projection": f"{r['avg_projection']:.1f}",
+            "Stack Templates": ", ".join(r["settings"].get("stack_template_selections") or []),
+        })
+    st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
+
+    if len(history) < 2:
+        st.caption("Run the optimizer again with different settings to enable side-by-side comparison.")
+        return
+
+    # ── Side-by-side comparison ────────────────────────────────────────
+    st.markdown("**Compare two runs**")
+    run_labels = [r["label"] for r in history]
+    col1, col2 = st.columns(2)
+    label_a = col1.selectbox("Run A", run_labels, index=len(run_labels) - 2, key="compare_a")
+    label_b = col2.selectbox("Run B", run_labels, index=len(run_labels) - 1, key="compare_b")
+
+    run_a = next(r for r in history if r["label"] == label_a)
+    run_b = next(r for r in history if r["label"] == label_b)
+
+    # Settings diff
+    diff_rows = []
+    for key, display_name in _SETTINGS_LABELS.items():
+        val_a = run_a["settings"].get(key)
+        val_b = run_b["settings"].get(key)
+        if val_a != val_b:
+            diff_rows.append({
+                "Setting": display_name,
+                label_a: str(val_a),
+                label_b: str(val_b),
+            })
+
+    with st.expander("Settings that changed between runs", expanded=True):
+        if diff_rows:
+            st.dataframe(pd.DataFrame(diff_rows), use_container_width=True, hide_index=True)
+        else:
+            st.info("No settings changed between these two runs.")
+
+    # Lineup count comparison
+    with st.expander("Lineup counts", expanded=True):
+        mc1, mc2, mc3, mc4 = st.columns(4)
+        mc1.metric(f"{label_a} Generated", run_a["generated"],
+                   delta=run_a["generated"] - run_a["requested"],
+                   delta_color="normal")
+        mc2.metric(f"{label_b} Generated", run_b["generated"],
+                   delta=run_b["generated"] - run_b["requested"],
+                   delta_color="normal")
+        mc3.metric("Change in Unique Lineups", "",
+                   delta=run_b["generated"] - run_a["generated"],
+                   delta_color="normal")
+        mc4.metric("Change in Duplicates",
+                   "",
+                   delta=-(run_b["generated"] - run_a["generated"]),
+                   delta_color="inverse")
+
+    # Stack composition comparison
+    with st.expander("Stack composition", expanded=True):
+        stacks_a = {r["Stack Type"]: r["Lineups"] for r in run_a["stack_summary"]}
+        stacks_b = {r["Stack Type"]: r["Lineups"] for r in run_b["stack_summary"]}
+        all_types = sorted(set(stacks_a) | set(stacks_b))
+        if all_types:
+            stack_rows = []
+            for stype in all_types:
+                cnt_a = stacks_a.get(stype, 0)
+                cnt_b = stacks_b.get(stype, 0)
+                stack_rows.append({
+                    "Stack Type": stype,
+                    f"{label_a} Lineups": cnt_a,
+                    f"{label_b} Lineups": cnt_b,
+                    "Change": cnt_b - cnt_a,
+                })
+            st.dataframe(pd.DataFrame(stack_rows), use_container_width=True, hide_index=True)
+        else:
+            st.info("No stack data available for comparison.")
+
+    # Top player exposure comparison
+    with st.expander("Top player exposure shift", expanded=False):
+        exp_a = {r["full_name"]: r["exposure_pct"] for r in run_a["top_players"]}
+        exp_b = {r["full_name"]: r["exposure_pct"] for r in run_b["top_players"]}
+        all_players = sorted(set(exp_a) | set(exp_b))
+        if all_players:
+            exp_rows = []
+            for player in all_players:
+                pct_a = exp_a.get(player, 0.0)
+                pct_b = exp_b.get(player, 0.0)
+                exp_rows.append({
+                    "Player": player,
+                    f"{label_a} Exposure": f"{pct_a:.1%}",
+                    f"{label_b} Exposure": f"{pct_b:.1%}",
+                    "Shift": f"{pct_b - pct_a:+.1%}",
+                })
+            st.dataframe(pd.DataFrame(exp_rows), use_container_width=True, hide_index=True)
+        else:
+            st.info("No exposure data available for comparison.")
 
 
 def _match_actual_scores(
@@ -3160,6 +3338,8 @@ def _render_step_five() -> None:
             st.caption(
                 f"Focusing on {display_df['lineup_id'].nunique()} lineups flagged in the late swap aide."
             )
+
+    _render_run_history()
 
     _render_game_status_panel(workflow)
     if st.button("Check Lineups Now", type="secondary"):
