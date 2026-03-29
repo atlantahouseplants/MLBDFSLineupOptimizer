@@ -1502,6 +1502,16 @@ def _run_solver(
             lineups = filtered_lineups
 
     lineups = lineups[:num_lineups]
+
+    if len(lineups) < num_lineups:
+        shortage = num_lineups - len(lineups)
+        st.warning(
+            f"**Only {len(lineups)} unique lineups generated** (you requested {num_lineups} — "
+            f"missing {shortage}). Your constraints are too tight for this pool size. "
+            f"To fix this, try: loosening chalk exposure caps, selecting multiple stack templates, "
+            f"reducing locked players, or requesting fewer lineups."
+        )
+
     lineup_df = _combine_lineups(lineups)
     return lineups, lineup_df
 
@@ -3171,28 +3181,40 @@ def _render_step_five() -> None:
     else:
         export_lineups = lineups
 
+    # ── Pre-submit lineup health check ──────────────────────────────────
+    st.subheader("Pre-Submit Lineup Check")
+
+    n_unique_lineups = len(export_lineups)
+
     if template_entries is not None and not template_entries.empty:
         n_entries = len(template_entries)
-        n_unique = len(export_lineups)
-        if n_unique < n_entries:
-            st.warning(
-                f"You have {n_entries} contest entries but only {n_unique} unique lineups. "
-                f"Each lineup will be repeated up to {-(-n_entries // n_unique)} times. "
-                f"Increase **Number of lineups** in Step 3 to at least {n_entries} to avoid duplicates."
-            )
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Unique Lineups", n_unique_lineups)
+        col_b.metric("Contest Entries", n_entries)
+        col_c.metric("Duplicate Entries", max(0, n_entries - n_unique_lineups))
 
-    fan_duel_df = lineups_to_fanduel_template(export_lineups, template_entries)
-
-    # Flag any duplicate lineups in the export
-    if not fan_duel_df.empty:
-        upload_cols = [c for c in FANDUEL_UPLOAD_COLUMNS if c in fan_duel_df.columns]
-        if upload_cols:
-            lineup_strs = fan_duel_df[upload_cols].apply(
-                lambda row: "|".join(sorted(str(v) for v in row)), axis=1
+        if n_unique_lineups < n_entries:
+            shortage = n_entries - n_unique_lineups
+            st.error(
+                f"**{shortage} of your {n_entries} contest entries would be duplicates.** "
+                f"The export below will only contain your {n_unique_lineups} unique lineups — "
+                f"upload those to fill the entries you can, then go back to Step 3 and "
+                f"loosen your constraints (e.g., raise chalk exposure caps or select multiple "
+                f"stack templates) to generate the remaining {shortage} lineups."
             )
-            n_dupes = lineup_strs.duplicated().sum()
-            if n_dupes > 0:
-                st.warning(f"{n_dupes} duplicate lineup(s) detected in the export file.")
+        else:
+            st.success(f"All {n_unique_lineups} lineups are unique. Ready to submit.")
+    else:
+        col_a, col_b = st.columns(2)
+        col_a.metric("Unique Lineups", n_unique_lineups)
+        col_b.metric("Duplicates", 0)
+        st.success(f"All {n_unique_lineups} lineups are unique. Ready to submit.")
+
+    # Build export — pass only unique lineups (no round-robin repeats)
+    fan_duel_df = lineups_to_fanduel_template(
+        export_lineups,
+        template_entries.head(n_unique_lineups) if template_entries is not None and not template_entries.empty else template_entries,
+    )
 
     st.download_button(
         "Download FanDuel Upload CSV",

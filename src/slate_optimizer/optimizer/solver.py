@@ -322,7 +322,7 @@ def generate_lineups(
     results: List[LineupResult] = []
     _seen_sets: set = set()
 
-    max_attempts = num_lineups * 2
+    max_attempts = num_lineups * 4 + 20
     for lineup_index in range(max_attempts):
         if len(results) >= num_lineups:
             break
