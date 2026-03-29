@@ -2346,6 +2346,109 @@ def _stack_exposure_summary(lineup_df: pd.DataFrame) -> pd.DataFrame:
     return exposure.sort_values("lineups", ascending=False)
 
 
+def _stack_composition_breakdown(lineup_df: pd.DataFrame) -> tuple:
+    """Return (signature_df, team_roles_df) for the stack composition panel.
+
+    signature_df: one row per stack type (e.g. '4-3-1'), with lineup count and %.
+    team_roles_df: for each stack size (4, 3, 2 …), which teams appear and how often.
+    """
+    hitters = lineup_df[lineup_df["player_type"].str.lower() == "batter"]
+    if hitters.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    total_lineups = lineup_df["lineup_id"].nunique()
+
+    # Per-lineup batter count per team
+    team_counts = (
+        hitters.groupby(["lineup_id", "team_code"])
+        .size()
+        .reset_index(name="batters")
+    )
+
+    # Build stack signature for each lineup
+    signatures = []
+    team_role_rows = []
+    for lineup_id, grp in team_counts.groupby("lineup_id"):
+        counts = sorted(grp["batters"].tolist(), reverse=True)
+        sig = "-".join(str(c) for c in counts if c >= 2)  # only groups ≥2 are "stacks"
+        if not sig:
+            sig = "No stacks"
+        signatures.append({"lineup_id": lineup_id, "stack_type": sig})
+        # Record which team fills which stack size
+        for _, row in grp.iterrows():
+            team_role_rows.append({
+                "stack_size": row["batters"],
+                "team_code": row["team_code"],
+                "lineup_id": lineup_id,
+            })
+
+    sig_df = pd.DataFrame(signatures)
+    composition = (
+        sig_df.groupby("stack_type")["lineup_id"]
+        .nunique()
+        .reset_index(name="lineups")
+        .sort_values("lineups", ascending=False)
+    )
+    composition["pct_of_lineups"] = (composition["lineups"] / total_lineups * 100).round(1)
+    composition = composition.rename(columns={"stack_type": "Stack Type", "lineups": "Lineups", "pct_of_lineups": "% of Lineups"})
+
+    roles_df = pd.DataFrame(team_role_rows)
+    if roles_df.empty or roles_df["stack_size"].max() < 2:
+        team_roles = pd.DataFrame()
+    else:
+        team_roles = (
+            roles_df[roles_df["stack_size"] >= 2]
+            .groupby(["stack_size", "team_code"])["lineup_id"]
+            .nunique()
+            .reset_index(name="lineups")
+            .sort_values(["stack_size", "lineups"], ascending=[False, False])
+        )
+        team_roles["pct"] = (team_roles["lineups"] / total_lineups * 100).round(1)
+        team_roles = team_roles.rename(columns={
+            "stack_size": "Stack Size",
+            "team_code": "Team",
+            "lineups": "Lineups",
+            "pct": "% of Lineups",
+        })
+
+    return composition, team_roles
+
+
+def _render_stack_breakdown(lineup_df: pd.DataFrame) -> None:
+    """Render the full stack composition breakdown panel in Step 5."""
+    st.subheader("Stack composition breakdown")
+    composition, team_roles = _stack_composition_breakdown(lineup_df)
+
+    if composition.empty:
+        st.info("No batter data available to build stack breakdown.")
+        return
+
+    total = composition["Lineups"].sum()
+
+    col_left, col_right = st.columns([1, 1])
+
+    with col_left:
+        st.markdown("**Stack types across all lineups**")
+        st.dataframe(composition, use_container_width=True, hide_index=True)
+
+    with col_right:
+        st.markdown("**Stack type distribution**")
+        chart_data = composition.set_index("Stack Type")["Lineups"]
+        st.bar_chart(chart_data)
+
+    if not team_roles.empty:
+        st.markdown("**Which teams are in each stack size**")
+        st.caption(
+            "Shows how many lineups each team appears in as a 4-man, 3-man, or 2-man stack. "
+            "A team can appear in multiple stack sizes across different lineups."
+        )
+        for size in sorted(team_roles["Stack Size"].unique(), reverse=True):
+            size_rows = team_roles[team_roles["Stack Size"] == size].drop(columns="Stack Size")
+            label = f"{size}-man stacks — {len(size_rows)} team(s) used"
+            with st.expander(label, expanded=(size >= 4)):
+                st.dataframe(size_rows, use_container_width=True, hide_index=True)
+
+
 def _match_actual_scores(
     actual_scores: pd.DataFrame,
     ownership_df: Optional[pd.DataFrame],
@@ -3106,6 +3209,9 @@ def _render_step_five() -> None:
     if not stack_exposure.empty:
         st.subheader("Stack exposure by team")
         st.dataframe(stack_exposure, width="stretch")
+
+    if not display_df.empty:
+        _render_stack_breakdown(display_df)
 
     if not display_df.empty:
         st.subheader("Exposure heatmap (team x position)")
