@@ -62,6 +62,7 @@ SIM_CONFIG_KEY = "simulation_config"
 SIM_RESULTS_KEY = "simulation_results"
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "data" / "slates.db"
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "processed"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 MANUAL_WEIGHT_PRESET = "Manual weights"
 DEFAULT_WEIGHT_PRESET = "Balanced (equal blend)"
