@@ -404,12 +404,12 @@ class OwnershipModelConfig:
     min_pct: float = 0.05
     max_pct: float = 1.0
     # Enhanced ownership model parameters (Section 3)
-    salary_exponent: float = 1.8
+    salary_exponent: float = 1.4
     value_multiplier: float = 0.5
     team_magnetism_factor: float = 0.3
     scarcity_bonus: float = 0.04
-    max_pitcher_ownership: float = 0.35
-    pitcher_steepness: float = 4.0
+    max_pitcher_ownership: float = 0.30
+    pitcher_steepness: float = 3.0
 
     def normalized_weights(self) -> dict[str, float]:
         weights = {

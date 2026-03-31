@@ -18,13 +18,13 @@ class LeverageConfig:
     """
 
     # How much to reward high-ceiling players
-    ceiling_weight: float = 0.30
+    ceiling_weight: float = 0.20
 
     # How much to penalize high-ownership players
-    ownership_penalty: float = 0.55
+    ownership_penalty: float = 0.30
 
     # How much to reward boom potential (ceiling-mean spread)
-    boom_weight: float = 0.15
+    boom_weight: float = 0.08
 
     # Stack leverage: bonus for stacking teams from "prime" or "good" environment games
     stack_leverage_bonus: float = 0.5
@@ -34,10 +34,10 @@ class LeverageConfig:
 
     # Chalk ceiling — extra penalty above this ownership %
     chalk_threshold: float = 0.20
-    chalk_extra_penalty: float = 0.20
+    chalk_extra_penalty: float = 0.08
 
     # Within-stack chalk penalty
-    within_stack_chalk_penalty: float = 0.15
+    within_stack_chalk_penalty: float = 0.06
 
     # Bring-back leverage bonus
     bring_back_leverage_bonus: float = 0.30
@@ -94,11 +94,11 @@ class LeverageConfig:
     def single_entry_preset(cls) -> "LeverageConfig":
         return cls(
             mode="single_entry",
-            ceiling_weight=0.30,
-            ownership_penalty=0.25,
+            ceiling_weight=0.22,
+            ownership_penalty=0.15,
             boom_weight=0.15,
             chalk_threshold=0.30,
-            chalk_extra_penalty=0.08,
+            chalk_extra_penalty=0.04,
             within_stack_chalk_penalty=0.05,
             target_avg_lineup_ownership=0.12,
             max_stack_exposure_gpp=1.0,
@@ -113,11 +113,11 @@ class LeverageConfig:
     def small_field_gpp_preset(cls) -> "LeverageConfig":
         return cls(
             mode="small_field_gpp",
-            ceiling_weight=0.25,
-            ownership_penalty=0.30,
+            ceiling_weight=0.18,
+            ownership_penalty=0.20,
             boom_weight=0.10,
             chalk_threshold=0.25,
-            chalk_extra_penalty=0.10,
+            chalk_extra_penalty=0.05,
             within_stack_chalk_penalty=0.08,
             target_avg_lineup_ownership=0.11,
             max_stack_exposure_gpp=0.45,
@@ -132,12 +132,12 @@ class LeverageConfig:
     def large_field_gpp_preset(cls) -> "LeverageConfig":
         return cls(
             mode="large_field_gpp",
-            ceiling_weight=0.30,
-            ownership_penalty=0.55,
-            boom_weight=0.15,
+            ceiling_weight=0.20,
+            ownership_penalty=0.30,
+            boom_weight=0.08,
             chalk_threshold=0.20,
-            chalk_extra_penalty=0.20,
-            within_stack_chalk_penalty=0.15,
+            chalk_extra_penalty=0.08,
+            within_stack_chalk_penalty=0.06,
             target_avg_lineup_ownership=0.08,
             max_stack_exposure_gpp=0.30,
             max_batter_exposure_gpp=0.30,
@@ -213,9 +213,9 @@ def apply_slate_adjustments(config: LeverageConfig, profile: SlateProfile) -> Le
 
 
 def _apply_small_slate(cfg: LeverageConfig) -> None:
-    cfg.ownership_penalty *= 1.3
+    cfg.ownership_penalty *= 1.15
     cfg.chalk_threshold *= 0.8
-    cfg.chalk_extra_penalty *= 1.5
+    cfg.chalk_extra_penalty *= 1.2
     cfg.pitcher_fade_bonus = 0.20
     cfg.within_stack_chalk_penalty *= 1.5
     cfg.min_primary_stack_size = 4

@@ -112,16 +112,23 @@ def _compute_gpp_score(
 
     score = mean
     score += leverage_config.ceiling_weight * ceiling
-    score -= leverage_config.ownership_penalty * ownership
+
+    # Ownership penalty scaled relative to the player's mean projection.
+    # This ensures a 25%-owned ace still scores well, while a 25%-owned
+    # mediocre player gets penalized more proportionally.
+    relative_ownership_cost = 0.0
+    if mean > 0:
+        relative_ownership_cost = ownership / max(mean, 1.0)
+        score -= leverage_config.ownership_penalty * relative_ownership_cost * mean * 0.5
+
+    # Extra chalk penalty (also relative)
+    if ownership > leverage_config.chalk_threshold and mean > 0:
+        score -= leverage_config.chalk_extra_penalty * relative_ownership_cost * mean * 0.3
 
     # Boom potential: (ceiling - mean) / mean gives upside percentage
     if mean > 0:
         boom_pct = (ceiling - mean) / mean
         score += leverage_config.boom_weight * boom_pct * mean
-
-    # Extra chalk penalty
-    if ownership > leverage_config.chalk_threshold:
-        score -= leverage_config.chalk_extra_penalty * ownership
 
     # Pitcher fade bonus: reward non-chalk pitchers
     if leverage_config.pitcher_fade_bonus > 0 and pitcher_top2_avg_own > 0:
@@ -170,6 +177,11 @@ def _build_base_lp(
 
     # Salary constraint
     prob += lpSum(pool.loc[idx, "salary"] * var for idx, var in decision_vars.items()) <= salary_cap
+
+    # Minimum salary usage — don't waste cap space
+    # For a $35K cap, require at least $32K usage (91% utilization)
+    min_salary = int(salary_cap * 0.91)
+    prob += lpSum(pool.loc[idx, "salary"] * var for idx, var in decision_vars.items()) >= min_salary
 
     # Exactly 9 players
     prob += lpSum(var for var in decision_vars.values()) == TOTAL_PLAYERS
@@ -493,6 +505,15 @@ def generate_lineups(
             boom_mask = df["proj_fd_ceiling"] >= df["proj_fd_ceiling"].quantile(0.6)
             viable_mask = viable_mask | boom_mask
         df = df[viable_mask].reset_index(drop=True)
+
+    # ── Pitcher salary floor: exclude relievers from pitcher pool ────
+    # On FanDuel, starting pitchers are generally $6,500+. Relievers at
+    # $5,500-$6,000 should never be selected as the lineup's starting pitcher.
+    # This applies in ALL modes, not just GPP.
+    PITCHER_MIN_SALARY = 6500
+    pitcher_mask_filter = (df["player_type"].str.lower() == "pitcher") & (df["salary"] < PITCHER_MIN_SALARY)
+    if pitcher_mask_filter.any():
+        df = df[~pitcher_mask_filter].reset_index(drop=True)
 
     usage_limits = _max_usage(df, num_lineups)
     usage_counts: Dict[str, int] = {pid: 0 for pid in usage_limits}
