@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Optional
 
 import re
+from datetime import timezone, timedelta
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -13,7 +14,11 @@ from slate_optimizer.projection.game_environment import merge_game_environment_c
 
 _TIME_PATTERN = re.compile(r"(\d{1,2}:\d{2}\s*[AP]M)", re.IGNORECASE)
 _DATE_PATTERN = re.compile(r"(\d{1,2}/\d{1,2})")
-_EASTERN_TZ = ZoneInfo("US/Eastern")
+try:
+    _EASTERN_TZ = ZoneInfo("US/Eastern")
+except KeyError:
+    # Fallback for environments missing tzdata (e.g. Streamlit Cloud)
+    _EASTERN_TZ = timezone(timedelta(hours=-4))
 
 OPTIMIZER_COLUMNS = [
     "fd_player_id",
