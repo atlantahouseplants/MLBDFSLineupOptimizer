@@ -90,40 +90,26 @@ def _load_source(path: Path, name_lookup: pd.Series) -> pd.DataFrame:
     return grouped
 
 
-def _estimate_fallback(
-    players_df: pd.DataFrame,
-    projections_df: pd.DataFrame,
-    model_config: OwnershipModelConfig | None = None,
-) -> pd.Series:
-    meta_cols = [
-        col
-        for col in (
-            "fd_player_id",
-            "salary",
-            "position",
-            "team_code",
-            "vegas_team_total",
-            "full_name",
-            "fppg",
-        )
-        if col in players_df.columns
-    ]
-    meta = players_df[meta_cols].copy()
-    if meta.empty:
-        meta = pd.DataFrame({"fd_player_id": projections_df["fd_player_id"].astype(str)})
-        meta["salary"] = 0
-        meta["position"] = "UTIL"
-    meta["fd_player_id"] = meta["fd_player_id"].astype(str)
-    meta = meta.drop_duplicates("fd_player_id")
+_DEFAULT_WEIGHTS = {
+    "salary_weight": 0.2,
+    "projection_weight": 0.25,
+    "value_weight": 0.2,
+    "team_weight": 0.15,
+    "name_weight": 0.1,
+    "position_weight": 0.1,
+}
 
-    proj = projections_df[["fd_player_id", "proj_fd_mean"]].copy()
-    proj["fd_player_id"] = proj["fd_player_id"].astype(str)
-    merged = meta.merge(proj, on="fd_player_id", how="left")
-    merged["salary"] = pd.to_numeric(merged["salary"], errors="coerce").fillna(
-        merged["salary"].median()
-    )
-    merged["proj_fd_mean"] = pd.to_numeric(merged["proj_fd_mean"], errors="coerce").fillna(0.0)
 
+def _has_custom_weights(cfg: OwnershipModelConfig) -> bool:
+    """Return True if the caller changed any of the legacy weight knobs."""
+    for key, default_val in _DEFAULT_WEIGHTS.items():
+        if getattr(cfg, key) != default_val:
+            return True
+    return False
+
+
+def _estimate_fallback_legacy(merged: pd.DataFrame, cfg: OwnershipModelConfig) -> pd.Series:
+    """Original rank-weighted fallback model for backward compatibility."""
     merged["salary_rank"] = merged["salary"].rank(pct=True)
     merged["projection_rank"] = merged["proj_fd_mean"].rank(pct=True)
 
@@ -152,7 +138,6 @@ def _estimate_fallback(
     merged["pos_scarcity"] = 1 - merged["position"].fillna("UTIL").map(pos_counts) / max_count
     merged["pos_scarcity"] = merged["pos_scarcity"].fillna(0.0)
 
-    cfg = model_config or OwnershipModelConfig()
     normalized_weights = cfg.normalized_weights()
     raw = pd.Series(0.0, index=merged.index, dtype=float)
     for column, weight in normalized_weights.items():
@@ -164,6 +149,143 @@ def _estimate_fallback(
     min_pct, max_pct = cfg.clamp_range()
     span = max_pct - min_pct
     fallback = (min_pct + span * raw).clip(lower=min_pct, upper=max_pct)
+    return pd.Series(fallback.values, index=merged["fd_player_id"], name="proj_fd_ownership")
+
+
+def _sigmoid(x: np.ndarray | pd.Series, steepness: float = 1.0) -> np.ndarray:
+    """Logistic sigmoid centred at 0.5, with adjustable steepness."""
+    arr = np.asarray(x, dtype=float)
+    return 1.0 / (1.0 + np.exp(-steepness * (arr - 0.5)))
+
+
+def _estimate_fallback(
+    players_df: pd.DataFrame,
+    projections_df: pd.DataFrame,
+    model_config: OwnershipModelConfig | None = None,
+) -> pd.Series:
+    # ── gather metadata ──────────────────────────────────────────────
+    meta_cols = [
+        col
+        for col in (
+            "fd_player_id",
+            "salary",
+            "position",
+            "team_code",
+            "vegas_team_total",
+            "full_name",
+            "fppg",
+            "player_type",
+        )
+        if col in players_df.columns
+    ]
+    meta = players_df[meta_cols].copy()
+    if meta.empty:
+        meta = pd.DataFrame({"fd_player_id": projections_df["fd_player_id"].astype(str)})
+        meta["salary"] = 0
+        meta["position"] = "UTIL"
+    meta["fd_player_id"] = meta["fd_player_id"].astype(str)
+    meta = meta.drop_duplicates("fd_player_id")
+
+    proj = projections_df[["fd_player_id", "proj_fd_mean"]].copy()
+    proj["fd_player_id"] = proj["fd_player_id"].astype(str)
+    merged = meta.merge(proj, on="fd_player_id", how="left")
+    merged["salary"] = pd.to_numeric(merged["salary"], errors="coerce").fillna(
+        merged["salary"].median()
+    )
+    merged["proj_fd_mean"] = pd.to_numeric(merged["proj_fd_mean"], errors="coerce").fillna(0.0)
+
+    cfg = model_config or OwnershipModelConfig()
+    min_pct, max_pct = cfg.clamp_range()
+
+    # ── Legacy mode: if caller customized the old weights, use old model ──
+    if model_config is not None and _has_custom_weights(model_config):
+        return _estimate_fallback_legacy(merged, model_config)
+
+    # ── detect player type ───────────────────────────────────────────
+    if "player_type" in merged.columns:
+        is_pitcher = merged["player_type"].astype(str).str.lower() == "pitcher"
+    else:
+        is_pitcher = merged["position"].fillna("").astype(str).str.upper().str.contains("P")
+    is_batter = ~is_pitcher
+
+    # ── 3.2.1  Salary-driven ownership curve ─────────────────────────
+    max_salary = merged["salary"].max()
+    if max_salary and max_salary > 0:
+        salary_signal = (merged["salary"] / max_salary) ** cfg.salary_exponent
+    else:
+        salary_signal = pd.Series(0.5, index=merged.index)
+
+    # ── 3.2.2  Value trap detection ──────────────────────────────────
+    with np.errstate(divide="ignore", invalid="ignore"):
+        value_ratio = merged["proj_fd_mean"] / merged["salary"].replace(0, np.nan) * 1000
+    value_pct = value_ratio.rank(pct=True).fillna(0.5)
+    value_bonus = (value_pct - 0.7).clip(lower=0.0) * cfg.value_multiplier
+
+    # ── 3.2.3  Stack magnetism ───────────────────────────────────────
+    team_totals_raw = merged.get("vegas_team_total")
+    if isinstance(team_totals_raw, pd.Series):
+        team_totals = pd.to_numeric(team_totals_raw, errors="coerce")
+    else:
+        team_totals = pd.Series(np.nan, index=merged.index)
+
+    if team_totals.notna().any():
+        team_rank = team_totals.rank(pct=True).fillna(0.5)
+    else:
+        team_rank = pd.Series(0.5, index=merged.index)
+    team_bonus = team_rank * cfg.team_magnetism_factor
+
+    # ── 3.2.4  Positional concentration ──────────────────────────────
+    scarcity_bonus = pd.Series(0.0, index=merged.index)
+    scarce_positions = {"C", "SS", "2B"}
+    position_col = merged["position"].fillna("UTIL").astype(str).str.upper()
+    for pos in scarce_positions:
+        pos_mask = position_col.str.contains(pos) & is_batter
+        if pos_mask.sum() < 2:
+            continue
+        pos_indices = merged.index[pos_mask]
+        pos_proj = merged.loc[pos_indices, "proj_fd_mean"]
+        top2_threshold = pos_proj.nlargest(2).min()
+        top2_mask = pos_mask & (merged["proj_fd_mean"] >= top2_threshold)
+        scarcity_bonus.loc[top2_mask] = cfg.scarcity_bonus
+
+    # ── 3.2.5  Pitcher ownership (sigmoid curve) ────────────────────
+    pitcher_ownership = pd.Series(0.0, index=merged.index)
+    if is_pitcher.any():
+        pitcher_salary_rank = merged.loc[is_pitcher, "salary"].rank(pct=True)
+        pitcher_ownership.loc[is_pitcher] = (
+            _sigmoid(pitcher_salary_rank.values, steepness=cfg.pitcher_steepness)
+            * cfg.max_pitcher_ownership
+        )
+
+    # ── Combine batter signals ───────────────────────────────────────
+    # Name recognition signal (fppg as proxy)
+    name_signal = pd.to_numeric(merged.get("fppg"), errors="coerce")
+    if name_signal.notna().any():
+        name_rank = name_signal.rank(pct=True).fillna(0.5)
+    else:
+        name_rank = merged["proj_fd_mean"].rank(pct=True)
+
+    batter_raw = salary_signal + value_bonus + team_bonus + scarcity_bonus + name_rank * 0.15
+    # Normalize batter raw to 0-1
+    batter_max = batter_raw.loc[is_batter].max() if is_batter.any() else 1.0
+    if batter_max and batter_max > 0:
+        batter_raw = batter_raw / batter_max
+
+    # ── Assemble final ownership ─────────────────────────────────────
+    raw = pd.Series(0.0, index=merged.index, dtype=float)
+    raw.loc[is_batter] = batter_raw.loc[is_batter]
+    raw.loc[is_pitcher] = pitcher_ownership.loc[is_pitcher]
+
+    # ── 3.3  Normalization ───────────────────────────────────────────
+    # Target: avg ownership ≈ num_roster_spots / num_players
+    num_players = len(merged)
+    # Use a floor of 80 to prevent normalization blowup on small slates
+    target_avg = 9.0 / max(num_players, 80)
+    current_mean = raw.mean()
+    if current_mean > 0:
+        raw = raw * (target_avg / current_mean)
+
+    fallback = raw.clip(lower=min_pct, upper=max_pct)
     return pd.Series(fallback.values, index=merged["fd_player_id"], name="proj_fd_ownership")
 
 
@@ -281,6 +403,13 @@ class OwnershipModelConfig:
     position_weight: float = 0.1
     min_pct: float = 0.05
     max_pct: float = 1.0
+    # Enhanced ownership model parameters (Section 3)
+    salary_exponent: float = 1.8
+    value_multiplier: float = 0.5
+    team_magnetism_factor: float = 0.3
+    scarcity_bonus: float = 0.04
+    max_pitcher_ownership: float = 0.35
+    pitcher_steepness: float = 4.0
 
     def normalized_weights(self) -> dict[str, float]:
         weights = {

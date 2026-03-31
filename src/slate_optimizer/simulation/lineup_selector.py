@@ -46,6 +46,9 @@ def select_portfolio(
     max_stack_exposure: float = 1.0,
     # Legacy support
     max_player_exposure: Optional[float] = None,
+    # Leverage-adjusted selection support
+    player_ownership_map: Optional[Dict[str, float]] = None,
+    target_avg_ownership: float = 0.10,
 ) -> PortfolioSelection:
     # Legacy: if caller passes old single value, use it for both
     if max_player_exposure is not None:
@@ -109,7 +112,19 @@ def select_portfolio(
             if not _respects_max_stack_exposure(candidate, stack_counts, num_lineups, max_stack_exposure):
                 continue
 
-            metric_value = getattr(candidate, selection_metric, 0.0)
+            # For leverage_adjusted_top1, use top_1pct_rate as base metric
+            if selection_metric == "leverage_adjusted_top1":
+                metric_value = getattr(candidate, "top_1pct_rate", 0.0)
+                # Apply ownership leverage bonus
+                if player_ownership_map:
+                    avg_own = np.mean([
+                        player_ownership_map.get(pid, target_avg_ownership)
+                        for pid in candidate.player_ids
+                    ])
+                    ownership_leverage_bonus = max(0.0, (target_avg_ownership - avg_own) / target_avg_ownership)
+                    metric_value *= (1 + ownership_leverage_bonus)
+            else:
+                metric_value = getattr(candidate, selection_metric, 0.0)
             overlap_penalty = _average_overlap(candidate, selected) / 9 if selected else 0.0
             combined = metric_value * (1 - diversity_weight * overlap_penalty)
 

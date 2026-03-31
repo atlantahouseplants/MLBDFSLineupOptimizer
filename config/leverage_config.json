@@ -1,0 +1,22 @@
+{
+  "mode": "large_field_gpp",
+  "ceiling_weight": 0.30,
+  "ownership_penalty": 0.55,
+  "boom_weight": 0.15,
+  "stack_leverage_bonus": 0.50,
+  "min_viable_projection_pct": 0.40,
+  "chalk_threshold": 0.20,
+  "chalk_extra_penalty": 0.20,
+  "within_stack_chalk_penalty": 0.15,
+  "bring_back_leverage_bonus": 0.30,
+  "target_avg_lineup_ownership": 0.08,
+  "max_stack_exposure_gpp": 0.30,
+  "max_batter_exposure_gpp": 0.30,
+  "max_pitcher_exposure_gpp": 0.50,
+  "default_num_lineups": 150,
+  "portfolio_diversity_weight": 0.40,
+  "pitcher_fade_bonus": 0.0,
+  "min_primary_stack_size": 3,
+  "bring_back_enabled": true,
+  "bring_back_count": 1
+}

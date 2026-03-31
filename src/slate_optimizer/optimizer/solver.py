@@ -4,7 +4,7 @@ from __future__ import annotations
 import warnings
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
 from pulp import (
@@ -16,6 +16,9 @@ from pulp import (
     PULP_CBC_CMD,
     lpSum,
 )
+
+if TYPE_CHECKING:
+    from .config import LeverageConfig
 
 SALARY_CAP = 35000
 TOTAL_PLAYERS = 9
@@ -93,6 +96,43 @@ def _max_usage(df: pd.DataFrame, num_lineups: int) -> Dict[str, int]:
 
 
 # ──────────────────────────────────────────────────────────────────────
+# GPP scoring helper
+# ──────────────────────────────────────────────────────────────────────
+
+def _compute_gpp_score(
+    pool: pd.DataFrame,
+    idx: int,
+    leverage_config: "LeverageConfig",
+    pitcher_top2_avg_own: float = 0.0,
+) -> float:
+    """Compute leverage-weighted objective score for a single player."""
+    mean = float(pool.loc[idx, "proj_fd_mean"])
+    ceiling = float(pool.loc[idx, "proj_fd_ceiling"]) if "proj_fd_ceiling" in pool.columns else mean * 1.2
+    ownership = max(float(pool.loc[idx, "proj_fd_ownership"]) if "proj_fd_ownership" in pool.columns else 0.05, 0.005)
+
+    score = mean
+    score += leverage_config.ceiling_weight * ceiling
+    score -= leverage_config.ownership_penalty * ownership
+
+    # Boom potential: (ceiling - mean) / mean gives upside percentage
+    if mean > 0:
+        boom_pct = (ceiling - mean) / mean
+        score += leverage_config.boom_weight * boom_pct * mean
+
+    # Extra chalk penalty
+    if ownership > leverage_config.chalk_threshold:
+        score -= leverage_config.chalk_extra_penalty * ownership
+
+    # Pitcher fade bonus: reward non-chalk pitchers
+    if leverage_config.pitcher_fade_bonus > 0 and pitcher_top2_avg_own > 0:
+        player_type = str(pool.loc[idx, "player_type"]).lower() if "player_type" in pool.columns else ""
+        if player_type == "pitcher" and ownership < pitcher_top2_avg_own * 0.6:
+            score += leverage_config.pitcher_fade_bonus * (pitcher_top2_avg_own - ownership)
+
+    return score
+
+
+# ──────────────────────────────────────────────────────────────────────
 # Base LP construction (everything except stack constraints)
 # ──────────────────────────────────────────────────────────────────────
 
@@ -103,6 +143,7 @@ def _build_base_lp(
     max_lineup_ownership: Optional[float],
     previous_lineups: List[List[str]],
     tag: str = "",
+    leverage_config: Optional["LeverageConfig"] = None,
 ) -> Tuple[LpProblem, Dict[int, LpVariable]]:
     """Build the LP with all constraints except stack/bring-back."""
     label = f"mlb_lineup_{lineup_index}{tag}"
@@ -112,8 +153,20 @@ def _build_base_lp(
         for idx in pool.index
     }
 
-    # Objective: maximize projected score
-    prob += lpSum(pool.loc[idx, "proj_fd_mean"] * var for idx, var in decision_vars.items())
+    # Objective: maximize projected score (leverage-weighted in GPP mode)
+    if leverage_config is not None and leverage_config.is_gpp:
+        # Precompute pitcher top-2 avg ownership for pitcher fade logic
+        _p2_avg = 0.0
+        if leverage_config.pitcher_fade_bonus > 0 and "proj_fd_ownership" in pool.columns:
+            pitcher_pool = pool[pool["player_type"].astype(str).str.lower() == "pitcher"]
+            if len(pitcher_pool) >= 2:
+                _p2_avg = float(pitcher_pool["proj_fd_ownership"].nlargest(2).mean())
+        prob += lpSum(
+            _compute_gpp_score(pool, idx, leverage_config, pitcher_top2_avg_own=_p2_avg) * var
+            for idx, var in decision_vars.items()
+        )
+    else:
+        prob += lpSum(pool.loc[idx, "proj_fd_mean"] * var for idx, var in decision_vars.items())
 
     # Salary constraint
     prob += lpSum(pool.loc[idx, "salary"] * var for idx, var in decision_vars.items()) <= salary_cap
@@ -284,6 +337,103 @@ def _add_stack_constraints(
 
 
 # ──────────────────────────────────────────────────────────────────────
+# Smart auto-stack selection
+# ──────────────────────────────────────────────────────────────────────
+
+def _select_auto_stack_template(
+    pool: pd.DataFrame,
+    slate_type: str = "medium",
+    num_lineups: int = 20,
+) -> Tuple[int, ...]:
+    """Choose a stack template based on slate size and game environment tiers.
+
+    Returns a tuple like (4, 4) or (4, 3, 1) depending on how many
+    attractive ("prime" / "good") games exist on the slate.
+    """
+    num_games = pool["game_key"].nunique() if "game_key" in pool.columns else 0
+    tiers = pool.drop_duplicates("game_key")["environment_tier"].value_counts() if "environment_tier" in pool.columns else pd.Series(dtype=int)
+    prime_count = int(tiers.get("prime", 0))
+    good_count = int(tiers.get("good", 0))
+
+    # ── Small slate (2-3 games) ──────────────────────────────────────
+    if slate_type == "small" or num_games <= 3:
+        if num_games <= 2:
+            return (4, 4)
+        # 3-game slate: pick based on game quality
+        if prime_count >= 1:
+            return (4, 3, 1)
+        return (4, 4)
+
+    # ── Large slate (9+ games) ───────────────────────────────────────
+    if slate_type == "large" or num_games >= 9:
+        if prime_count >= 2:
+            return (4, 3, 1)
+        if prime_count == 1 and good_count >= 1:
+            return (4, 2, 2)
+        return (4, 2, 1, 1)
+
+    # ── Medium slate (default) ───────────────────────────────────────
+    if prime_count >= 2:
+        return (4, 4)
+    if prime_count == 1 and good_count >= 1:
+        return (4, 3, 1)
+    if prime_count == 1:
+        return (4, 2, 2)
+    if good_count >= 2:
+        return (3, 3, 2)
+    return (3, 3, 2)
+
+
+def _build_large_slate_rotation(num_lineups: int) -> List[Tuple[int, ...]]:
+    """Build a template rotation for large slates with 100+ lineups."""
+    prime_templates = [(4, 3, 1), (4, 2, 2)]
+    secondary_templates = [(3, 3, 2), (4, 2, 1, 1)]
+    wild_templates = [(3, 2, 2, 1), (3, 2, 1, 1, 1)]
+
+    prime_count = int(num_lineups * 0.50)
+    secondary_count = int(num_lineups * 0.35)
+    wild_count = num_lineups - prime_count - secondary_count
+
+    rotation: List[Tuple[int, ...]] = []
+    for t in prime_templates:
+        rotation.extend([t] * max(1, prime_count // len(prime_templates)))
+    for t in secondary_templates:
+        rotation.extend([t] * max(1, secondary_count // len(secondary_templates)))
+    for t in wild_templates:
+        rotation.extend([t] * max(1, wild_count // len(wild_templates)))
+    return rotation
+
+
+def _add_stack_leverage_bonus(
+    prob: LpProblem,
+    pool: pd.DataFrame,
+    stack_info: List[Tuple[str, str, LpVariable]],
+    leverage_bonus: float,
+) -> None:
+    """Add a soft objective bonus that tilts stack assignment toward high-leverage teams."""
+    if not stack_info or leverage_bonus <= 0 or "team_gpp_leverage" not in pool.columns:
+        return
+    # Compute per-team leverage
+    is_batter = pool["player_type"].astype(str).str.lower() == "batter"
+    team_leverage = (
+        pool.loc[is_batter]
+        .groupby("team_code")["team_gpp_leverage"]
+        .first()
+    )
+    if team_leverage.empty:
+        return
+    # Normalize to 0-1 range
+    lev_max = team_leverage.max()
+    if lev_max and lev_max > 0:
+        team_leverage = team_leverage / lev_max
+
+    for team_code, _opp, assign_var in stack_info:
+        lev = float(team_leverage.get(team_code, 0.0))
+        if lev > 0:
+            prob += leverage_bonus * lev * assign_var
+
+
+# ──────────────────────────────────────────────────────────────────────
 # Main lineup generation
 # ──────────────────────────────────────────────────────────────────────
 
@@ -300,12 +450,14 @@ def generate_lineups(
     bring_back_enabled: bool = False,
     bring_back_count: int = 1,
     min_game_total_for_stacks: Optional[float] = None,
+    leverage_config: Optional["LeverageConfig"] = None,
 ) -> List[LineupResult]:
     df = dataset.copy()
     df["proj_fd_mean"] = pd.to_numeric(df["proj_fd_mean"], errors="coerce").fillna(0.0)
     df["salary"] = pd.to_numeric(df["salary"], errors="coerce").fillna(0).astype(int)
 
     # Resolve stack template: rotation > single template > legacy fallback
+    _gpp_mode = leverage_config is not None and leverage_config.is_gpp
     if stack_rotation is not None:
         # Multi-template mode: cycle through the rotation list
         pass  # handled per-lineup below
@@ -313,8 +465,34 @@ def generate_lineups(
         stack_template = tuple(min(s, MAX_HITTERS_PER_TEAM) for s in stack_templates if s and s > 0)
         if not stack_template:
             stack_template = None
+    # Smart auto-stack: when in GPP mode and no template specified, pick one
+    if stack_template is None and stack_rotation is None and _gpp_mode:
+        # Detect slate type for template selection
+        _num_games = df["game_key"].nunique() if "game_key" in df.columns else 0
+        _slate_type = "small" if _num_games <= 3 else ("large" if _num_games >= 9 else "medium")
+        # Large slate + many lineups → use rotation for template diversity
+        if _slate_type == "large" and num_lineups >= 100:
+            stack_rotation = _build_large_slate_rotation(num_lineups)
+        else:
+            stack_template = _select_auto_stack_template(df, slate_type=_slate_type, num_lineups=num_lineups)
 
+    # Override bring-back from leverage config when available
+    if _gpp_mode and leverage_config is not None:
+        if leverage_config.bring_back_enabled:
+            bring_back_enabled = True
+        bring_back_count = max(bring_back_count, leverage_config.bring_back_count)
     bring_back_count = max(1, int(bring_back_count))
+
+    # ── Section 5.4: Player floor filter (GPP mode) ──────────────────
+    if _gpp_mode and leverage_config is not None:
+        projection_cutoff = df["proj_fd_mean"].quantile(leverage_config.min_viable_projection_pct)
+        is_pitcher = df["player_type"].str.lower() == "pitcher"
+        viable_mask = is_pitcher | (df["proj_fd_mean"] >= projection_cutoff)
+        # Also keep boom candidates (high ceiling even if mean is low)
+        if "proj_fd_ceiling" in df.columns:
+            boom_mask = df["proj_fd_ceiling"] >= df["proj_fd_ceiling"].quantile(0.6)
+            viable_mask = viable_mask | boom_mask
+        df = df[viable_mask].reset_index(drop=True)
 
     usage_limits = _max_usage(df, num_lineups)
     usage_counts: Dict[str, int] = {pid: 0 for pid in usage_limits}
@@ -336,6 +514,7 @@ def generate_lineups(
         # Build base LP (no stacks)
         prob, decision_vars = _build_base_lp(
             pool, lineup_index, salary_cap, max_lineup_ownership, previous_lineups,
+            leverage_config=leverage_config,
         )
 
         # Pick the template for this lineup (rotation or single)
@@ -353,6 +532,29 @@ def generate_lineups(
                 min_game_total=min_game_total_for_stacks,
             )
 
+        # Stack leverage bonus (GPP mode)
+        if _gpp_mode and stack_info and leverage_config is not None:
+            _add_stack_leverage_bonus(
+                prob, pool, stack_info, leverage_config.stack_leverage_bonus,
+            )
+
+            # Section 5.5: Within-stack chalk penalty — prefer underowned batters on stacked teams
+            if leverage_config.within_stack_chalk_penalty > 0 and "proj_fd_ownership" in pool.columns:
+                batter_mask_ws = pool["player_type"].str.lower() == "batter"
+                for team_code, _opp, assign_var in stack_info:
+                    team_batter_idx = pool.index[
+                        (pool["team_code"] == team_code) & batter_mask_ws
+                    ]
+                    for bidx in team_batter_idx:
+                        player_own = float(pool.loc[bidx, "proj_fd_ownership"])
+                        if player_own > leverage_config.chalk_threshold:
+                            prob += (
+                                -leverage_config.within_stack_chalk_penalty
+                                * player_own
+                                * decision_vars[bidx]
+                                * assign_var
+                            )
+
         # Bring-back constraints (only when stacks applied)
         if bring_back_enabled and stack_info:
             batter_mask = pool["player_type"].str.lower() == "batter"
@@ -364,6 +566,16 @@ def generate_lineups(
                     continue
                 prob += lpSum(decision_vars[idx] for idx in opp_indices) >= bring_back_count * stack_var
 
+                # Section 6: Bring-back leverage preference — favor low-owned bring-back players
+                if _gpp_mode and leverage_config is not None and "proj_fd_ownership" in pool.columns:
+                    bb_bonus = leverage_config.bring_back_leverage_bonus
+                    if bb_bonus > 0:
+                        median_own = float(pool.loc[opp_indices, "proj_fd_ownership"].median())
+                        for oi in opp_indices:
+                            own = float(pool.loc[oi, "proj_fd_ownership"])
+                            if own < median_own:
+                                prob += bb_bonus * (median_own - own) * decision_vars[oi]
+
         status = prob.solve(PULP_CBC_CMD(msg=False))
 
         # Fallback: if stacks made it infeasible, solve without stacks
@@ -374,6 +586,7 @@ def generate_lineups(
             )
             prob, decision_vars = _build_base_lp(
                 pool, lineup_index, salary_cap, max_lineup_ownership, previous_lineups, tag="_ns",
+                leverage_config=leverage_config,
             )
             status = prob.solve(PULP_CBC_CMD(msg=False))
 

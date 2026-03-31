@@ -74,16 +74,20 @@ class SimulationConfig:
         )
 
     @classmethod
-    def cash_preset(cls) -> "SimulationConfig":
+    def small_field_gpp_preset(cls) -> "SimulationConfig":
+        """Preset for small-field tournaments (under 500 entries)."""
         return cls(
             num_simulations=10_000,
-            volatility_scale=0.8,
+            volatility_scale=1.0,
             num_field_lineups=500,
-            selection_metric="cash_rate",
-            diversity_weight=0.1,
-            max_batter_exposure=0.80,
-            max_pitcher_exposure=0.80,
+            selection_metric="top_1pct_rate",
+            diversity_weight=0.25,
+            max_batter_exposure=0.40,
+            max_pitcher_exposure=0.60,
         )
+
+    # Backward compat alias
+    cash_preset = small_field_gpp_preset
 
     @classmethod
     def single_entry_preset(cls) -> "SimulationConfig":

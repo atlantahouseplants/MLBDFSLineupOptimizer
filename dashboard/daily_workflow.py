@@ -28,7 +28,7 @@ from slate_optimizer.ingestion.slate_builder import build_player_dataset
 from slate_optimizer.ingestion.vegas import VegasLoader
 from slate_optimizer.optimizer import build_optimizer_dataset, generate_lineups
 from slate_optimizer.optimizer.solver import STACK_PRESETS
-from slate_optimizer.optimizer.config import OptimizerConfig
+from slate_optimizer.optimizer.config import LeverageConfig, OptimizerConfig, SlateProfile, apply_slate_adjustments, detect_slate_profile
 from slate_optimizer.optimizer.dataset import OPTIMIZER_COLUMNS
 from slate_optimizer.optimizer.export import (
     FANDUEL_UPLOAD_COLUMNS,
@@ -40,6 +40,7 @@ from slate_optimizer.projection import (
     OwnershipModelConfig,
     blend_projection_sources,
     compute_baseline_projections,
+    compute_game_environments,
     compute_ownership_series,
 )
 from slate_optimizer.simulation import (
@@ -53,6 +54,21 @@ from slate_optimizer.simulation import (
     simulate_slate,
 )
 from scipy.stats import norm
+
+def _build_leverage_config_from_session(workflow: Dict) -> LeverageConfig:
+    """Reconstruct the LeverageConfig from session state for re-runs."""
+    _strat = workflow.get("leverage_strategy_mode", "Large Field GPP")
+    if _strat == "Single Entry":
+        cfg = LeverageConfig.single_entry_preset()
+    elif _strat == "Small Field GPP":
+        cfg = LeverageConfig.small_field_gpp_preset()
+    else:
+        cfg = LeverageConfig.large_field_gpp_preset()
+    _sp = workflow.get("slate_profile")
+    if _sp is not None:
+        cfg = apply_slate_adjustments(cfg, _sp)
+    return cfg
+
 
 WORKFLOW_KEY = "workflow_state"
 NAV_KEY = "workflow_nav"
@@ -1438,10 +1454,12 @@ def _reoptimize_scratches(
 
     temp_config = dict(config_state)
     temp_config["num_lineups"] = len(affected_ids)
+    _lev_scratch = _build_leverage_config_from_session(workflow)
     new_lineups, _ = _run_solver(
         optimizer_df,
         temp_config,
         excluded_players=scratched_players,
+        leverage_config=_lev_scratch,
     )
     existing = workflow.get("lineups")
     diff_messages: List[str] = []
@@ -1510,6 +1528,7 @@ def _run_solver(
     config_settings: Dict,
     locked_players: Optional[List[str]] = None,
     excluded_players: Optional[List[str]] = None,
+    leverage_config: Optional[LeverageConfig] = None,
 ) -> Tuple[List, pd.DataFrame]:
     df = dataset.copy()
     locked_players = locked_players or []
@@ -1596,6 +1615,7 @@ def _run_solver(
         bring_back_enabled=bring_back_enabled,
         bring_back_count=bring_back_count,
         min_game_total_for_stacks=min_game_total,
+        leverage_config=leverage_config,
     )
 
     if not lineups:
@@ -2261,6 +2281,63 @@ def _render_step_two() -> None:
     _section_chalk(filtered_df)
 
 
+def _render_leverage_summary(optimizer_df: pd.DataFrame, lineups: list) -> None:
+    """Show game environment table and lineup ownership summary after GPP optimization."""
+    envs = compute_game_environments(optimizer_df)
+    if envs:
+        with st.expander("Game Environment Table", expanded=True):
+            env_rows = []
+            for e in envs:
+                env_rows.append({
+                    "Game": e.game_key,
+                    "Total": round(e.vegas_game_total, 1),
+                    "Home Impl": round(e.home_implied_total, 2),
+                    "Away Impl": round(e.away_implied_total, 2),
+                    "Home Own%": f"{e.home_team_ownership:.1%}",
+                    "Away Own%": f"{e.away_team_ownership:.1%}",
+                    "Leverage": round(e.game_leverage_score, 3),
+                    "Tier": e.environment_tier,
+                })
+            st.dataframe(pd.DataFrame(env_rows), use_container_width=True)
+
+    # Stack leverage ranking
+    if "team_gpp_leverage" in optimizer_df.columns:
+        is_batter = optimizer_df["player_type"].astype(str).str.lower() == "batter"
+        team_stats = (
+            optimizer_df[is_batter]
+            .groupby("team_code")
+            .agg(
+                implied_total=("vegas_team_total", "first"),
+                team_own=("proj_fd_ownership", "sum"),
+                gpp_leverage=("team_gpp_leverage", "first"),
+            )
+            .sort_values("gpp_leverage", ascending=False)
+            .reset_index()
+        )
+        # Count how many lineups stack each team
+        stack_counts: Dict[str, int] = {}
+        for lineup in lineups:
+            teams = lineup.dataframe[lineup.dataframe["player_type"].str.lower() == "batter"]["team_code"].value_counts()
+            for team, ct in teams.items():
+                if ct >= 3:
+                    stack_counts[team] = stack_counts.get(team, 0) + 1
+        team_stats["Your Exposure"] = team_stats["team_code"].map(
+            lambda t: f"{stack_counts.get(t, 0)}/{len(lineups)}"
+        )
+        with st.expander("Stack Leverage Ranking"):
+            st.dataframe(team_stats, use_container_width=True)
+
+    # Lineup ownership summary
+    with st.expander("Lineup Ownership Summary"):
+        avg_owns = []
+        for lineup in lineups:
+            own_col = pd.to_numeric(lineup.dataframe.get("proj_fd_ownership"), errors="coerce").fillna(0)
+            avg_owns.append(own_col.mean())
+        if avg_owns:
+            st.metric("Avg lineup ownership", f"{np.mean(avg_owns):.1%}")
+            st.bar_chart(pd.Series(avg_owns, name="Avg Ownership"))
+
+
 def _render_step_three() -> None:
     st.header("Step 3 · Configure & Optimize")
     workflow = _get_session()
@@ -2269,6 +2346,62 @@ def _render_step_three() -> None:
     if optimizer_df is None or optimizer_df.empty:
         st.info("Process a slate first (Step 1) to configure and run the optimizer.")
         return
+
+    # ── Contest Type Selector ───────────────────────────────────────
+    # Detect slate profile
+    _slate_profile = detect_slate_profile(optimizer_df)
+    workflow["slate_profile"] = _slate_profile
+
+    st.info(
+        f"Slate: **{_slate_profile.num_games} games** ({_slate_profile.slate_type.title()}) "
+        f"| {_slate_profile.num_batters} batters | {_slate_profile.num_pitchers} pitchers"
+    )
+
+    contest_options = ["Single Entry", "Small Field GPP", "Large Field GPP"]
+    # Auto-suggest from field size if available
+    contest_entries = st.number_input(
+        "Contest field size (entries)", min_value=1, max_value=100000,
+        value=int(workflow.get("contest_entries", 5000) or 5000), step=100,
+        help="Number of entries in your target contest. Used to auto-suggest contest type.",
+    )
+    workflow["contest_entries"] = contest_entries
+    if contest_entries == 1:
+        default_idx = 0
+    elif contest_entries < 500:
+        default_idx = 1
+    else:
+        default_idx = 2
+
+    contest_type = st.radio(
+        "Contest Type",
+        contest_options,
+        horizontal=True,
+        index=default_idx,
+        help="**Single Entry** — One lineup, max ceiling. "
+             "**Small Field GPP** — Under 500 entries, moderate leverage. "
+             "**Large Field GPP** — 1000+ entries, maximum leverage.",
+    )
+    workflow["leverage_strategy_mode"] = contest_type
+
+    # Build strategy summary
+    _strat_label = f"{contest_type} x {_slate_profile.slate_type.title()} Slate ({_slate_profile.num_games} games)"
+    st.caption(f"Strategy: {_strat_label}")
+
+    with st.expander("Override Settings (Advanced)"):
+        lev_ceiling = st.slider("Ceiling weight", 0.0, 0.6, 0.30, 0.05, key="lev_ceiling")
+        lev_own_pen = st.slider("Ownership penalty", 0.0, 1.0, 0.55, 0.05, key="lev_own_pen")
+        lev_boom = st.slider("Boom weight", 0.0, 0.30, 0.15, 0.05, key="lev_boom")
+        lev_stack = st.slider("Stack leverage bonus", 0.0, 1.0, 0.50, 0.05, key="lev_stack")
+        lev_chalk = st.slider("Chalk threshold (%)", 10.0, 40.0, 20.0, 1.0, key="lev_chalk") / 100.0
+        lev_floor = st.slider("Min viable projection %ile", 0.0, 0.60, 0.40, 0.05, key="lev_floor")
+        workflow["custom_leverage_config"] = LeverageConfig(
+            ceiling_weight=lev_ceiling,
+            ownership_penalty=lev_own_pen,
+            boom_weight=lev_boom,
+            stack_leverage_bonus=lev_stack,
+            chalk_threshold=lev_chalk,
+            min_viable_projection_pct=lev_floor,
+        )
 
     _render_optimizer_settings_guide()
 
@@ -2423,10 +2556,32 @@ def _render_step_three() -> None:
             f"Last lock/exclude request: locks={locks_info.get('locks')}, excludes={locks_info.get('excludes')}"
         )
 
+    # Build leverage config based on contest type + slate size
+    _strategy = workflow.get("leverage_strategy_mode", "Large Field GPP")
+    if _strategy == "Single Entry":
+        _leverage_cfg: Optional[LeverageConfig] = LeverageConfig.single_entry_preset()
+    elif _strategy == "Small Field GPP":
+        _leverage_cfg = LeverageConfig.small_field_gpp_preset()
+    else:
+        _leverage_cfg = LeverageConfig.large_field_gpp_preset()
+    # Apply custom overrides if user adjusted sliders
+    _custom = workflow.get("custom_leverage_config")
+    if _custom is not None:
+        _leverage_cfg.ceiling_weight = _custom.ceiling_weight
+        _leverage_cfg.ownership_penalty = _custom.ownership_penalty
+        _leverage_cfg.boom_weight = _custom.boom_weight
+        _leverage_cfg.stack_leverage_bonus = _custom.stack_leverage_bonus
+        _leverage_cfg.chalk_threshold = _custom.chalk_threshold
+        _leverage_cfg.min_viable_projection_pct = _custom.min_viable_projection_pct
+    # Apply slate-specific adjustments
+    _sp = workflow.get("slate_profile")
+    if _sp is not None:
+        _leverage_cfg = apply_slate_adjustments(_leverage_cfg, _sp)
+
     if st.button("Run Optimizer", type="primary"):
         try:
             with st.spinner("Generating lineups..."):
-                lineups, lineup_df = _run_solver(optimizer_df, config_state)
+                lineups, lineup_df = _run_solver(optimizer_df, config_state, leverage_config=_leverage_cfg)
                 workflow["lineups"] = lineups
                 workflow["lineups_df"] = lineup_df
                 workflow.pop("optimizer_lineups_backup", None)
@@ -2434,6 +2589,9 @@ def _render_step_three() -> None:
                 workflow["active_lineup_source"] = "optimizer"
                 _save_run_snapshot(lineup_df, config_state, int(config_state.get("num_lineups", 20) or 20))
             st.success(f"Generated {len(lineups)} lineups. Proceed to Step 4.")
+
+            # Show game environment table and leverage summary
+            _render_leverage_summary(optimizer_df, lineups)
         except Exception as exc:  # pylint: disable=broad-except
             st.error(f"Optimizer failed: {exc}")
 
@@ -2731,7 +2889,7 @@ A "stack" means putting multiple batters from the same team in a lineup. When hi
 | **4-4** | 4 batters from two different teams. Maximizes correlation but is a riskier, boom-or-bust structure. |
 | **3-3-2** | Two medium stacks plus a pair. More diversity across teams, slightly safer. |
 | **4-2-2** | One big stack plus two smaller pairs. Common balance play. |
-| **Auto** | No stacking requirement — optimizer picks freely. Good for cash games, not ideal for GPP. |
+| **Auto** | No stacking requirement — optimizer picks freely. In GPP mode, the system auto-selects a template based on slate size. |
 
 You can select **multiple templates** and set how many lineups use each. Example: 50 lineups on 4-3-1 and 50 on 3-3-2 gives you a mixed portfolio.
 
@@ -2822,11 +2980,11 @@ How the simulation ranks and selects your best lineups:
 |---|---|
 | **top_1pct_rate** | Large GPPs — picks lineups most likely to land in the top 1% (max score, winner mentality) |
 | **win_rate** | Head-to-head / very small contests — which lineup wins outright most often |
-| **cash_rate** | Cash games / 50-50s — which lineup finishes in the top half most often |
+| **cash_rate** | Min-cash rate — how often a lineup finishes in the money |
 | **expected_roi** | Balanced — maximizes expected return across all outcome scenarios |
 | **p99_score** | Pure ceiling — picks lineups with the highest 99th percentile possible score |
 
-For large GPPs, use **top_1pct_rate**. For cash games, use **cash_rate**.
+For large GPPs, use **top_1pct_rate**. For small fields, **win_rate** or **cash_rate** (min-cash frequency).
 
 ---
 
@@ -3529,8 +3687,8 @@ def _render_step_four() -> None:
     if preset_cols[0].button("GPP"):
         _apply_sim_preset(SimulationConfig.gpp_preset(), sim_state)
         st.rerun()
-    if preset_cols[1].button("Cash"):
-        _apply_sim_preset(SimulationConfig.cash_preset(), sim_state)
+    if preset_cols[1].button("Small Field"):
+        _apply_sim_preset(SimulationConfig.small_field_gpp_preset(), sim_state)
         st.rerun()
     if preset_cols[2].button("Single Entry"):
         _apply_sim_preset(SimulationConfig.single_entry_preset(), sim_state)
@@ -3778,7 +3936,8 @@ def _render_step_five() -> None:
                 st.error("Missing optimizer dataset in session state.")
             else:
                 with st.spinner("Re-running optimizer with locks/exclusions..."):
-                    lineups, lineup_df = _run_solver(optimizer_df, config_state, locks, excludes)
+                    _lev = _build_leverage_config_from_session(workflow)
+                    lineups, lineup_df = _run_solver(optimizer_df, config_state, locks, excludes, leverage_config=_lev)
                     workflow["lineups"] = lineups
                     workflow["lineups_df"] = lineup_df
                     workflow["lock_settings"] = {"locks": locks, "excludes": excludes}

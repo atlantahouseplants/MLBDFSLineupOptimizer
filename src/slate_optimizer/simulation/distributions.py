@@ -87,6 +87,7 @@ class PlayerDistribution:
 def fit_player_distributions(
     optimizer_df: pd.DataFrame,
     volatility_scale: float = 1.0,
+    gpp_mode: bool = False,
 ) -> Dict[str, PlayerDistribution]:
     """Fit fantasy score distributions for every player in the optimizer dataset."""
 
@@ -107,7 +108,7 @@ def fit_player_distributions(
             mu, sigma, shift = _fit_pitcher_normal(mean, floor, ceiling)
             dist_type: Literal["lognormal", "truncated_normal"] = "truncated_normal"
         else:
-            mu, sigma, shift = _fit_batter_lognormal(mean, floor, ceiling, salary)
+            mu, sigma, shift = _fit_batter_lognormal(mean, floor, ceiling, salary, gpp_mode=gpp_mode)
             player_type = "batter"
             dist_type = "lognormal"
 
@@ -128,13 +129,19 @@ def fit_player_distributions(
     return dists
 
 
-def _fit_batter_lognormal(mean: float, floor: float, ceiling: float, salary: int) -> tuple[float, float, float]:
+def _fit_batter_lognormal(
+    mean: float, floor: float, ceiling: float, salary: int, gpp_mode: bool = False,
+) -> tuple[float, float, float]:
     shift = max(0.0, float(floor) * 0.5)
     adj_mean = max(mean - shift, 0.1)
     adj_ceiling = max(ceiling - shift, adj_mean * 1.05)
     ratio = adj_ceiling / adj_mean
     salary = max(int(salary) if salary else 0, 1)
-    salary_factor = _clamp(4000.0 / salary, 0.7, 1.3)
+    if gpp_mode:
+        # GPP: wider distributions for cheap players (more boom/bust)
+        salary_factor = _clamp(3500.0 / salary, 0.8, 1.5)
+    else:
+        salary_factor = _clamp(4000.0 / salary, 0.7, 1.3)
     if ratio <= 1.05:
         sigma = 0.6 * salary_factor
     else:

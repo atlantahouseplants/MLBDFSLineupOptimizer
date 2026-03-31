@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
+from slate_optimizer.projection.game_environment import merge_game_environment_columns
+
 _TIME_PATTERN = re.compile(r"(\d{1,2}:\d{2}\s*[AP]M)", re.IGNORECASE)
 _DATE_PATTERN = re.compile(r"(\d{1,2}/\d{1,2})")
 _EASTERN_TZ = ZoneInfo("US/Eastern")
@@ -50,6 +52,10 @@ OPTIMIZER_COLUMNS = [
     "default_max_exposure",
     "player_leverage_score",
     "team_leverage_score",
+    "ownership_tier",
+    "game_leverage_score",
+    "environment_tier",
+    "team_gpp_leverage",
     "bpp_runs",
     "bpp_win_percent",
 ]
@@ -59,13 +65,24 @@ def _safe_numeric(series: pd.Series) -> pd.Series:
     return pd.to_numeric(series, errors="coerce")
 
 
+def _classify_ownership_tier(ownership: pd.Series) -> pd.Series:
+    """Classify players into ownership tiers: chalk / mid / leverage / deep."""
+    tiers = pd.Series("mid", index=ownership.index)
+    tiers = tiers.mask(ownership > 0.20, "chalk")
+    tiers = tiers.mask((ownership >= 0.03) & (ownership <= 0.08), "leverage")
+    tiers = tiers.mask(ownership < 0.03, "deep")
+    return tiers
+
+
 def _add_leverage_columns(df: pd.DataFrame) -> pd.DataFrame:
     if "proj_fd_ownership" not in df.columns:
         df["player_leverage_score"] = 0.0
         df["team_leverage_score"] = 0.0
+        df["ownership_tier"] = "mid"
         return df
     df["proj_fd_ownership"] = pd.to_numeric(df["proj_fd_ownership"], errors="coerce").fillna(0.0)
     df["player_leverage_score"] = df["proj_fd_mean"].rank(pct=True) - df["proj_fd_ownership"].rank(pct=True)
+    df["ownership_tier"] = _classify_ownership_tier(df["proj_fd_ownership"])
     team_ownership = df.groupby("team_code")["proj_fd_ownership"].mean().rename("team_avg_ownership")
     df = df.merge(team_ownership, on="team_code", how="left")
     run_rank = pd.to_numeric(df.get("bpp_runs"), errors="coerce").rank(pct=True)
@@ -214,6 +231,7 @@ def build_optimizer_dataset(
     dataset["pitcher_hand"] = dataset["pitcher_hand"].astype(str)
 
     dataset = _add_leverage_columns(dataset)
+    dataset = merge_game_environment_columns(dataset)
     dataset.sort_values(by=["player_type", "team_code", "proj_fd_mean"], ascending=[True, True, False], inplace=True)
     return dataset.reset_index(drop=True)
 
