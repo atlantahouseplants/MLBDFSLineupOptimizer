@@ -4,6 +4,13 @@ Unified Streamlit workflow for the MLB slate optimizer (Steps 1-4).
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path as _Path
+
+_src_dir = str(_Path(__file__).resolve().parents[1] / "src")
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+
 import io
 import json
 import tempfile

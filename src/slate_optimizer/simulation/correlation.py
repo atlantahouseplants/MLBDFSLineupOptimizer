@@ -70,13 +70,14 @@ def build_correlation_matrix(
     n = len(player_ids)
     matrix = np.eye(n, dtype=np.float64)
 
-    # Extract arrays for vectorized comparison
-    player_type = df["player_type"].values
-    stack_key = df["stack_key"].values
-    game_key = df["game_key"].values
-    team_code = df["team_code"].values
-    opponent_code = df["opponent_code"].values
-    stack_priority = df["stack_priority"].values
+    # Extract arrays for vectorized comparison (use object dtype to avoid
+    # pandas StringArray broadcasting issues on newer pandas versions)
+    player_type = df["player_type"].to_numpy(dtype=object)
+    stack_key = df["stack_key"].to_numpy(dtype=object)
+    game_key = df["game_key"].to_numpy(dtype=object)
+    team_code = df["team_code"].to_numpy(dtype=object)
+    opponent_code = df["opponent_code"].to_numpy(dtype=object)
+    stack_priority = df["stack_priority"].to_numpy(dtype=object)
     vegas_total = df["vegas_game_total"].values
     batting_order = df["batting_order_position"].to_numpy(dtype=np.float64, na_value=0.0)
     is_batter = player_type == "batter"
