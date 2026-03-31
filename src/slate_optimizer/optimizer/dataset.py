@@ -16,7 +16,7 @@ _TIME_PATTERN = re.compile(r"(\d{1,2}:\d{2}\s*[AP]M)", re.IGNORECASE)
 _DATE_PATTERN = re.compile(r"(\d{1,2}/\d{1,2})")
 try:
     _EASTERN_TZ = ZoneInfo("US/Eastern")
-except KeyError:
+except Exception:
     # Fallback for environments missing tzdata (e.g. Streamlit Cloud)
     _EASTERN_TZ = timezone(timedelta(hours=-4))
 

@@ -21,7 +21,13 @@ from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 import numpy as np
 import pandas as pd
 import streamlit as st
+from datetime import timezone, timedelta
 from zoneinfo import ZoneInfo
+
+try:
+    _EASTERN = _EASTERN
+except Exception:
+    _EASTERN = timezone(timedelta(hours=-4))
 
 from slate_optimizer.analysis import backtest
 from slate_optimizer.data.storage import SlateDatabase
@@ -1306,7 +1312,7 @@ def _game_status_dataframe(optimizer_df: Optional[pd.DataFrame]) -> pd.DataFrame
         return "Open"
     games["status"] = games["game_start_time"].apply(_status)
     games["minutes_to_lock"] = (games["game_start_time"] - now_utc).dt.total_seconds() / 60.0
-    games["local_start"] = games["game_start_time"].dt.tz_convert(ZoneInfo("US/Eastern")).dt.strftime("%I:%M %p")
+    games["local_start"] = games["game_start_time"].dt.tz_convert(_EASTERN).dt.strftime("%I:%M %p")
     return games.sort_values("game_start_time")
 
 
@@ -1391,7 +1397,7 @@ def _late_swap_candidates(lineup_df: pd.DataFrame, horizon_minutes: int = 90) ->
     risk_mask = soon_mask & (~confirmed)
     if not risk_mask.any():
         return pd.DataFrame()
-    local_times = times.dt.tz_convert(ZoneInfo("US/Eastern"))
+    local_times = times.dt.tz_convert(_EASTERN)
     result = lineup_df.loc[risk_mask, ["lineup_id", "full_name", "team_code", "proj_fd_mean", "salary"]].copy()
     result["game_start_time"] = times.loc[risk_mask]
     result["start_et"] = local_times.loc[risk_mask].dt.strftime("%I:%M %p")
