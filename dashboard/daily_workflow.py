@@ -245,6 +245,7 @@ def _get_sim_config_state() -> Dict:
         "min_stack_exposure": 0.0,
         "max_stack_exposure": 1.0,
         "use_stratified": False,
+        "num_portfolio_lineups": 150,
     }
     return st.session_state.setdefault(SIM_CONFIG_KEY, default_config)
 
@@ -281,6 +282,7 @@ def _build_simulation_config(state: Dict) -> SimulationConfig:
     config.correlation.pitcher_vs_opposing = float(state.get("pitcher_vs_opposing", config.correlation.pitcher_vs_opposing))
     config.correlation.copula_nu = int(state.get("copula_nu", config.correlation.copula_nu))
     config.use_stratified = bool(state.get("use_stratified", False))
+    config.num_candidates = int(state.get("num_portfolio_lineups", 150))
     return config
 
 
@@ -3603,6 +3605,14 @@ def _render_step_four() -> None:
             value=float(sim_state.get("teammate_corr", 0.25) or 0.25),
             step=0.01,
         )
+        sim_state["num_portfolio_lineups"] = st.number_input(
+            "Portfolio size (final lineups to select)",
+            min_value=1,
+            max_value=2000,
+            value=int(sim_state.get("num_portfolio_lineups", 150) or 150),
+            step=10,
+            help="How many lineups to select from your candidate pool after simulation. Should be LESS than the number generated in Step 3.",
+        )
     with col_right:
         sim_state["pitcher_vs_opposing"] = st.number_input(
             "Pitcher vs opposing hitters correlation",
@@ -3618,7 +3628,7 @@ def _render_step_four() -> None:
             value=int(sim_state.get("field_size", 1000) or 1000),
             step=500,
         )
-        metric_options = ["top_1pct_rate", "win_rate", "cash_rate", "expected_roi", "p99_score"]
+        metric_options = ["top_1pct_rate", "win_rate", "leverage_adjusted_top1", "cash_rate", "expected_roi", "p99_score"]
         current_metric = sim_state.get("selection_metric", "top_1pct_rate")
         metric_index = metric_options.index(current_metric) if current_metric in metric_options else 0
         sim_state["selection_metric"] = st.selectbox(
