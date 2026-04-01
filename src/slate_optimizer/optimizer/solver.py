@@ -130,6 +130,13 @@ def _compute_gpp_score(
         boom_pct = (ceiling - mean) / mean
         score += leverage_config.boom_weight * boom_pct * mean
 
+    # Bust rate factor: high-bust players are under-owned (the field avoids them).
+    # Reward players with high upside efficiency (ceiling per unit of bust risk).
+    bust_rate = float(pool.loc[idx, "bust_rate"]) if "bust_rate" in pool.columns else 0.15
+    if bust_rate > 0 and ceiling > 0:
+        upside_efficiency = ceiling / (bust_rate * 100)
+        score += leverage_config.boom_weight * min(upside_efficiency * 0.02, 0.5)
+
     # Pitcher fade bonus: reward non-chalk pitchers
     if leverage_config.pitcher_fade_bonus > 0 and pitcher_top2_avg_own > 0:
         player_type = str(pool.loc[idx, "player_type"]).lower() if "player_type" in pool.columns else ""

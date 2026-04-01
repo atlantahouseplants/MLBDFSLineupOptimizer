@@ -410,6 +410,8 @@ def _persist_slate_files(
     ownership_files,
     projection_files,
     lineup_paste: str,
+    bpp_dfs_batter_file=None,
+    bpp_dfs_pitcher_file=None,
 ) -> None:
     """Save all uploaded slate files to UPLOAD_CACHE_DIR and write a manifest."""
     import datetime, json, shutil
@@ -449,6 +451,10 @@ def _persist_slate_files(
         manifest["handedness"] = _cache(handedness_file)
     if recent_file:
         manifest["recent_stats"] = _cache(recent_file)
+    if bpp_dfs_batter_file:
+        manifest["bpp_dfs_batters"] = _cache(bpp_dfs_batter_file)
+    if bpp_dfs_pitcher_file:
+        manifest["bpp_dfs_pitchers"] = _cache(bpp_dfs_pitcher_file)
     for f in (ownership_files or []):
         manifest["ownership_files"].append(_cache(f))
     for f in (projection_files or []):
@@ -479,6 +485,8 @@ def _load_slate_cache() -> Optional[Dict]:
         + ([manifest["batting_orders"]] if manifest.get("batting_orders") else [])
         + ([manifest["handedness"]] if manifest.get("handedness") else [])
         + ([manifest["recent_stats"]] if manifest.get("recent_stats") else [])
+        + ([manifest["bpp_dfs_batters"]] if manifest.get("bpp_dfs_batters") else [])
+        + ([manifest["bpp_dfs_pitchers"]] if manifest.get("bpp_dfs_pitchers") else [])
         + manifest.get("ownership_files", [])
         + manifest.get("projection_files", [])
     )
@@ -504,6 +512,8 @@ def _proxies_from_manifest(manifest: Dict) -> Dict:
         "ownership_files": [_FileProxy(UPLOAD_CACHE_DIR / n) for n in manifest.get("ownership_files", [])],
         "projection_files": [_FileProxy(UPLOAD_CACHE_DIR / n) for n in manifest.get("projection_files", [])],
         "lineup_paste": manifest.get("lineup_paste", ""),
+        "bpp_dfs_batter_file": _p(manifest.get("bpp_dfs_batters")),
+        "bpp_dfs_pitcher_file": _p(manifest.get("bpp_dfs_pitchers")),
     }
 
 
@@ -732,6 +742,8 @@ def _process_slate(
     recent_file,
     ownership_files,
     projection_files,
+    bpp_dfs_batter_file=None,
+    bpp_dfs_pitcher_file=None,
     lineup_paste_text: str = "",
     projection_preset: Optional[str] = None,
     projection_weights_input: Optional[str] = None,
@@ -998,6 +1010,24 @@ def _process_slate(
             weights=projection_weights,
             baseline_weight=projection_baseline_weight,
         )
+
+        # Merge BPP DFS Optimizer data (Points, Bust, Median, Upside)
+        from slate_optimizer.ingestion.bpp_dfs_optimizer import load_bpp_dfs_optimizer, merge_bpp_dfs_projections
+
+        bpp_dfs_batter_path = _save_uploaded_file(bpp_dfs_batter_file, temp_dir) if bpp_dfs_batter_file else None
+        bpp_dfs_pitcher_path = _save_uploaded_file(bpp_dfs_pitcher_file, temp_dir) if bpp_dfs_pitcher_file else None
+
+        if bpp_dfs_batter_path or bpp_dfs_pitcher_path:
+            bpp_dfs_df = load_bpp_dfs_optimizer(
+                batter_path=bpp_dfs_batter_path,
+                pitcher_path=bpp_dfs_pitcher_path,
+            )
+            if not bpp_dfs_df.empty:
+                projections = merge_bpp_dfs_projections(projections, bpp_dfs_df)
+                bpp_dfs_matched = int((projections.get("bpp_dfs_points", 0) > 0).sum()) if "bpp_dfs_points" in projections.columns else 0
+                optional_messages.append(
+                    f"BPP DFS Optimizer: matched {bpp_dfs_matched} players with simulation-grade projections (Points, Bust%, Upside)"
+                )
 
         ownership_paths_list = [Path(p) for p in ownership_paths]
         ownership_result = compute_ownership_series(
@@ -1948,6 +1978,8 @@ def _render_step_one() -> None:
                             proxies["recent_file"],
                             proxies["ownership_files"],
                             proxies["projection_files"],
+                            bpp_dfs_batter_file=proxies.get("bpp_dfs_batter_file"),
+                            bpp_dfs_pitcher_file=proxies.get("bpp_dfs_pitcher_file"),
                             lineup_paste_text=proxies["lineup_paste"],
                             projection_preset=config_state.get("projection_preset"),
                             projection_weights_input=config_state.get("projection_weights_input"),
@@ -2002,6 +2034,18 @@ def _render_step_one() -> None:
         "Recent stats CSV (optional)",
         type=["csv"],
         key="recent_stats",
+    )
+    bpp_dfs_batter_file = st.file_uploader(
+        "BPP DFS Optimizer — Batters (optional but recommended)",
+        type=["xlsx"],
+        key="bpp_dfs_batter",
+        help="The 'Ballpark DFS Optimizer' export with Points, Bust%, Median, Upside for batters. This gives much more accurate projections than derived estimates.",
+    )
+    bpp_dfs_pitcher_file = st.file_uploader(
+        "BPP DFS Optimizer — Pitchers (optional but recommended)",
+        type=["xlsx"],
+        key="bpp_dfs_pitcher",
+        help="The 'Ballpark DFS Optimizer' export for pitchers.",
     )
 
     ownership_files = st.file_uploader(
@@ -2143,6 +2187,8 @@ def _render_step_one() -> None:
                     recent_stats_file,
                     ownership_files or [],
                     projection_files or [],
+                    bpp_dfs_batter_file=bpp_dfs_batter_file,
+                    bpp_dfs_pitcher_file=bpp_dfs_pitcher_file,
                     lineup_paste_text=lineup_paste or "",
                     projection_preset=projection_preset,
                     projection_weights_input=projection_weights_input,
@@ -2169,6 +2215,8 @@ def _render_step_one() -> None:
                         ownership_files or [],
                         projection_files or [],
                         lineup_paste or "",
+                        bpp_dfs_batter_file=bpp_dfs_batter_file,
+                        bpp_dfs_pitcher_file=bpp_dfs_pitcher_file,
                     )
             st.success("Slate processed and saved. Next time, use **Re-use saved slate** to skip re-uploading.")
         except Exception as exc:  # pylint: disable=broad-except

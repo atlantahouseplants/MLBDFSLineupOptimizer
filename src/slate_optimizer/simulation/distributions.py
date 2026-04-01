@@ -36,6 +36,7 @@ class PlayerDistribution:
     proj_floor: float
     proj_ceiling: float
     salary: int
+    bust_rate: float = 0.15
 
     def _lognormal(self):
         return lognorm(s=self.sigma, scale=math.exp(self.mu), loc=self.shift)
@@ -103,6 +104,7 @@ def fit_player_distributions(
         floor = float(record.get("proj_fd_floor", mean * 0.8) or mean * 0.8)
         ceiling = float(record.get("proj_fd_ceiling", mean * 1.2) or mean * 1.2)
         salary = int(record.get("salary", 0) or 0)
+        bust_rate = float(record.get("bust_rate", 0.15) or 0.15)
 
         if player_type == "pitcher":
             mu, sigma, shift = _fit_pitcher_normal(mean, floor, ceiling)
@@ -125,6 +127,7 @@ def fit_player_distributions(
             proj_floor=floor,
             proj_ceiling=ceiling,
             salary=salary,
+            bust_rate=bust_rate,
         )
     return dists
 
