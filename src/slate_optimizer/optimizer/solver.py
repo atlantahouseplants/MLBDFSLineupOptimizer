@@ -387,13 +387,13 @@ def _select_auto_stack_template(
     # ── Medium slate (default) ───────────────────────────────────────
     if prime_count >= 2:
         return (4, 4)
-    if prime_count == 1 and good_count >= 1:
+    if prime_count >= 1:
         return (4, 3, 1)
-    if prime_count == 1:
-        return (4, 2, 2)
     if good_count >= 2:
-        return (3, 3, 2)
-    return (3, 3, 2)
+        return (4, 3, 1)  # 4-batter primary stack is always better in baseball
+    if good_count >= 1:
+        return (4, 2, 2)
+    return (3, 3, 2)  # absolute fallback only
 
 
 def _build_large_slate_rotation(num_lineups: int) -> List[Tuple[int, ...]]:
@@ -402,8 +402,8 @@ def _build_large_slate_rotation(num_lineups: int) -> List[Tuple[int, ...]]:
     secondary_templates = [(3, 3, 2), (4, 2, 1, 1)]
     wild_templates = [(3, 2, 2, 1), (3, 2, 1, 1, 1)]
 
-    prime_count = int(num_lineups * 0.50)
-    secondary_count = int(num_lineups * 0.35)
+    prime_count = int(num_lineups * 0.60)
+    secondary_count = int(num_lineups * 0.30)
     wild_count = num_lineups - prime_count - secondary_count
 
     rotation: List[Tuple[int, ...]] = []
@@ -515,6 +515,24 @@ def generate_lineups(
     if pitcher_mask_filter.any():
         df = df[~pitcher_mask_filter].reset_index(drop=True)
 
+    # ── Pitcher must be a confirmed starter when lineup data is available ──
+    if "is_confirmed_lineup" in df.columns:
+        # For pitchers, require is_confirmed_lineup=True
+        # This prevents relievers from being selected even if they pass the salary floor
+        unconfirmed_pitcher = (
+            (df["player_type"].str.lower() == "pitcher")
+            & (~df["is_confirmed_lineup"].astype(bool))
+        )
+        if unconfirmed_pitcher.any() and df["is_confirmed_lineup"].astype(bool).any():
+            # Only filter if we have SOME confirmed data (avoid filtering everything)
+            confirmed_pitchers = df[
+                (df["player_type"].str.lower() == "pitcher")
+                & (df["is_confirmed_lineup"].astype(bool))
+            ]
+            if len(confirmed_pitchers) >= 2:
+                # We have enough confirmed pitchers — remove unconfirmed ones
+                df = df[~unconfirmed_pitcher].reset_index(drop=True)
+
     usage_limits = _max_usage(df, num_lineups)
     usage_counts: Dict[str, int] = {pid: 0 for pid in usage_limits}
     previous_lineups: List[List[str]] = []
@@ -599,17 +617,37 @@ def generate_lineups(
 
         status = prob.solve(PULP_CBC_CMD(msg=False))
 
-        # Fallback: if stacks made it infeasible, solve without stacks
+        # Fallback: if stacks made it infeasible, try a simpler stack first
         if status != LpStatusOptimal and used_stacks:
+            # Try a relaxed 3-3-2 before giving up on stacks entirely
             warnings.warn(
-                f"Lineup {lineup_index}: stack template {current_template} infeasible, solving without stacks.",
+                f"Lineup {lineup_index}: template {current_template} infeasible, trying 3-3-2.",
                 stacklevel=2,
             )
             prob, decision_vars = _build_base_lp(
-                pool, lineup_index, salary_cap, max_lineup_ownership, previous_lineups, tag="_ns",
+                pool, lineup_index, salary_cap, max_lineup_ownership, previous_lineups, tag="_relax",
                 leverage_config=leverage_config,
             )
+            relaxed_info = _add_stack_constraints(
+                prob, pool, decision_vars, (3, 3, 2),
+                min_game_total=None,  # Drop game total filter for fallback
+            )
+            if relaxed_info:
+                if _gpp_mode and leverage_config is not None:
+                    _add_stack_leverage_bonus(prob, pool, relaxed_info, leverage_config.stack_leverage_bonus)
             status = prob.solve(PULP_CBC_CMD(msg=False))
+
+            # Only if 3-3-2 also fails, go truly unconstrained
+            if status != LpStatusOptimal:
+                warnings.warn(
+                    f"Lineup {lineup_index}: all stacks infeasible, solving without stacks.",
+                    stacklevel=2,
+                )
+                prob, decision_vars = _build_base_lp(
+                    pool, lineup_index, salary_cap, max_lineup_ownership, previous_lineups, tag="_ns",
+                    leverage_config=leverage_config,
+                )
+                status = prob.solve(PULP_CBC_CMD(msg=False))
 
         if status != LpStatusOptimal:
             break

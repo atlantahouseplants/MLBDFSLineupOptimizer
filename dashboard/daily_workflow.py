@@ -936,7 +936,7 @@ def _process_slate(
 
             # Pool is non-viable if: too few players, missing positions, OR low match rate
             pool_too_small = (
-                len(combined) < 40
+                len(combined) < 15
                 or bool(_missing)
                 or match_rate < 0.5
             )
@@ -945,8 +945,8 @@ def _process_slate(
                 reasons = []
                 if bool(_missing):
                     reasons.append(f"missing positions: {', '.join(sorted(_missing))}")
-                if len(combined) < 40:
-                    reasons.append(f"only {len(combined)} players (need 40+)")
+                if len(combined) < 15:
+                    reasons.append(f"only {len(combined)} players (need 15+)")
                 if match_rate < 0.5:
                     reasons.append(f"low match rate: {n_matched}/{n_pasted} ({match_rate:.0%})")
                 reason_str = "; ".join(reasons)
@@ -960,12 +960,20 @@ def _process_slate(
                         f"not a previous day's file."
                     )
 
-                optional_messages.append(
-                    f"WARNING: Confirmed starters pool is not viable ({reason_str}). "
-                    f"Falling back to full player pool ({before_count} players). "
-                    f"Check that your lineup paste matches the FanDuel slate."
-                )
-                combined = full_pool_backup.reset_index(drop=True)
+                # Only fall back if positions are literally missing or match rate is catastrophic
+                if bool(_missing) or len(combined) < 10:
+                    # Genuine problem — restore full pool but warn loudly
+                    combined = full_pool_backup.reset_index(drop=True)
+                    optional_messages.append(
+                        f"WARNING: Lineup paste matching failed ({reason_str}). Using full player pool. "
+                        f"Check that pasted names match the FanDuel player list."
+                    )
+                else:
+                    # Pool is small but usable — keep the filtered pool, just warn
+                    optional_messages.append(
+                        f"Note: Only {len(combined)} players matched from paste. "
+                        f"Proceeding with confirmed starters only."
+                    )
 
             elif match_rate < 0.75:
                 # Moderate match rate — warn but still use filtered pool
@@ -3628,7 +3636,7 @@ def _render_step_four() -> None:
             value=int(sim_state.get("field_size", 1000) or 1000),
             step=500,
         )
-        metric_options = ["top_1pct_rate", "win_rate", "leverage_adjusted_top1", "cash_rate", "expected_roi", "p99_score"]
+        metric_options = ["top_1pct_rate", "leverage_adjusted_top1", "win_rate", "expected_roi", "p99_score"]
         current_metric = sim_state.get("selection_metric", "top_1pct_rate")
         metric_index = metric_options.index(current_metric) if current_metric in metric_options else 0
         sim_state["selection_metric"] = st.selectbox(
