@@ -52,8 +52,15 @@ def load_bpp_dfs_optimizer(
         if not path.exists():
             continue
 
-        # Read with header on row 1 (row 0 is a title row)
+        # Read with header on row 1 (row 0 is a title row in BPP DFS Optimizer)
         df = pd.read_excel(path, header=1)
+
+        # Auto-detect: if "Players" column is missing, try header=0
+        if "Players" not in df.columns:
+            df = pd.read_excel(path, header=0)
+        if "Players" not in df.columns:
+            # Not a BPP DFS Optimizer file — skip silently
+            continue
 
         # Extract batting order from player name (e.g. "F. Lindor 1" -> order=1)
         raw_names = df["Players"].astype(str)

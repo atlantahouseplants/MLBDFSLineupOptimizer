@@ -770,6 +770,33 @@ def _process_slate(
         bpp_dir.mkdir(exist_ok=True)
         _write_multiple(bpp_files, bpp_dir)
 
+        # Auto-detect DFS Optimizer files mixed in with regular BPP uploads
+        # DFS Optimizer files have a "Players" column at header row 1
+        _auto_dfs_batter = None
+        _auto_dfs_pitcher = None
+        _dfs_dir = temp_dir / "bpp_dfs"
+        _dfs_dir.mkdir(exist_ok=True)
+        for bpp_file in sorted(bpp_dir.glob("*.xlsx")):
+            try:
+                _peek = pd.read_excel(bpp_file, header=1, nrows=2)
+                if "Players" in _peek.columns and "Points" in _peek.columns:
+                    # This is a DFS Optimizer file, not a regular BPP file
+                    _dest = _dfs_dir / bpp_file.name
+                    bpp_file.rename(_dest)  # Move out of regular BPP dir
+                    _pt_col = _peek.get("PlayerType", pd.Series(dtype=str))
+                    _types = set(_pt_col.astype(str).str.strip().str.lower())
+                    if "p" in _types:
+                        _auto_dfs_pitcher = _dest
+                    else:
+                        _auto_dfs_batter = _dest
+            except Exception:
+                pass
+        # Use auto-detected DFS files if user didn't upload them explicitly
+        if bpp_dfs_batter_file is None and _auto_dfs_batter:
+            bpp_dfs_batter_file = _auto_dfs_batter
+        if bpp_dfs_pitcher_file is None and _auto_dfs_pitcher:
+            bpp_dfs_pitcher_file = _auto_dfs_pitcher
+
         vegas_path = _save_uploaded_file(vegas_file, temp_dir) if vegas_file else None
         # Handle batting orders: paste text takes priority over CSV upload
         batting_path = None
@@ -1014,8 +1041,15 @@ def _process_slate(
         # Merge BPP DFS Optimizer data (Points, Bust, Median, Upside)
         from slate_optimizer.ingestion.bpp_dfs_optimizer import load_bpp_dfs_optimizer, merge_bpp_dfs_projections
 
-        bpp_dfs_batter_path = _save_uploaded_file(bpp_dfs_batter_file, temp_dir) if bpp_dfs_batter_file else None
-        bpp_dfs_pitcher_path = _save_uploaded_file(bpp_dfs_pitcher_file, temp_dir) if bpp_dfs_pitcher_file else None
+        # Handle both uploaded file objects and Path objects (from auto-detection)
+        if bpp_dfs_batter_file and isinstance(bpp_dfs_batter_file, Path):
+            bpp_dfs_batter_path = bpp_dfs_batter_file
+        else:
+            bpp_dfs_batter_path = _save_uploaded_file(bpp_dfs_batter_file, temp_dir) if bpp_dfs_batter_file else None
+        if bpp_dfs_pitcher_file and isinstance(bpp_dfs_pitcher_file, Path):
+            bpp_dfs_pitcher_path = bpp_dfs_pitcher_file
+        else:
+            bpp_dfs_pitcher_path = _save_uploaded_file(bpp_dfs_pitcher_file, temp_dir) if bpp_dfs_pitcher_file else None
 
         if bpp_dfs_batter_path or bpp_dfs_pitcher_path:
             bpp_dfs_df = load_bpp_dfs_optimizer(
