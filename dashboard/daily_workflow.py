@@ -322,9 +322,11 @@ def _run_simulation_stack(
         entry_fee=sim_config.entry_fee,
         payout_structure=sim_config.payout_structure,
     )
-    contest_df = contest_result.to_dataframe().sort_values(
-        sim_config.selection_metric, ascending=False
-    )
+    contest_df = contest_result.to_dataframe()
+    _sort_metric = sim_config.selection_metric
+    if _sort_metric not in contest_df.columns:
+        _sort_metric = "top_1pct_rate"  # fallback for virtual metrics like leverage_adjusted_top1
+    contest_df = contest_df.sort_values(_sort_metric, ascending=False)
     # Build pitcher ID set for position-aware exposure limits
     pitcher_ids = set(
         optimizer_df.loc[
