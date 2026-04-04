@@ -632,11 +632,18 @@ def generate_lineups(
                     for bidx in team_batter_idx:
                         player_own = float(pool.loc[bidx, "proj_fd_ownership"])
                         if player_own > leverage_config.chalk_threshold:
+                            stack_player_var = LpVariable(
+                                f"stack_chalk_{lineup_index}_{team_code}_{bidx}",
+                                cat=LpBinary,
+                            )
+                            # Linearize AND(player selected, team assigned to stack slot)
+                            prob += stack_player_var <= decision_vars[bidx]
+                            prob += stack_player_var <= assign_var
+                            prob += stack_player_var >= decision_vars[bidx] + assign_var - 1
                             prob += (
                                 -leverage_config.within_stack_chalk_penalty
                                 * player_own
-                                * decision_vars[bidx]
-                                * assign_var
+                                * stack_player_var
                             )
 
         # Bring-back constraints (only when stacks applied)
