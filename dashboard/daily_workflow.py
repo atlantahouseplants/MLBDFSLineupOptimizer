@@ -1694,18 +1694,22 @@ def _run_solver(
     salary_cap_value = optimizer_config.salary_cap or 35000
 
     extra_lineups = num_lineups + (len(locked_players) * 2)
-    lineups = generate_lineups(
-        df,
-        num_lineups=extra_lineups,
-        salary_cap=salary_cap_value,
-        stack_template=stack_template,
-        stack_rotation=stack_rotation,
-        max_lineup_ownership=max_lineup_ownership,
-        bring_back_enabled=bring_back_enabled,
-        bring_back_count=bring_back_count,
-        min_game_total_for_stacks=min_game_total,
-        leverage_config=leverage_config,
-    )
+    try:
+        lineups = generate_lineups(
+            df,
+            num_lineups=extra_lineups,
+            salary_cap=salary_cap_value,
+            stack_template=stack_template,
+            stack_rotation=stack_rotation,
+            max_lineup_ownership=max_lineup_ownership,
+            bring_back_enabled=bring_back_enabled,
+            bring_back_count=bring_back_count,
+            min_game_total_for_stacks=min_game_total,
+            leverage_config=leverage_config,
+        )
+    except ValueError as exc:
+        st.error(f"Optimizer failed: {exc}")
+        return [], pd.DataFrame()
 
     if not lineups:
         n_players = len(df)

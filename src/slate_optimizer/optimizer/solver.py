@@ -95,6 +95,34 @@ def _max_usage(df: pd.DataFrame, num_lineups: int) -> Dict[str, int]:
     return usage
 
 
+def _minimum_possible_salary(pool: pd.DataFrame) -> Optional[int]:
+    """Return the absolute cheapest FanDuel lineup cost for the current pool.
+
+    If even the cheapest combination of one pitcher + eight hitters exceeds the
+    salary cap, the slate is impossible (usually because the FanDuel CSV was
+    filtered down to only expensive starters or the wrong salary column was
+    ingested).
+    """
+
+    player_type = pool.get("player_type")
+    salary = pd.to_numeric(pool.get("salary"), errors="coerce")
+    if player_type is None or salary.isna().all():
+        return None
+
+    is_pitcher = player_type.astype(str).str.lower() == "pitcher"
+    pitchers = salary[is_pitcher].dropna()
+    hitters = salary[~is_pitcher].dropna()
+    if pitchers.empty or len(hitters) < TOTAL_PLAYERS - 1:
+        return None
+
+    cheapest_pitcher = int(pitchers.min())
+    cheapest_hitters = hitters.nsmallest(TOTAL_PLAYERS - 1)
+    return int(cheapest_pitcher + cheapest_hitters.sum())
+
+
+
+
+
 # ──────────────────────────────────────────────────────────────────────
 # GPP scoring helper
 # ──────────────────────────────────────────────────────────────────────
@@ -512,6 +540,16 @@ def generate_lineups(
             boom_mask = df["proj_fd_ceiling"] >= df["proj_fd_ceiling"].quantile(0.6)
             viable_mask = viable_mask | boom_mask
         df = df[viable_mask].reset_index(drop=True)
+    # -- Salary feasibility checks ------------------------------------
+    min_possible_salary = _minimum_possible_salary(df)
+    if min_possible_salary is not None and min_possible_salary > salary_cap:
+        raise ValueError(
+            "Cheapest possible lineup exceeds salary cap. "
+            f"Min salary {min_possible_salary:,} vs cap {salary_cap:,}. "
+            "Re-check the FanDuel CSV and confirmed-lineup filters to make sure "
+            "punt bats and minimum-salary pitchers are still in the pool."
+        )
+
 
     # ── Pitcher salary floor: exclude relievers from pitcher pool ────
     # On FanDuel, starting pitchers are generally $6,500+. Relievers at

@@ -176,18 +176,22 @@ def main() -> None:
         bring_back_count = args.bring_back_count
     min_game_total = config.min_game_total_for_stacks if config.min_game_total_for_stacks is not None else args.min_game_total
 
-    lineups = generate_lineups(
-        df,
-        num_lineups=args.num_lineups,
-        salary_cap=salary_cap,
-        min_stack_size=max(0, min_stack_size),
-        stack_player_types=(config.stack_player_types if config.stack_player_types else ("batter",)),
-        stack_templates=stack_templates,
-        max_lineup_ownership=max_lineup_ownership,
-        bring_back_enabled=bring_back_enabled,
-        bring_back_count=bring_back_count,
-        min_game_total_for_stacks=min_game_total,
-    )
+    try:
+        lineups = generate_lineups(
+            df,
+            num_lineups=args.num_lineups,
+            salary_cap=salary_cap,
+            min_stack_size=max(0, min_stack_size),
+            stack_player_types=(config.stack_player_types if config.stack_player_types else ("batter",)),
+            stack_templates=stack_templates,
+            max_lineup_ownership=max_lineup_ownership,
+            bring_back_enabled=bring_back_enabled,
+            bring_back_count=bring_back_count,
+            min_game_total_for_stacks=min_game_total,
+        )
+    except ValueError as exc:
+        print(f"Optimizer failed: {exc}")
+        raise SystemExit(1)
 
     if not lineups:
         print("No feasible lineups generated. Check constraints or dataset.")

@@ -413,18 +413,22 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         if vegas_lines is not None:
             vegas_lines.games.to_csv(output_dir / f"{tag}_vegas_lines.csv", index=False)
 
-    lineups = generate_lineups(
-        optimizer_df,
-        num_lineups=args.num_lineups,
-        salary_cap=salary_cap,
-        min_stack_size=max(0, min_stack_size),
-        stack_player_types=(config.stack_player_types if config.stack_player_types else ("batter",)),
-        stack_templates=stack_templates,
-        max_lineup_ownership=max_lineup_ownership,
-        bring_back_enabled=bring_back_enabled,
-        bring_back_count=bring_back_count,
-        min_game_total_for_stacks=min_game_total,
-    )
+    try:
+        lineups = generate_lineups(
+            optimizer_df,
+            num_lineups=args.num_lineups,
+            salary_cap=salary_cap,
+            min_stack_size=max(0, min_stack_size),
+            stack_player_types=(config.stack_player_types if config.stack_player_types else ("batter",)),
+            stack_templates=stack_templates,
+            max_lineup_ownership=max_lineup_ownership,
+            bring_back_enabled=bring_back_enabled,
+            bring_back_count=bring_back_count,
+            min_game_total_for_stacks=min_game_total,
+        )
+    except ValueError as exc:
+        print(f"Optimizer failed: {exc}")
+        return {"tag": tag, "output_dir": output_dir, "optimizer_df": optimizer_df, "lineups": [], "lineup_df": pd.DataFrame(), "salary_cap": salary_cap, "lineups_path": None, "upload_path": None}
 
     if not lineups:
         print("No feasible lineups generated.")
