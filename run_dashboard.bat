@@ -42,7 +42,7 @@ echo   Press Ctrl+C to stop
 echo ==========================================
 echo.
 
-streamlit run dashboard/app.py ^
+python -m streamlit run dashboard/app.py ^
     --server.headless false ^
     --browser.gatherUsageStats false ^
     --server.port 8501
