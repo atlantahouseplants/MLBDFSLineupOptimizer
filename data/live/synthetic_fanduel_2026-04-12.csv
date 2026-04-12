@@ -1,0 +1,301 @@
+Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Probable Pitcher,Batting Order,Roster Position
+SYN-605137,C/1B,Josh,Josh Bell,Bell,9.65,0,3100,MIN@TOR,MIN,TOR,,,0,,5,C/1B
+SYN-621439,C/1B,Byron,Byron Buxton,Buxton,12.29,0,3300,MIN@TOR,MIN,TOR,,,0,,1,C/1B
+SYN-623168,SS,Tyler,Tyler Heineman,Heineman,6.13,0,3000,TOR@MIN,TOR,MIN,,,0,,9,SS
+SYN-656484,3B,Tristan,Tristan Gray,Gray,7.67,0,3000,MIN@TOR,MIN,TOR,,,0,,9,3B
+SYN-660821,3B,Jesus,Jesus Sanchez,Sanchez,9.4,0,3100,TOR@MIN,TOR,MIN,,,0,,4,3B
+SYN-662139,2B,Daulton,Daulton Varsho,Varsho,10.03,0,3200,TOR@MIN,TOR,MIN,,,0,,2,2B
+SYN-663616,C/1B,Trevor,Trevor Larnach,Larnach,9.98,0,3100,MIN@TOR,MIN,TOR,,,0,,2,C/1B
+SYN-664770,C/1B,Nathan,Nathan Lukes,Lukes,9.01,0,3100,TOR@MIN,TOR,MIN,,,0,,1,C/1B
+SYN-665019,OF,Kody,Kody Clemens,Clemens,9.96,0,3100,MIN@TOR,MIN,TOR,,,0,,7,OF
+SYN-665489,C/1B,Vladimir,Vladimir Guerrero Jr.,Guerrero Jr.,9.68,0,3100,TOR@MIN,TOR,MIN,,,0,,3,C/1B
+SYN-665926,C/1B,Andres,Andres Gimenez,Gimenez,8.5,0,3000,TOR@MIN,TOR,MIN,,,0,,7,C/1B
+SYN-670242,C/1B,Matt,Matt Wallner,Wallner,10.51,0,3200,MIN@TOR,MIN,TOR,,,0,,4,C/1B
+SYN-672960,3B,Kazuma,Kazuma Okamoto,Okamoto,7.64,0,3000,TOR@MIN,TOR,MIN,,,0,,5,3B
+SYN-676391,3B,Ernie,Ernie Clement,Clement,8.26,0,3000,TOR@MIN,TOR,MIN,,,0,,6,3B
+SYN-676914,C/1B,Davis,Davis Schneider,Schneider,7.32,0,3000,TOR@MIN,TOR,MIN,,,0,,8,C/1B
+SYN-680777,3B,Ryan,Ryan Jeffers,Jeffers,8.49,0,3000,MIN@TOR,MIN,TOR,,,0,,6,3B
+SYN-686797,OF,Brooks,Brooks Lee,Lee,8.39,0,3000,MIN@TOR,MIN,TOR,,,0,,8,OF
+SYN-807712,3B,Luke,Luke Keaschall,Keaschall,10.81,0,3200,MIN@TOR,MIN,TOR,,,0,,3,3B
+SYN-519317,OF,Giancarlo,Giancarlo Stanton,Stanton,9.17,0,3100,NYY@TB ,NYY,TB ,,,0,,5,OF
+SYN-592450,SS,Aaron,Aaron Judge,Judge,13.54,0,3400,NYY@TB ,NYY,TB ,,,0,,2,SS
+SYN-641355,C/1B,Cody,Cody Bellinger,Bellinger,10.21,0,3200,NYY@TB ,NYY,TB ,,,0,,3,C/1B
+SYN-641584,2B,Jake,Jake Fraley,Fraley,6.81,0,3000,TB @NYY,TB ,NYY,,,0,,7,2B
+SYN-641857,OF,Ryan,Ryan McMahon,McMahon,7.64,0,3000,NYY@TB ,NYY,TB ,,,0,,8,OF
+SYN-650490,OF,Yandy,Yandy Diaz,Diaz,7.71,0,3000,TB @NYY,TB ,NYY,,,0,,4,OF
+SYN-656775,SS,Cedric,Cedric Mullins,Mullins,8.12,0,3000,TB @NYY,TB ,NYY,,,0,,5,SS
+SYN-663743,2B,Nick,Nick Fortes,Fortes,6.46,0,3000,TB @NYY,TB ,NYY,,,0,,6,2B
+SYN-663757,3B,Trent,Trent Grisham,Grisham,10.77,0,3200,NYY@TB ,NYY,TB ,,,0,,1,3B
+SYN-665862,OF,Jazz,Jazz Chisholm,Chisholm,10.58,0,3200,NYY@TB ,NYY,TB ,,,0,,6,OF
+SYN-666018,C/1B,Jonathan,Jonathan Aranda,Aranda,8.79,0,3100,TB @NYY,TB ,NYY,,,0,,3,C/1B
+SYN-669224,C/1B,Austin,Austin Wells,Wells,8.25,0,3000,NYY@TB ,NYY,TB ,,,0,,9,C/1B
+SYN-670764,OF,Taylor,Taylor Walls,Walls,6.98,0,3000,TB @NYY,TB ,NYY,,,0,,9,OF
+SYN-676609,C/1B,Jose,Jose Caballero,Caballero,8.79,0,3100,NYY@TB ,NYY,TB ,,,0,,7,C/1B
+SYN-691406,OF,Junior,Junior Caminero,Caminero,9.18,0,3100,TB @NYY,TB ,NYY,,,0,,2,OF
+SYN-700250,OF,Ben,Ben Rice,Rice,9.97,0,3100,NYY@TB ,NYY,TB ,,,0,,4,OF
+SYN-802415,SS,Chandler,Chandler Simpson,Simpson,8.9,0,3100,TB @NYY,TB ,NYY,,,0,,1,SS
+SYN-810938,C/1B,Ben,Ben Williamson,Williamson,6.22,0,3000,TB @NYY,TB ,NYY,,,0,,8,C/1B
+SYN-575929,OF,Willson,Willson Contreras,Contreras,10.65,0,3200,BOS@STL,BOS,STL,,,0,,3,OF
+SYN-596115,C/1B,Trevor,Trevor Story,Story,9.78,0,3100,BOS@STL,BOS,STL,,,0,,5,C/1B
+SYN-665966,OF,Carlos,Carlos Narvaez,Narvaez,7.83,0,3000,BOS@STL,BOS,STL,,,0,,8,OF
+SYN-669357,C/1B,Nolan,Nolan Gorman,Gorman,9.54,0,3100,STL@BOS,STL,BOS,,,0,,5,C/1B
+SYN-671056,SS,Ivan,Ivan Herrera,Herrera,10.46,0,3200,STL@BOS,STL,BOS,,,0,,2,SS
+SYN-676475,OF,Alec,Alec Burleson,Burleson,9.55,0,3100,STL@BOS,STL,BOS,,,0,,3,OF
+SYN-677800,3B,Wilyer,Wilyer Abreu,Abreu,10.15,0,3200,BOS@STL,BOS,STL,,,0,,4,3B
+SYN-678882,C/1B,Ceddanne,Ceddanne Rafaela,Rafaela,8.56,0,3000,BOS@STL,BOS,STL,,,0,,9,C/1B
+SYN-680776,C/1B,Jarren,Jarren Duran,Duran,11.07,0,3200,BOS@STL,BOS,STL,,,0,,2,C/1B
+SYN-686780,3B,Pedro,Pedro Pages,Pages,6.92,0,3000,STL@BOS,STL,BOS,,,0,,8,3B
+SYN-687363,SS,Victor,Victor Scott II,Scott II,8.11,0,3000,STL@BOS,STL,BOS,,,0,,9,SS
+SYN-691023,C/1B,Jordan,Jordan Walker,Walker,10.01,0,3200,STL@BOS,STL,BOS,,,0,,4,C/1B
+SYN-691026,3B,Masyn,Masyn Winn,Winn,7.74,0,3000,STL@BOS,STL,BOS,,,0,,6,3B
+SYN-691785,C/1B,Marcelo,Marcelo Mayer,Mayer,8.19,0,3000,BOS@STL,BOS,STL,,,0,,6,C/1B
+SYN-695336,OF,Thomas,Thomas Saggese,Saggese,7.19,0,3000,STL@BOS,STL,BOS,,,0,,7,OF
+SYN-701350,SS,Roman,Roman Anthony,Anthony,10.81,0,3200,BOS@STL,BOS,STL,,,0,,1,SS
+SYN-702332,OF,Caleb,Caleb Durbin,Durbin,8.48,0,3000,BOS@STL,BOS,STL,,,0,,7,OF
+SYN-802139,OF,JJ,JJ Wetherholt,Wetherholt,9.66,0,3100,STL@BOS,STL,BOS,,,0,,1,OF
+SYN-514888,2B,Jose,Jose Altuve,Altuve,8.69,0,3100,HOU@SEA,HOU,SEA,,,0,,3,2B
+SYN-572233,OF,Christian,Christian Walker,Walker,8.76,0,3100,HOU@SEA,HOU,SEA,,,0,,6,OF
+SYN-621043,OF,Carlos,Carlos Correa,Correa,8.51,0,3000,HOU@SEA,HOU,SEA,,,0,,4,OF
+SYN-641487,3B,J.P.,J.P. Crawford,Crawford,8.16,0,3000,SEA@HOU,SEA,HOU,,,0,,8,3B
+SYN-647304,SS,Josh,Josh Naylor,Naylor,9.02,0,3100,SEA@HOU,SEA,HOU,,,0,,4,SS
+SYN-663728,C/1B,Cal,Cal Raleigh,Raleigh,10.04,0,3200,SEA@HOU,SEA,HOU,,,0,,2,C/1B
+SYN-665161,2B,Jeremy,Jeremy Pena,Pena,9.51,0,3100,HOU@SEA,HOU,SEA,,,0,,1,2B
+SYN-668227,3B,Randy,Randy Arozarena,Arozarena,9.26,0,3100,SEA@HOU,SEA,HOU,,,0,,5,3B
+SYN-670042,2B,Luke,Luke Raley,Raley,8.81,0,3100,SEA@HOU,SEA,HOU,,,0,,6,2B
+SYN-670541,OF,Yordan,Yordan Alvarez,Alvarez,9.41,0,3100,HOU@SEA,HOU,SEA,,,0,,2,OF
+SYN-670623,OF,Isaac,Isaac Paredes,Paredes,8.26,0,3000,HOU@SEA,HOU,SEA,,,0,,5,OF
+SYN-673237,SS,Yainer,Yainer Diaz,Diaz,7.31,0,3000,HOU@SEA,HOU,SEA,,,0,,9,SS
+SYN-677594,3B,Julio,Julio Rodriguez,Rodriguez,9.83,0,3100,SEA@HOU,SEA,HOU,,,0,,3,3B
+SYN-680977,OF,Brendan,Brendan Donovan,Donovan,10.18,0,3200,SEA@HOU,SEA,HOU,,,0,,1,OF
+SYN-686527,C/1B,Dominic,Dominic Canzone,Canzone,7.25,0,3000,SEA@HOU,SEA,HOU,,,0,,7,C/1B
+SYN-694388,3B,Joey,Joey Loperfido,Loperfido,6.15,0,3000,HOU@SEA,HOU,SEA,,,0,,8,3B
+SYN-701358,C/1B,Cam,Cam Smith,Smith,7.01,0,3000,HOU@SEA,HOU,SEA,,,0,,7,C/1B
+SYN-702284,OF,Cole,Cole Young,Young,7.46,0,3000,SEA@HOU,SEA,HOU,,,0,,9,OF
+SYN-592518,OF,Manny,Manny Machado,Machado,9.74,0,3100,SD @COL,SD ,COL,,,0,,4,OF
+SYN-593428,SS,Xander,Xander Bogaerts,Bogaerts,8.08,0,3000,SD @COL,SD ,COL,,,0,,6,SS
+SYN-609280,C/1B,Miguel,Miguel Andujar,Andujar,8.31,0,3000,SD @COL,SD ,COL,,,0,,5,C/1B
+SYN-630105,3B,Jake,Jake Cronenworth,Cronenworth,7.43,0,3000,SD @COL,SD ,COL,,,0,,8,3B
+SYN-650489,OF,Willi,Willi Castro,Castro,6.01,0,3000,COL@SD ,COL,SD ,,,0,,7,OF
+SYN-657656,3B,Ramon,Ramon Laureano,Laureano,10.15,0,3200,SD @COL,SD ,COL,,,0,,1,3B
+SYN-664034,OF,Ty,Ty France,France,7.75,0,3000,SD @COL,SD ,COL,,,0,,7,OF
+SYN-665487,OF,Fernando,Fernando Tatis Jr.,Tatis Jr.,10.26,0,3200,SD @COL,SD ,COL,,,0,,2,OF
+SYN-666160,OF,Mickey,Mickey Moniak,Moniak,7.52,0,3000,COL@SD ,COL,SD ,,,0,,2,OF
+SYN-666397,2B,Edouard,Edouard Julien,Julien,7.0,0,3000,COL@SD ,COL,SD ,,,0,,1,2B
+SYN-669134,SS,Luis,Luis Campusano,Campusano,6.08,0,3000,SD @COL,SD ,COL,,,0,,9,SS
+SYN-678662,2B,Ezequiel,Ezequiel Tovar,Tovar,7.35,0,3000,COL@SD ,COL,SD ,,,0,,5,2B
+SYN-681198,3B,TJ,TJ Rumfield,Rumfield,5.84,0,3000,COL@SD ,COL,SD ,,,0,,4,3B
+SYN-686668,SS,Brenton,Brenton Doyle,Doyle,6.31,0,3000,COL@SD ,COL,SD ,,,0,,8,SS
+SYN-687859,OF,Troy,Troy Johnston,Johnston,5.69,0,3000,COL@SD ,COL,SD ,,,0,,6,OF
+SYN-691720,OF,Kyle,Kyle Karros,Karros,5.24,0,3000,COL@SD ,COL,SD ,,,0,,9,OF
+SYN-696100,OF,Hunter,Hunter Goodman,Goodman,6.9,0,3000,COL@SD ,COL,SD ,,,0,,3,OF
+SYN-701538,3B,Jackson,Jackson Merrill,Merrill,10.18,0,3200,SD @COL,SD ,COL,,,0,,3,3B
+SYN-545121,2B,Ildemaro,Ildemaro Vargas,Vargas,8.59,0,3100,ARI@PHI,ARI,PHI,,,0,,7,2B
+SYN-547180,OF,Bryce,Bryce Harper,Harper,11.41,0,3200,PHI@ARI,PHI,ARI,,,0,,3,OF
+SYN-571448,C/1B,Nolan,Nolan Arenado,Arenado,7.9,0,3000,ARI@PHI,ARI,PHI,,,0,,6,C/1B
+SYN-592663,C/1B,J.T.,J.T. Realmuto,Realmuto,8.49,0,3000,PHI@ARI,PHI,ARI,,,0,,8,C/1B
+SYN-606466,C/1B,Ketel,Ketel Marte,Marte,10.08,0,3200,ARI@PHI,ARI,PHI,,,0,,1,C/1B
+SYN-607208,2B,Trea,Trea Turner,Turner,10.5,0,3200,PHI@ARI,PHI,ARI,,,0,,1,2B
+SYN-656941,2B,Kyle,Kyle Schwarber,Schwarber,12.09,0,3300,PHI@ARI,PHI,ARI,,,0,,2,2B
+SYN-664761,OF,Alec,Alec Bohm,Bohm,9.46,0,3100,PHI@ARI,PHI,ARI,,,0,,4,OF
+SYN-666969,C/1B,Adolis,Adolis Garcia,Garcia,9.19,0,3100,PHI@ARI,PHI,ARI,,,0,,6,C/1B
+SYN-669016,OF,Brandon,Brandon Marsh,Marsh,9.33,0,3100,PHI@ARI,PHI,ARI,,,0,,7,OF
+SYN-672515,OF,Gabriel,Gabriel Moreno,Moreno,9.29,0,3100,ARI@PHI,ARI,PHI,,,0,,4,OF
+SYN-672695,OF,Geraldo,Geraldo Perdomo,Perdomo,11.53,0,3300,ARI@PHI,ARI,PHI,,,0,,3,OF
+SYN-677950,SS,Alek,Alek Thomas,Thomas,7.36,0,3000,ARI@PHI,ARI,PHI,,,0,,8,SS
+SYN-678489,C/1B,Jorge,Jorge Barrosa,Barrosa,7.25,0,3000,ARI@PHI,ARI,PHI,,,0,,9,C/1B
+SYN-680728,C/1B,Adrian,Adrian Del Castillo,Del Castillo,7.74,0,3000,ARI@PHI,ARI,PHI,,,0,,5,C/1B
+SYN-681082,SS,Bryson,Bryson Stott,Stott,10.16,0,3200,PHI@ARI,PHI,ARI,,,0,,5,SS
+SYN-682998,OF,Corbin,Corbin Carroll,Carroll,11.52,0,3300,ARI@PHI,ARI,PHI,,,0,,2,OF
+SYN-702222,C/1B,Justin,Justin Crawford,Crawford,6.81,0,3000,PHI@ARI,PHI,ARI,,,0,,9,C/1B
+SYN-543760,SS,Marcus,Marcus Semien,Semien,7.9,0,3000,NYM@ATH,NYM,ATH,,,0,,7,SS
+SYN-593871,OF,Jorge,Jorge Polanco,Polanco,8.4,0,3000,NYM@ATH,NYM,ATH,,,0,,3,OF
+SYN-596019,2B,Francisco,Francisco Lindor,Lindor,10.63,0,3200,NYM@ATH,NYM,ATH,,,0,,1,2B
+SYN-643446,OF,Jeff,Jeff McNeil,McNeil,7.32,0,3000,ATH@NYM,ATH,NYM,,,0,,6,OF
+SYN-666126,C/1B,Carlos,Carlos Cortes,Cortes,6.55,0,3000,ATH@NYM,ATH,NYM,,,0,,8,C/1B
+SYN-666182,SS,Bo,Bo Bichette,Bichette,8.93,0,3100,NYM@ATH,NYM,ATH,,,0,,2,SS
+SYN-668901,2B,Mark,Mark Vientos,Vientos,6.63,0,3000,NYM@ATH,NYM,ATH,,,0,,6,2B
+SYN-669127,C/1B,Shea,Shea Langeliers,Langeliers,7.75,0,3000,ATH@NYM,ATH,NYM,,,0,,3,C/1B
+SYN-671732,SS,Lawrence,Lawrence Butler,Butler,9.26,0,3100,ATH@NYM,ATH,NYM,,,0,,1,SS
+SYN-672016,3B,Denzel,Denzel Clarke,Clarke,5.3,0,3000,ATH@NYM,ATH,NYM,,,0,,9,3B
+SYN-673357,2B,Luis,Luis Robert,Robert,9.1,0,3100,NYM@ATH,NYM,ATH,,,0,,4,2B
+SYN-682626,OF,Francisco,Francisco Alvarez,Alvarez,7.05,0,3000,NYM@ATH,NYM,ATH,,,0,,9,OF
+SYN-683146,2B,Brett,Brett Baty,Baty,7.7,0,3000,NYM@ATH,NYM,ATH,,,0,,5,2B
+SYN-691016,C/1B,Tyler,Tyler Soderstrom,Soderstrom,7.48,0,3000,ATH@NYM,ATH,NYM,,,0,,4,C/1B
+SYN-691777,OF,Max,Max Muncy,Muncy,6.76,0,3000,ATH@NYM,ATH,NYM,,,0,,7,OF
+SYN-701762,OF,Nick,Nick Kurtz,Kurtz,8.07,0,3000,ATH@NYM,ATH,NYM,,,0,,2,OF
+SYN-701807,C/1B,Carson,Carson Benge,Benge,6.92,0,3000,NYM@ATH,NYM,ATH,,,0,,8,C/1B
+SYN-805779,C/1B,Jacob,Jacob Wilson,Wilson,7.02,0,3000,ATH@NYM,ATH,NYM,,,0,,5,C/1B
+SYN-592885,OF,Christian,Christian Yelich,Yelich,11.34,0,3200,MIL@WAS,MIL,WAS,,,0,,3,OF
+SYN-641343,SS,Jake,Jake Bauers,Bauers,11.28,0,3200,MIL@WAS,MIL,WAS,,,0,,4,SS
+SYN-660688,3B,Keibert,Keibert Ruiz,Ruiz,6.31,0,3000,WAS@MIL,WAS,MIL,,,0,,8,3B
+SYN-661388,C/1B,William,William Contreras,Contreras,11.63,0,3300,MIL@WAS,MIL,WAS,,,0,,2,C/1B
+SYN-663368,3B,Blake,Blake Perkins,Perkins,8.3,0,3000,MIL@WAS,MIL,WAS,,,0,,8,3B
+SYN-666152,C/1B,David,David Hamilton,Hamilton,10.06,0,3200,MIL@WAS,MIL,WAS,,,0,,7,C/1B
+SYN-668930,C/1B,Brice,Brice Turang,Turang,11.25,0,3200,MIL@WAS,MIL,WAS,,,0,,1,C/1B
+SYN-669003,OF,Garrett,Garrett Mitchell,Mitchell,9.99,0,3100,MIL@WAS,MIL,WAS,,,0,,5,OF
+SYN-671277,C/1B,Luis,Luis Garcia,Garcia,9.95,0,3100,WAS@MIL,WAS,MIL,,,0,,2,C/1B
+SYN-677588,2B,Jose,Jose Tena,Tena,7.19,0,3000,WAS@MIL,WAS,MIL,,,0,,7,2B
+SYN-682928,2B,C.J.,C.J. Abrams,Abrams,9.07,0,3100,WAS@MIL,WAS,MIL,,,0,,5,2B
+SYN-683083,OF,Nasim,Nasim Nunez,Nunez,7.72,0,3000,WAS@MIL,WAS,MIL,,,0,,6,OF
+SYN-686217,2B,Sal,Sal Frelick,Frelick,9.31,0,3100,MIL@WAS,MIL,WAS,,,0,,6,2B
+SYN-687401,SS,Joey,Joey Ortiz,Ortiz,7.06,0,3000,MIL@WAS,MIL,WAS,,,0,,9,SS
+SYN-691781,OF,Brady,Brady House,House,7.86,0,3000,WAS@MIL,WAS,MIL,,,0,,3,OF
+SYN-695578,3B,James,James Wood,Wood,10.58,0,3200,WAS@MIL,WAS,MIL,,,0,,1,3B
+SYN-695734,3B,Daylen,Daylen Lile,Lile,8.68,0,3100,WAS@MIL,WAS,MIL,,,0,,4,3B
+SYN-696285,SS,Jacob,Jacob Young,Young,6.67,0,3000,WAS@MIL,WAS,MIL,,,0,,9,SS
+SYN-518692,OF,Freddie,Freddie Freeman,Freeman,8.66,0,3100,LAD@TEX,LAD,TEX,,,0,,4,OF
+SYN-571970,OF,Max,Max Muncy,Muncy,8.1,0,3000,LAD@TEX,LAD,TEX,,,0,,5,OF
+SYN-592626,OF,Joc,Joc Pederson,Pederson,8.81,0,3100,TEX@LAD,TEX,LAD,,,0,,5,OF
+SYN-606192,OF,Teoscar,Teoscar Hernandez,Hernandez,7.74,0,3000,LAD@TEX,LAD,TEX,,,0,,6,OF
+SYN-607043,C/1B,Brandon,Brandon Nimmo,Nimmo,10.37,0,3200,TEX@LAD,TEX,LAD,,,0,,1,C/1B
+SYN-608369,3B,Corey,Corey Seager,Seager,11.47,0,3300,TEX@LAD,TEX,LAD,,,0,,3,3B
+SYN-643376,3B,Danny,Danny Jansen,Jansen,8.23,0,3000,TEX@LAD,TEX,LAD,,,0,,7,3B
+SYN-660271,C/1B,Shohei,Shohei Ohtani,Ohtani,12.03,0,3300,LAD@TEX,LAD,TEX,,,0,,1,C/1B
+SYN-663656,OF,Kyle,Kyle Tucker,Tucker,8.92,0,3100,LAD@TEX,LAD,TEX,,,0,,2,OF
+SYN-669257,C/1B,Will,Will Smith,Smith,8.38,0,3000,LAD@TEX,LAD,TEX,,,0,,3,C/1B
+SYN-669394,3B,Jake,Jake Burger,Burger,9.45,0,3100,TEX@LAD,TEX,LAD,,,0,,4,3B
+SYN-669701,3B,Josh,Josh Smith,Smith,8.44,0,3000,TEX@LAD,TEX,LAD,,,0,,8,3B
+SYN-673962,C/1B,Josh,Josh Jung,Jung,7.72,0,3000,TEX@LAD,TEX,LAD,,,0,,9,C/1B
+SYN-681624,C/1B,Andy,Andy Pages,Pages,6.96,0,3000,LAD@TEX,LAD,TEX,,,0,,7,C/1B
+SYN-690976,C/1B,Alex,Alex Freeland,Freeland,5.05,0,3000,LAD@TEX,LAD,TEX,,,0,,9,C/1B
+SYN-694497,3B,Evan,Evan Carter,Carter,8.69,0,3100,TEX@LAD,TEX,LAD,,,0,,6,3B
+SYN-694671,C/1B,Wyatt,Wyatt Langford,Langford,11.71,0,3300,TEX@LAD,TEX,LAD,,,0,,2,C/1B
+SYN-808975,C/1B,Hyeseong,Hyeseong Kim,Kim,5.21,0,3000,LAD@TEX,LAD,TEX,,,0,,8,C/1B
+SYN-521692,OF,Salvador,Salvador Perez,Perez,12.03,0,3300,KC @CHW,KC ,CHW,,,0,,4,OF
+SYN-656537,C/1B,Derek,Derek Hill,Hill,8.33,0,3000,CHW@KC ,CHW,KC ,,,0,,9,C/1B
+SYN-663697,3B,Jonathan,Jonathan India,India,9.87,0,3100,KC @CHW,KC ,CHW,,,0,,6,3B
+SYN-664728,SS,Kyle,Kyle Isbel,Isbel,8.28,0,3000,KC @CHW,KC ,CHW,,,0,,9,SS
+SYN-672580,OF,Maikel,Maikel Garcia,Garcia,12.64,0,3300,KC @CHW,KC ,CHW,,,0,,1,OF
+SYN-672820,3B,Lenyn,Lenyn Sosa,Sosa,11.11,0,3200,CHW@KC ,CHW,KC ,,,0,,2,3B
+SYN-677951,2B,Bobby,Bobby Witt Jr.,Witt Jr.,13.45,0,3400,KC @CHW,KC ,CHW,,,0,,2,2B
+SYN-678246,OF,Miguel,Miguel Vargas,Vargas,10.4,0,3200,CHW@KC ,CHW,KC ,,,0,,4,OF
+SYN-682668,3B,Luisangel,Luisangel Acuna,Acuna,7.7,0,3000,CHW@KC ,CHW,KC ,,,0,,8,3B
+SYN-686469,OF,Vinnie,Vinnie Pasquantino,Pasquantino,12.65,0,3300,KC @CHW,KC ,CHW,,,0,,3,OF
+SYN-686555,OF,Isaac,Isaac Collins,Collins,10.2,0,3200,KC @CHW,KC ,CHW,,,0,,8,OF
+SYN-695020,3B,Tanner,Tanner Murray,Murray,6.16,0,3000,CHW@KC ,CHW,KC ,,,0,,7,3B
+SYN-695506,C/1B,Jac,Jac Caglianone,Caglianone,9.29,0,3100,KC @CHW,KC ,CHW,,,0,,7,C/1B
+SYN-695600,C/1B,Carter,Carter Jensen,Jensen,10.01,0,3200,KC @CHW,KC ,CHW,,,0,,5,C/1B
+SYN-695657,OF,Colson,Colson Montgomery,Montgomery,9.89,0,3100,CHW@KC ,CHW,KC ,,,0,,5,OF
+SYN-700337,OF,Edgar,Edgar Quero,Quero,7.81,0,3000,CHW@KC ,CHW,KC ,,,0,,6,OF
+SYN-805367,OF,Chase,Chase Meidroth,Meidroth,9.1,0,3100,CHW@KC ,CHW,KC ,,,0,,1,OF
+SYN-808959,OF,Munetaka,Munetaka Murakami,Murakami,8.93,0,3100,CHW@KC ,CHW,KC ,,,0,,3,OF
+SYN-596103,OF,Austin,Austin Slater,Slater,7.13,0,3000,MIA@DET,MIA,DET,,,0,,1,OF
+SYN-650402,C/1B,Gleyber,Gleyber Torres,Torres,7.96,0,3000,DET@MIA,DET,MIA,,,0,,3,C/1B
+SYN-656716,C/1B,Zach,Zach McKinstry,McKinstry,7.48,0,3000,DET@MIA,DET,MIA,,,0,,7,C/1B
+SYN-669364,C/1B,Xavier,Xavier Edwards,Edwards,8.29,0,3000,MIA@DET,MIA,DET,,,0,,7,C/1B
+SYN-672640,OF,Otto,Otto Lopez,Lopez,8.35,0,3000,MIA@DET,MIA,DET,,,0,,4,OF
+SYN-672761,OF,Wenceel,Wenceel Perez,Perez,7.04,0,3000,DET@MIA,DET,MIA,,,0,,9,OF
+SYN-679529,C/1B,Spencer,Spencer Torkelson,Torkelson,7.11,0,3000,DET@MIA,DET,MIA,,,0,,8,C/1B
+SYN-681393,3B,Connor,Connor Norby,Norby,6.6,0,3000,MIA@DET,MIA,DET,,,0,,6,3B
+SYN-681481,3B,Kerry,Kerry Carpenter,Carpenter,7.9,0,3000,DET@MIA,DET,MIA,,,0,,4,3B
+SYN-681715,3B,Heriberto,Heriberto Hernandez,Hernandez,7.4,0,3000,MIA@DET,MIA,DET,,,0,,5,3B
+SYN-682663,OF,Agustin,Agustin Ramirez,Ramirez,8.41,0,3000,MIA@DET,MIA,DET,,,0,,2,OF
+SYN-682985,2B,Riley,Riley Greene,Greene,8.27,0,3000,DET@MIA,DET,MIA,,,0,,5,2B
+SYN-690993,OF,Colt,Colt Keith,Keith,7.93,0,3000,DET@MIA,DET,MIA,,,0,,1,OF
+SYN-691277,2B,Deyvison,Deyvison De Los Santos,De Los Santos,5.2,0,3000,MIA@DET,MIA,DET,,,0,,8,2B
+SYN-691594,SS,Javier,Javier Sanoja,Sanoja,6.39,0,3000,MIA@DET,MIA,DET,,,0,,9,SS
+SYN-693307,OF,Dillon,Dillon Dingler,Dingler,6.95,0,3000,DET@MIA,DET,MIA,,,0,,6,OF
+SYN-805300,3B,Jakob,Jakob Marsee,Marsee,8.13,0,3000,MIA@DET,MIA,DET,,,0,,3,3B
+SYN-805808,C/1B,Kevin,Kevin McGonigle,McGonigle,7.78,0,3000,DET@MIA,DET,MIA,,,0,,2,C/1B
+SYN-545361,OF,Mike,Mike Trout,Trout,10.3,0,3200,LAA@CIN,LAA,CIN,,,0,,2,OF
+SYN-553993,C/1B,Eugenio,Eugenio Suarez,Suarez,9.35,0,3100,CIN@LAA,CIN,LAA,,,0,,5,C/1B
+SYN-600869,C/1B,Jeimer,Jeimer Candelario,Candelario,7.99,0,3000,LAA@CIN,LAA,CIN,,,0,,8,C/1B
+SYN-624585,C/1B,Jorge,Jorge Soler,Soler,8.53,0,3000,LAA@CIN,LAA,CIN,,,0,,4,C/1B
+SYN-660162,C/1B,Yoan,Yoan Moncada,Moncada,8.56,0,3000,LAA@CIN,LAA,CIN,,,0,,5,C/1B
+SYN-663647,3B,Ke'Bryan,Ke'Bryan Hayes,Hayes,7.2,0,3000,CIN@LAA,CIN,LAA,,,0,,9,3B
+SYN-663886,2B,Tyler,Tyler Stephenson,Stephenson,7.99,0,3000,CIN@LAA,CIN,LAA,,,0,,8,2B
+SYN-666176,OF,Jo,Jo Adell,Adell,9.69,0,3100,LAA@CIN,LAA,CIN,,,0,,3,OF
+SYN-666181,OF,Will,Will Benson,Benson,8.95,0,3100,CIN@LAA,CIN,LAA,,,0,,7,OF
+SYN-668715,OF,Spencer,Spencer Steer,Steer,9.11,0,3100,CIN@LAA,CIN,LAA,,,0,,6,OF
+SYN-669326,3B,Bryce,Bryce Teodosio,Teodosio,6.06,0,3000,LAA@CIN,LAA,CIN,,,0,,9,3B
+SYN-670770,OF,TJ,TJ Friedl,Friedl,9.7,0,3100,CIN@LAA,CIN,LAA,,,0,,1,OF
+SYN-672724,C/1B,Oswald,Oswald Peraza,Peraza,7.62,0,3000,LAA@CIN,LAA,CIN,,,0,,6,C/1B
+SYN-680574,2B,Matt,Matt McLain,McLain,9.88,0,3100,CIN@LAA,CIN,LAA,,,0,,2,2B
+SYN-681351,OF,Logan,Logan O'Hoppe,O'Hoppe,7.45,0,3000,LAA@CIN,LAA,CIN,,,0,,7,OF
+SYN-682829,C/1B,Elly,Elly De La Cruz,De La Cruz,10.07,0,3200,CIN@LAA,CIN,LAA,,,0,,3,C/1B
+SYN-687263,OF,Zach,Zach Neto,Neto,10.82,0,3200,LAA@CIN,LAA,CIN,,,0,,1,OF
+SYN-701398,SS,Sal,Sal Stewart,Stewart,8.76,0,3100,CIN@LAA,CIN,LAA,,,0,,4,SS
+SYN-542303,OF,Marcell,Marcell Ozuna,Ozuna,11.47,0,3300,PIT@CHC,PIT,CHC,,,0,,5,OF
+SYN-608324,SS,Alex,Alex Bregman,Bregman,12.4,0,3300,CHC@PIT,CHC,PIT,,,0,,3,SS
+SYN-608348,OF,Carson,Carson Kelly,Kelly,11.6,0,3300,CHC@PIT,CHC,PIT,,,0,,7,OF
+SYN-621020,OF,Dansby,Dansby Swanson,Swanson,11.11,0,3200,CHC@PIT,CHC,PIT,,,0,,9,OF
+SYN-656811,2B,Ryan,Ryan O'Hearn,O'Hearn,13.47,0,3400,PIT@CHC,PIT,CHC,,,0,,4,2B
+SYN-663538,3B,Nico,Nico Hoerner,Hoerner,14.04,0,3400,CHC@PIT,CHC,PIT,,,0,,1,3B
+SYN-664023,SS,Ian,Ian Happ,Happ,12.81,0,3300,CHC@PIT,CHC,PIT,,,0,,4,SS
+SYN-664040,3B,Brandon,Brandon Lowe,Lowe,13.84,0,3400,PIT@CHC,PIT,CHC,,,0,,2,3B
+SYN-665833,C/1B,Oneil,Oneil Cruz,Cruz,13.55,0,3400,PIT@CHC,PIT,CHC,,,0,,1,C/1B
+SYN-668804,C/1B,Bryan,Bryan Reynolds,Reynolds,11.9,0,3300,PIT@CHC,PIT,CHC,,,0,,3,C/1B
+SYN-673548,OF,Seiya,Seiya Suzuki,Suzuki,13.05,0,3400,CHC@PIT,CHC,PIT,,,0,,5,OF
+SYN-680779,C/1B,Henry,Henry Davis,Davis,9.73,0,3100,PIT@CHC,PIT,CHC,,,0,,9,C/1B
+SYN-683737,C/1B,Michael,Michael Busch,Busch,14.36,0,3500,CHC@PIT,CHC,PIT,,,0,,2,C/1B
+SYN-687462,OF,Spencer,Spencer Horwitz,Horwitz,11.18,0,3200,PIT@CHC,PIT,CHC,,,0,,7,OF
+SYN-691718,2B,Pete,Pete Crow-Armstrong,Crow-Armstrong,13.13,0,3400,CHC@PIT,CHC,PIT,,,0,,6,2B
+SYN-693304,C/1B,Nick,Nick Gonzales,Gonzales,10.66,0,3200,PIT@CHC,PIT,CHC,,,0,,6,C/1B
+SYN-694208,C/1B,Moises,Moises Ballesteros,Ballesteros,10.05,0,3200,CHC@PIT,CHC,PIT,,,0,,8,C/1B
+SYN-804606,2B,Konnor,Konnor Griffin,Griffin,10.69,0,3200,PIT@CHC,PIT,CHC,,,0,,8,2B
+SYN-621493,C/1B,Taylor,Taylor Ward,Ward,9.88,0,3100,BAL@SF ,BAL,SF ,,,0,,2,C/1B
+SYN-624413,C/1B,Pete,Pete Alonso,Alonso,9.93,0,3100,BAL@SF ,BAL,SF ,,,0,,3,C/1B
+SYN-641933,3B,Tyler,Tyler O'Neill,O'Neill,9.7,0,3100,BAL@SF ,BAL,SF ,,,0,,5,3B
+SYN-642715,OF,Willy,Willy Adames,Adames,9.78,0,3100,SF @BAL,SF ,BAL,,,0,,1,OF
+SYN-646240,C/1B,Rafael,Rafael Devers,Devers,9.67,0,3100,SF @BAL,SF ,BAL,,,0,,5,C/1B
+SYN-650333,3B,Luis,Luis Arraez,Arraez,8.97,0,3100,SF @BAL,SF ,BAL,,,0,,3,3B
+SYN-656305,C/1B,Matt,Matt Chapman,Chapman,9.49,0,3100,SF @BAL,SF ,BAL,,,0,,2,C/1B
+SYN-664056,C/1B,Harrison,Harrison Bader,Bader,8.34,0,3000,SF @BAL,SF ,BAL,,,0,,8,C/1B
+SYN-666464,OF,Jerar,Jerar Encarnacion,Encarnacion,8.21,0,3000,SF @BAL,SF ,BAL,,,0,,6,OF
+SYN-669236,OF,Jeremiah,Jeremiah Jackson,Jackson,7.15,0,3000,BAL@SF ,BAL,SF ,,,0,,7,OF
+SYN-671218,SS,Heliot,Heliot Ramos,Ramos,8.5,0,3000,SF @BAL,SF ,BAL,,,0,,4,SS
+SYN-672275,3B,Patrick,Patrick Bailey,Bailey,7.06,0,3000,SF @BAL,SF ,BAL,,,0,,9,3B
+SYN-681297,OF,Colton,Colton Cowser,Cowser,7.73,0,3000,BAL@SF ,BAL,SF ,,,0,,8,OF
+SYN-683002,3B,Gunnar,Gunnar Henderson,Henderson,10.68,0,3200,BAL@SF ,BAL,SF ,,,0,,1,3B
+SYN-687637,SS,Dylan,Dylan Beavers,Beavers,7.8,0,3000,BAL@SF ,BAL,SF ,,,0,,6,SS
+SYN-691723,OF,Coby,Coby Mayo,Mayo,7.4,0,3000,BAL@SF ,BAL,SF ,,,0,,9,OF
+SYN-694212,2B,Samuel,Samuel Basallo,Basallo,7.8,0,3000,BAL@SF ,BAL,SF ,,,0,,4,2B
+SYN-808982,SS,Jung,Jung Hoo Lee,Hoo Lee,8.26,0,3000,SF @BAL,SF ,BAL,,,0,,7,SS
+SYN-573262,OF,Mike,Mike Yastrzemski,Yastrzemski,9.37,0,3100,ATL@CLE,ATL,CLE,,,0,,5,OF
+SYN-595978,OF,Austin,Austin Hedges,Hedges,6.31,0,3000,CLE@ATL,CLE,ATL,,,0,,8,OF
+SYN-608070,C/1B,Jose,Jose Ramirez,Ramirez,10.45,0,3200,CLE@ATL,CLE,ATL,,,0,,3,C/1B
+SYN-621566,C/1B,Matt,Matt Olson,Olson,9.22,0,3100,ATL@CLE,ATL,CLE,,,0,,3,C/1B
+SYN-642086,OF,Dominic,Dominic Smith,Smith,7.6,0,3000,ATL@CLE,ATL,CLE,,,0,,7,OF
+SYN-642201,C/1B,Eli,Eli White,White,6.48,0,3000,ATL@CLE,ATL,CLE,,,0,,9,C/1B
+SYN-643289,C/1B,Mauricio,Mauricio Dubon,Dubon,6.93,0,3000,ATL@CLE,ATL,CLE,,,0,,8,C/1B
+SYN-645277,3B,Ozzie,Ozzie Albies,Albies,8.23,0,3000,ATL@CLE,ATL,CLE,,,0,,6,3B
+SYN-656555,SS,Rhys,Rhys Hoskins,Hoskins,7.65,0,3000,CLE@ATL,CLE,ATL,,,0,,6,SS
+SYN-660670,2B,Ronald,Ronald Acuna Jr.,Acuna Jr.,10.76,0,3200,ATL@CLE,ATL,CLE,,,0,,1,2B
+SYN-663586,OF,Austin,Austin Riley,Riley,8.13,0,3000,ATL@CLE,ATL,CLE,,,0,,4,OF
+SYN-677587,C/1B,Brayan,Brayan Rocchio,Rocchio,7.12,0,3000,CLE@ATL,CLE,ATL,,,0,,9,C/1B
+SYN-680757,3B,Steven,Steven Kwan,Kwan,9.33,0,3100,CLE@ATL,CLE,ATL,,,0,,1,3B
+SYN-681807,OF,David,David Fry,Fry,6.93,0,3000,CLE@ATL,CLE,ATL,,,0,,4,OF
+SYN-682657,SS,Angel,Angel Martinez,Martinez,8.78,0,3100,CLE@ATL,CLE,ATL,,,0,,2,SS
+SYN-682877,2B,Juan,Juan Brito,Brito,6.94,0,3000,CLE@ATL,CLE,ATL,,,0,,7,2B
+SYN-686948,OF,Drake,Drake Baldwin,Baldwin,9.41,0,3100,ATL@CLE,ATL,CLE,,,0,,2,OF
+SYN-800050,SS,Chase,Chase DeLauter,DeLauter,7.64,0,3000,CLE@ATL,CLE,ATL,,,0,,5,SS
+SYN-453286,P,Max,Max Scherzer,Scherzer,23.32,0,6500,TOR@MIN,TOR,MIN,,,0,Yes,0,P
+SYN-671737,P,Taj,Taj Bradley,Bradley,28.34,0,6600,MIN@TOR,MIN,TOR,,,0,Yes,0,P
+SYN-656876,P,Drew,Drew Rasmussen,Rasmussen,27.59,0,6500,TB @NYY,TB ,NYY,,,0,Yes,0,P
+SYN-693645,P,Cam,Cam Schlittler,Schlittler,32.8,0,6800,NYY@TB ,NYY,TB ,,,0,Yes,0,P
+SYN-669467,P,Andre,Andre Pallante,Pallante,21.93,0,6500,STL@BOS,STL,BOS,,,0,Yes,0,P
+SYN-678394,P,Brayan,Brayan Bello,Bello,20.66,0,6500,BOS@STL,BOS,STL,,,0,Yes,0,P
+SYN-669302,P,Logan,Logan Gilbert,Gilbert,30.78,0,6700,SEA@HOU,SEA,HOU,,,0,Yes,0,P
+SYN-675989,P,Cody,Cody Bolton,Bolton,21.48,0,6500,HOU@SEA,HOU,SEA,,,0,Yes,0,P
+SYN-601713,P,Nick,Nick Pivetta,Pivetta,42.14,0,7300,SD @COL,SD ,COL,,,0,Yes,0,P
+SYN-607536,P,Kyle,Kyle Freeland,Freeland,24.5,0,6500,COL@SD ,COL,SD ,,,0,Yes,0,P
+SYN-668678,P,Zac,Zac Gallen,Gallen,23.66,0,6500,ARI@PHI,ARI,PHI,,,0,Yes,0,P
+SYN-691725,P,Andrew,Andrew Painter,Painter,24.27,0,6500,PHI@ARI,PHI,ARI,,,0,Yes,0,P
+SYN-642547,P,Freddy,Freddy Peralta,Peralta,38.6,0,7100,NYM@ATH,NYM,ATH,,,0,Yes,0,P
+SYN-650644,P,Aaron,Aaron Civale,Civale,26.34,0,6500,ATH@NYM,ATH,NYM,,,0,Yes,0,P
+SYN-605540,P,Brandon,Brandon Woodruff,Woodruff,33.58,0,6800,MIL@WAS,MIL,WAS,,,0,Yes,0,P
+SYN-641793,P,Zack,Zack Littell,Littell,22.24,0,6500,WAS@MIL,WAS,MIL,,,0,Yes,0,P
+SYN-594798,P,Jacob,Jacob deGrom,deGrom,36.03,0,7000,TEX@LAD,TEX,LAD,,,0,Yes,0,P
+SYN-808963,P,Roki,Roki Sasaki,Sasaki,18.21,0,6500,LAD@TEX,LAD,TEX,,,0,Yes,0,P
+SYN-691799,P,Grant,Grant Taylor,Taylor,5.56,0,6500,CHW@KC ,CHW,KC ,,,0,Yes,0,P
+SYN-702070,P,Noah,Noah Cameron,Cameron,27.24,0,6500,KC @CHW,KC ,CHW,,,0,Yes,0,P
+SYN-645261,P,Sandy,Sandy Alcantara,Alcantara,29.41,0,6600,MIA@DET,MIA,DET,,,0,Yes,0,P
+SYN-669373,P,Tarik,Tarik Skubal,Skubal,41.41,0,7200,DET@MIA,DET,MIA,,,0,Yes,0,P
+SYN-667755,P,Jose,Jose Soriano,Soriano,31.02,0,6700,LAA@CIN,LAA,CIN,,,0,Yes,0,P
+SYN-671096,P,Andrew,Andrew Abbott,Abbott,33.56,0,6800,CIN@LAA,CIN,LAA,,,0,Yes,0,P
+SYN-592791,P,Jameson,Jameson Taillon,Taillon,23.01,0,6500,CHC@PIT,CHC,PIT,,,0,Yes,0,P
+SYN-696149,P,Bubba,Bubba Chandler,Chandler,22.93,0,6500,PIT@CHC,PIT,CHC,,,0,Yes,0,P
+SYN-605288,P,Adrian,Adrian Houser,Houser,25.93,0,6500,SF @BAL,SF ,BAL,,,0,Yes,0,P
+SYN-700249,P,Cade,Cade Povich,Povich,25.8,0,6500,BAL@SF ,BAL,SF ,,,0,Yes,0,P
+SYN-519242,P,Chris,Chris Sale,Sale,36.55,0,7000,ATL@CLE,ATL,CLE,,,0,Yes,0,P
+SYN-676440,P,Tanner,Tanner Bibee,Bibee,27.75,0,6500,CLE@ATL,CLE,ATL,,,0,Yes,0,P
