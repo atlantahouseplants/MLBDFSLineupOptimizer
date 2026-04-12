@@ -23,6 +23,18 @@ from pathlib import Path
 # Allow running from repo root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+import os
+from pathlib import Path
+
+# Auto-load .env from repo root if present
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+if _env_path.exists():
+    for line in _env_path.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, _, v = line.partition("=")
+            os.environ.setdefault(k.strip(), v.strip())
+
 import pandas as pd
 
 from slate_optimizer.ingestion.mlb_api import fetch_mlb_lineups
