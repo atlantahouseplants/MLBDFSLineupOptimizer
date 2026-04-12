@@ -16,7 +16,7 @@ if str(SRC_PATH) not in sys.path:
 
 from slate_optimizer.ingestion.ballparkpal import BallparkPalLoader
 
-HITTER_POSITIONS = ["C", "1B", "2B", "3B", "SS", "OF", "OF", "OF"]
+HITTER_POSITIONS = ["C/1B", "C/1B", "2B", "3B", "SS", "OF", "OF", "OF"]
 
 FD_COLUMNS = [
     "Id",
@@ -59,10 +59,13 @@ def _generate_id(prefix: str, player_id: str) -> str:
 
 
 def _estimate_salary(points: float, is_pitcher: bool) -> int:
-    base = 5200 if is_pitcher else 3200
-    multiplier = 50 if is_pitcher else 70
-    value = base + points * multiplier
-    value = max(3000, min(value, 9000))
+    if is_pitcher:
+        base, multiplier = 5200, 50
+        value = max(6500, min(int(base + points * multiplier), 12000))
+    else:
+        base, multiplier = 2500, 70
+        value = max(3000, min(int(base + points * multiplier), 6500))
+    value = (value // 100) * 100  # round to nearest $100
     return int(round(value / 100.0) * 100)
 
 

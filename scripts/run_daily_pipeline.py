@@ -31,6 +31,7 @@ from slate_optimizer.optimizer import (
 )
 from slate_optimizer.optimizer.export import write_fanduel_upload
 from slate_optimizer.projection import compute_baseline_projections, compute_ownership_series
+from slate_optimizer.projection.ownership_model import estimate_ownership, build_calibration_record
 
 def build_parser(add_help: bool = True) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -384,9 +385,23 @@ def run_pipeline(args: argparse.Namespace) -> dict:
             f"Blended ownership from {ownership_result.source_count} source(s); coverage {ownership_result.covered_players}/{total_players} players."
         )
     else:
-        print(
-            "Using fallback ownership estimator (no external ownership sources provided)."
-        )
+        # Use enhanced BPP-signal ownership model instead of legacy fallback
+        print("Computing ownership from BPP simulation signals (bust%, upside, HR/hit prob, order)...")
+        bpp_ownership = estimate_ownership(combined)
+        # bpp_ownership is indexed same as combined; align to projections by position
+        projections["proj_fd_ownership"] = bpp_ownership.values
+        n_est = int(bpp_ownership.notna().sum())
+        lo = float(bpp_ownership.min())
+        hi = float(bpp_ownership.max())
+        print(f"  Estimated ownership for {n_est} players (range: {lo:.1%} – {hi:.1%})")
+    # Auto-save ownership predictions for calibration tracking
+    try:
+        calib_path = output_dir / f"{tag}_ownership_predicted.csv"
+        build_calibration_record(combined, projections["proj_fd_ownership"], tag, str(calib_path))
+        print(f"Saved ownership predictions → {calib_path} (compare to actual post-contest)")
+    except Exception as _cal_exc:
+        pass  # calibration save is best-effort, never block the pipeline
+
     optimizer_df = build_optimizer_dataset(combined, projections)
 
     config = OptimizerConfig.load(Path(args.config)) if args.config else OptimizerConfig()
@@ -480,17 +495,45 @@ def run_pipeline(args: argparse.Namespace) -> dict:
 
 def _run_auto_fetch(args: argparse.Namespace) -> None:
     """Run fetch_live_data.py logic inline if --auto-fetch is set."""
-    import sys
+    import sys, os
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+    # Load .env from repo root
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                os.environ.setdefault(k.strip(), v.strip())
     from datetime import date as _date
     from slate_optimizer.ingestion.mlb_api import fetch_mlb_lineups
     from slate_optimizer.ingestion.odds_api import fetch_vegas_lines
+    from slate_optimizer.ingestion.bpp_api import fetch_bpp_data
 
     live_dir = Path(args.live_data_dir)
     live_dir.mkdir(parents=True, exist_ok=True)
     d = _date.today().strftime("%Y-%m-%d")
 
-    print("[auto-fetch] Fetching batting orders from MLB Stats API...")
+    print("[auto-fetch] Fetching BallparkPal simulation data...")
+    bundle = fetch_bpp_data(date_str=d)
+    if bundle:
+        s = bundle.summary()
+        print(f"  BPP: {s['batters']} batters, {s['pitchers']} pitchers, {s['dfs_projections']} DFS projections")
+        bpp_excels = bundle.to_excels(str(live_dir))
+        derived = bundle.to_csvs(str(live_dir))
+        # Point pipeline at BPP Excel files as bpp-source
+        if not getattr(args, "bpp_source", None):
+            args.bpp_source = str(live_dir)
+        # Use BPP-derived batting orders if no manual override
+        if not args.batting_orders_csv and "batting_orders" in derived:
+            args.batting_orders_csv = derived["batting_orders"]
+        # Use BPP-derived handedness if no manual override
+        if not args.handedness_csv and "handedness" in derived:
+            args.handedness_csv = derived["handedness"]
+    else:
+        print("  BPP fetch skipped — set BPP_SESSION in .env")
+
+    print("[auto-fetch] Fetching batting orders from MLB Stats API (confirmed lineups)...")
     batting_df, pitchers_df = fetch_mlb_lineups(date_str=d)
 
     orders_path = live_dir / f"batting_orders_{d}.csv"

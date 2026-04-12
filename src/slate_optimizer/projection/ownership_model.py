@@ -61,21 +61,22 @@ def estimate_batter_ownership(batters: pd.DataFrame) -> pd.Series:
     df = batters.copy().reset_index(drop=True)
 
     # ── 1. Value score (pts per $1000 salary) — strongest driver ─────────────
-    pts = pd.to_numeric(df.get("PointsFD", df.get("proj_fd_mean", 0)), errors="coerce").fillna(0)
-    sal = pd.to_numeric(df.get("salary", 0), errors="coerce").replace(0, np.nan)
+    _pts_col = df["PointsFD"] if "PointsFD" in df.columns else (df["proj_fd_mean"] if "proj_fd_mean" in df.columns else pd.Series(0.0, index=df.index, dtype=float))
+    pts = pd.to_numeric(_pts_col, errors="coerce").fillna(0)
+    sal = pd.to_numeric(df["salary"] if "salary" in df.columns else pd.Series(0.0, index=df.index), errors="coerce").replace(0, np.nan)
     value = (pts / sal * 1000).fillna(0)
     value_pct = _pct_rank(value)                    # 0-1
 
     # ── 2. Vegas implied team total ────────────────────────────────────────────
-    vegas = pd.to_numeric(df.get("vegas_team_total", np.nan), errors="coerce")
+    vegas = pd.to_numeric((df["vegas_team_total"] if "vegas_team_total" in df.columns else pd.Series(np.nan, index=df.index, dtype=float)), errors="coerce")
     if vegas.notna().any():
         vegas_pct = _pct_rank(vegas)
     else:
         vegas_pct = pd.Series(0.5, index=df.index)
 
     # ── 3. Upside ratio (upside / avg) — boom potential ───────────────────────
-    avg = pd.to_numeric(df.get("dfs_avg", df.get("PointsFD", np.nan)), errors="coerce")
-    ups = pd.to_numeric(df.get("upside", np.nan), errors="coerce")
+    avg = pd.to_numeric(df["dfs_avg"] if "dfs_avg" in df.columns else (df["PointsFD"] if "PointsFD" in df.columns else pd.Series(np.nan, index=df.index, dtype=float)), errors="coerce")
+    ups = pd.to_numeric((df["upside"] if "upside" in df.columns else pd.Series(np.nan, index=df.index, dtype=float)), errors="coerce")
     if ups.notna().any() and avg.notna().any():
         upside_ratio = (ups / avg.replace(0, np.nan)).fillna(1.0).clip(1.0, 3.0)
         upside_pct = _pct_rank(upside_ratio)
@@ -89,17 +90,17 @@ def estimate_batter_ownership(batters: pd.DataFrame) -> pd.Series:
     sal_pct = _pct_rank(sal_num)
 
     # ── 5. Batting order position ─────────────────────────────────────────────
-    order = pd.to_numeric(df.get("BattingPosition", df.get("batting_order_position", np.nan)), errors="coerce")
+    order = pd.to_numeric((df["BattingPosition"] if "BattingPosition" in df.columns else pd.Series((df["batting_order_position"] if "batting_order_position" in df.columns else pd.Series(np.nan, index=df.index, dtype=float)))), errors="coerce")
     order_mult = order.map(_ORDER_OWN_MULT).fillna(1.0)
 
     # ── 6. Hit/HR probability ─────────────────────────────────────────────────
-    hit_prob = pd.to_numeric(df.get("HitProbability", np.nan), errors="coerce").fillna(0.5)
-    hr_prob  = pd.to_numeric(df.get("HomeRunProbability", np.nan), errors="coerce").fillna(0.0)
+    hit_prob = pd.to_numeric((df["HitProbability"] if "HitProbability" in df.columns else pd.Series(np.nan, index=df.index, dtype=float)), errors="coerce").fillna(0.5)
+    hr_prob  = pd.to_numeric((df["HomeRunProbability"] if "HomeRunProbability" in df.columns else pd.Series(np.nan, index=df.index, dtype=float)), errors="coerce").fillna(0.0)
     hit_signal = _pct_rank(hit_prob * 0.6 + hr_prob * 0.4)
 
     # ── 7. Bust% (inverted) — safe floors are popular in cash, fade-worthy in GPP
     #    High bust = volatile = contrarian. Low bust = safe = chalk.
-    bust = pd.to_numeric(df.get("bust_pct", np.nan), errors="coerce")
+    bust = pd.to_numeric((df["bust_pct"] if "bust_pct" in df.columns else pd.Series(np.nan, index=df.index, dtype=float)), errors="coerce")
     if bust.notna().any():
         safe_signal = _pct_rank(1.0 - bust)   # invert: low bust → high rank
     else:
@@ -134,11 +135,11 @@ def estimate_pitcher_ownership(pitchers: pd.DataFrame) -> pd.Series:
     """
     df = pitchers.copy().reset_index(drop=True)
 
-    pts = pd.to_numeric(df.get("PointsFD", df.get("proj_fd_mean", 0)), errors="coerce").fillna(0)
-    sal = pd.to_numeric(df.get("salary", 0), errors="coerce").fillna(0)
-    win = pd.to_numeric(df.get("WinPct", np.nan), errors="coerce").fillna(0.33)
-    ks  = pd.to_numeric(df.get("Strikeouts", np.nan), errors="coerce").fillna(0)
-    qs  = pd.to_numeric(df.get("QualityStart", np.nan), errors="coerce").fillna(0)
+    pts = pd.to_numeric(df["PointsFD"] if "PointsFD" in df.columns else (df["proj_fd_mean"] if "proj_fd_mean" in df.columns else pd.Series(0.0, index=df.index, dtype=float)), errors="coerce").fillna(0)
+    sal = pd.to_numeric(df["salary"] if "salary" in df.columns else pd.Series(0.0, index=df.index), errors="coerce").fillna(0)
+    win = pd.to_numeric((df["WinPct"] if "WinPct" in df.columns else pd.Series(np.nan, index=df.index, dtype=float)), errors="coerce").fillna(0.33)
+    ks  = pd.to_numeric((df["Strikeouts"] if "Strikeouts" in df.columns else pd.Series(np.nan, index=df.index, dtype=float)), errors="coerce").fillna(0)
+    qs  = pd.to_numeric((df["QualityStart"] if "QualityStart" in df.columns else pd.Series(np.nan, index=df.index, dtype=float)), errors="coerce").fillna(0)
 
     # ── Signals ───────────────────────────────────────────────────────────────
     pts_pct = _pct_rank(pts)       # projection rank is the #1 pitcher signal
