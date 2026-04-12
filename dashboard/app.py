@@ -528,7 +528,7 @@ def run_pipeline(
                 file_name=upload_path.name,
                 mime="text/csv",
             )
-        st.session_state["active_tab"] = "Review Lineups"
+        st.session_state["pending_tab"] = "Review Lineups"
         st.rerun()
 
     st.session_state["last_run_message"] = "\n".join(status_lines[-3:] if status_lines else output_lines[-3:])
@@ -969,6 +969,10 @@ def main() -> None:
     init_session_state()
     _auto_fetch_if_stale()
     files = get_live_files()
+
+    # Apply any pending tab switch (must happen before radio widget)
+    if st.session_state.get("pending_tab"):
+        st.session_state["active_tab"] = st.session_state.pop("pending_tab")
 
     st.title("MLB DFS Daily Workflow")
 
