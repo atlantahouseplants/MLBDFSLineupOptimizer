@@ -230,6 +230,94 @@ def _weather_score(df: pd.DataFrame) -> pd.Series:
     return weather.clip(-0.5, 0.5)
 
 
+def _normalize_ownership(series: pd.Series, index: pd.Index) -> pd.Series:
+    values = pd.to_numeric(series, errors="coerce").astype(float)
+    if values.notna().any() and values.max(skipna=True) > 1.0:
+        values = values / 100.0
+    return values.reindex(index).clip(lower=0.0, upper=1.0)
+
+
+def _scaled_percentile(values: pd.Series, min_own: float, max_own: float) -> pd.Series:
+    numeric = pd.to_numeric(values, errors="coerce")
+    result = pd.Series((min_own + max_own) / 2.0, index=values.index, dtype=float)
+    valid = numeric.notna()
+    if not valid.any():
+        return result
+
+    valid_values = numeric.loc[valid]
+    if len(valid_values) == 1:
+        result.loc[valid] = max_own
+        return result
+
+    ranks = valid_values.rank(method="average", pct=False)
+    percentiles = (ranks - 1.0) / (len(valid_values) - 1.0)
+    result.loc[valid] = min_own + percentiles * (max_own - min_own)
+    return result.clip(lower=min_own, upper=max_own)
+
+
+def _estimate_ownership(df: pd.DataFrame) -> pd.Series:
+    ownership = pd.Series(0.0, index=df.index, dtype=float)
+
+    if "bpp_ownership" in df.columns:
+        bpp_ownership = _normalize_ownership(df["bpp_ownership"], df.index)
+        ownership.loc[bpp_ownership.notna()] = bpp_ownership.loc[bpp_ownership.notna()]
+
+    player_type = df.get("player_type", "").astype(str).str.lower()
+    batter_mask = player_type == "batter"
+    pitcher_mask = player_type == "pitcher"
+    missing_mask = ownership <= 0
+
+    batter_missing = batter_mask & missing_mask
+    if batter_missing.any():
+        batter_estimates = _scaled_percentile(
+            df.loc[batter_missing, "value_score"],
+            min_own=0.05,
+            max_own=0.35,
+        )
+        ownership.loc[batter_missing] = batter_estimates
+
+    pitcher_missing = pitcher_mask & missing_mask
+    if pitcher_missing.any():
+        pitcher_estimates = _scaled_percentile(
+            df.loc[pitcher_missing, "proj_fd_mean"],
+            min_own=0.10,
+            max_own=0.30,
+        )
+        ownership.loc[pitcher_missing] = pitcher_estimates
+
+    fallback_missing = ownership <= 0
+    if fallback_missing.any():
+        ownership.loc[fallback_missing] = 0.05
+
+    return ownership.clip(lower=0.0, upper=1.0)
+
+
+def data_quality_report(players_df: pd.DataFrame) -> dict[str, int]:
+    df = players_df.copy()
+
+    def _numeric_column(column: str) -> pd.Series:
+        values = df.get(column)
+        if isinstance(values, pd.Series):
+            return pd.to_numeric(values, errors="coerce")
+        return pd.Series(pd.NA, index=df.index, dtype="Float64")
+
+    bpp_projection = _numeric_column("bpp_points_fd")
+    fppg = _numeric_column("fppg")
+    batting_order = _numeric_column("batting_order_position")
+    confirmed_lineup = pd.Series(df.get("is_confirmed_lineup", False), index=df.index).astype(bool)
+    vegas_team_total = _numeric_column("vegas_team_total")
+    recent_last7 = _numeric_column("recent_last7_fppg")
+
+    report = {
+        "n_players_with_bpp_projection": int(bpp_projection.notna().sum()),
+        "n_players_using_fppg_fallback": int(bpp_projection.isna().mul(fppg.notna()).sum()),
+        "n_players_with_confirmed_batting_order": int(batting_order.notna().mul(confirmed_lineup).sum()),
+        "n_players_with_vegas_data": int((vegas_team_total.fillna(0.0) > 0).sum()),
+        "n_players_with_recent_stats": int(recent_last7.notna().sum()),
+    }
+    return report
+
+
 
 def compute_baseline_projections(
     players_df: pd.DataFrame,
@@ -335,6 +423,7 @@ def compute_baseline_projections(
     salary_series = pd.to_numeric(salary_raw, errors="coerce")
     salary_series = salary_series.replace(0, pd.NA)
     df["value_score"] = (df["proj_fd_mean"] / salary_series).fillna(0.0) * 1000.0
+    df["proj_fd_ownership"] = _estimate_ownership(df)
 
     floor_multiplier = pd.Series(1.0, index=df.index, dtype=float)
     ceiling_multiplier = pd.Series(1.0, index=df.index, dtype=float)
@@ -395,4 +484,8 @@ def compute_baseline_projections(
     return output
 
 
-__all__ = ["compute_baseline_projections", "PROJECTION_COLUMNS"]
+__all__ = [
+    "compute_baseline_projections",
+    "data_quality_report",
+    "PROJECTION_COLUMNS",
+]

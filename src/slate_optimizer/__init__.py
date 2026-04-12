@@ -15,7 +15,7 @@ from .optimizer import (
     build_optimizer_dataset,
     generate_lineups,
 )
-from .projection import PROJECTION_COLUMNS, compute_baseline_projections
+from .projection import PROJECTION_COLUMNS, compute_baseline_projections, data_quality_report
 
 __all__ = [
     "BallparkPalBundle",
@@ -27,6 +27,7 @@ __all__ = [
     "SlateDatabase",
     "PROJECTION_COLUMNS",
     "compute_baseline_projections",
+    "data_quality_report",
     "OPTIMIZER_COLUMNS",
     "build_optimizer_dataset",
     "OptimizerPlayer",
