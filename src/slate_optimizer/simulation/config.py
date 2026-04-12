@@ -40,7 +40,7 @@ class SimulationConfig:
     min_batter_exposure: float = 0.0
     min_pitcher_exposure: float = 0.0
     min_stack_exposure: float = 0.0
-    max_stack_exposure: float = 1.0
+    max_stack_exposure: float = 0.35  # Max 35% of lineups with same primary stack
     diversity_weight: float = 0.3
 
     def to_dict(self) -> Dict:

@@ -247,10 +247,30 @@ def format_pct(value: float | int | None, digits: int = 0) -> str:
 
 
 def build_stack_targets(vegas_df: pd.DataFrame, batter_df: pd.DataFrame) -> pd.DataFrame:
+    """Build team stack targets with proper leverage scoring.
+    
+    Leverage = (implied_total / avg_implied) / (proj_ownership / avg_proj_ownership)
+    High leverage = good projected runs at lower-than-expected ownership.
+    Floor: only teams with implied total >= 4.0 runs (no fading bad teams just because they are underowned).
+    """
     if vegas_df.empty or batter_df.empty:
         return pd.DataFrame()
     games = vegas_df.copy()
     teams_in_batters = set(batter_df["Team"].dropna().astype(str).str.upper())
+
+    # Build per-team ownership from batter data
+    batter_own = batter_df.copy()
+    batter_own["Team"] = batter_own["Team"].astype(str).str.upper()
+    if "proj_fd_ownership" in batter_own.columns:
+        team_own = batter_own.groupby("Team")["proj_fd_ownership"].mean()
+    elif "PointsFD" in batter_own.columns:
+        # Use projection rank as ownership proxy if no ownership column
+        batter_own["_rank"] = batter_own.groupby("Team")["PointsFD"].transform("mean")
+        total = batter_own["_rank"].sum()
+        team_own = (batter_own.groupby("Team")["_rank"].mean() / total) if total > 0 else pd.Series(dtype=float)
+    else:
+        team_own = pd.Series(dtype=float)
+
     rows: list[dict[str, object]] = []
     for _, row in games.iterrows():
         game = str(row.get("game", ""))
@@ -267,36 +287,42 @@ def build_stack_targets(vegas_df: pd.DataFrame, batter_df: pd.DataFrame) -> pd.D
             continue
         away_prob = away_prob_raw / prob_total
         home_prob = home_prob_raw / prob_total
-        away_total = total * away_prob
-        home_total = total * home_prob
-        rows.extend(
-            [
-                {
-                    "team": away_team,
-                    "opponent": home_team,
-                    "game_total": total,
-                    "implied_total": away_total,
-                },
-                {
-                    "team": home_team,
-                    "opponent": away_team,
-                    "game_total": total,
-                    "implied_total": home_total,
-                },
-            ]
-        )
+        away_total = float(total) * away_prob
+        home_total = float(total) * home_prob
+        for team, opp, implied in [(away_team, home_team, away_total), (home_team, away_team, home_total)]:
+            rows.append({
+                "team": team,
+                "opp": opp,
+                "game_total": float(total),
+                "implied": implied,
+                "proj_own": float(team_own.get(team, 0.15)),
+            })
+
     stacks = pd.DataFrame(rows)
     if stacks.empty:
         return stacks
     stacks = stacks[stacks["team"].isin(teams_in_batters)].copy()
-    stacks = stacks.sort_values("implied_total", ascending=False).head(5).reset_index(drop=True)
-    return stacks
+
+    # Leverage: implied runs vs projected ownership — but FLOOR at 4.0 runs
+    # This prevents surfacing bad teams that are just underowned because they're bad
+    avg_implied = stacks["implied"].mean()
+    avg_own = stacks["proj_own"].replace(0, stacks["proj_own"].mean()).mean()
+    stacks["leverage"] = (stacks["implied"] / avg_implied) / (stacks["proj_own"].replace(0, avg_own) / avg_own)
+
+    # Filter: only viable stacking environments (4.0+ implied runs)
+    viable = stacks[stacks["implied"] >= 4.0].copy()
+    if viable.empty:
+        viable = stacks.copy()
+
+    # Sort by implied total descending — we want real run environments
+    viable = viable.sort_values("implied", ascending=False).head(12).reset_index(drop=True)
+    return viable
 
 
 def stack_tier(implied_total: float) -> tuple[str, str]:
-    if implied_total > 5.0:
+    if implied_total > 5.5:
         return "🔥 HIGH", "high"
-    if implied_total >= 4.0:
+    if implied_total >= 4.5:
         return "🟡 MED", "medium"
     return "⚪ LOW", "low"
 
@@ -308,7 +334,7 @@ def render_stack_cards(stacks: pd.DataFrame) -> None:
     for start in range(0, len(stacks), 3):
         cols = st.columns(3)
         for col, (_, row) in zip(cols, stacks.iloc[start : start + 3].iterrows()):
-            tag, tier_class = stack_tier(float(row["implied_total"]))
+            tag, tier_class = stack_tier(float(row["implied"]))
             with col:
                 st.markdown(
                     f"""
@@ -316,7 +342,7 @@ def render_stack_cards(stacks: pd.DataFrame) -> None:
                         <div class="stack-team">{row['team']}</div>
                         <div class="stack-line">Opp: {row['opponent']}</div>
                         <div class="stack-line">Game Total: {row['game_total']:.1f}</div>
-                        <div class="stack-line">Implied: {row['implied_total']:.2f}</div>
+                        <div class="stack-line">Implied: {row['implied']:.2f}</div>
                         <div class="stack-line">{tag}</div>
                     </div>
                     """,
@@ -482,6 +508,7 @@ def run_pipeline(
     cmd += ["--write-intermediate"]
     cmd += ["--num-candidates", str(pool_size)]   # how many to generate
     cmd += ["--num-lineups", str(submit_count)]   # how many to select for submission
+    cmd += ["--max-player-exposure", "0.65"]      # no player in >65% of lineups
     cmd += ["--stack-templates", stack_template_str]
     cmd += ["--tag", tag]
     if bring_back:
@@ -494,6 +521,10 @@ def run_pipeline(
         cmd += ["--batting-orders-csv", str(files["batting"])]
     if files["handedness"]:
         cmd += ["--handedness-csv", str(files["handedness"])]
+    # Stack diversification: cap any single team at 35% of lineups
+    cmd += ["--diversity-weight", "0.5"]
+    # Only stack teams projected for 4.5+ implied runs — no low-total fades
+    cmd += ["--min-game-total", "4.5"]
 
     log_placeholder = st.empty()
     status_lines = ["🚀 Starting optimizer..."]
@@ -606,7 +637,9 @@ def build_review_summary(lineups_df: pd.DataFrame) -> dict[str, str]:
     total_lineups = int(lineups_df["lineup_id"].nunique())
     salary_summary = lineups_df.groupby("lineup_id")["salary"].sum()
     proj_summary = safe_numeric(lineups_df["proj_fd_mean"]).groupby(lineups_df["lineup_id"]).sum()
-    own_summary = safe_numeric(lineups_df["proj_fd_ownership"]).groupby(lineups_df["lineup_id"]).sum()
+    # Total lineup ownership = sum of 9 player ownerships (used in GPP construction)
+    # Divide by 9 to get avg per-player ownership for display
+    own_summary = safe_numeric(lineups_df["proj_fd_ownership"]).groupby(lineups_df["lineup_id"]).mean()
 
     hitters = lineups_df[lineups_df["player_type"].astype(str).str.lower() == "batter"].copy()
     team_lineups = (
@@ -628,7 +661,7 @@ def build_review_summary(lineups_df: pd.DataFrame) -> dict[str, str]:
     return {
         "n_lineups": str(total_lineups),
         "avg_proj": f"{proj_summary.mean():.1f} pts" if not proj_summary.empty else "—",
-        "avg_own": f"{own_summary.mean():.0%}" if not own_summary.empty else "—",
+        "avg_own": f"{own_summary.mean():.1%}" if not own_summary.empty else "—",
         "top_stack": top_stack,
         "main_pitcher": main_pitcher,
         "avg_salary": f"${salary_summary.mean():,.0f}" if not salary_summary.empty else "—",
@@ -780,8 +813,37 @@ def render_today_tab(files: dict[str, Path | None]) -> None:
     projection_df = load_csv(str(files["projection"])) if files["projection"] else pd.DataFrame()
     vegas_df = load_csv(str(files["vegas"])) if files["vegas"] else pd.DataFrame()
 
-    st.markdown("### Top Stacks")
-    render_stack_cards(build_stack_targets(vegas_df, batter_df))
+    st.markdown("### Top Stacks & Leverage")
+    stack_targets = build_stack_targets(vegas_df, batter_df)
+    render_stack_cards(stack_targets)
+
+    # Leverage table: high projected runs vs projected ownership
+    if not stack_targets.empty:
+        st.markdown("#### Team Leverage Board")
+        st.caption("🎯 Leverage = high projected runs at low projected ownership. Fade the chalk, exploit the field.")
+        lev = stack_targets.copy()
+        # Color-coded: green=high leverage (implied>=4.5 and low own), yellow=medium, gray=chalk or weak
+        def leverage_tag(row):
+            if row["implied"] < 4.5:
+                return "⚫ Skip"
+            if row["leverage"] > 1.15:
+                return "🔥 Strong"
+            if row["leverage"] > 0.95:
+                return "🟡 Neutral"
+            return "🔴 Chalk"
+
+        if "leverage" in lev.columns:
+            lev["Signal"] = lev.apply(leverage_tag, axis=1)
+            lev["Implied Runs"] = lev["implied"].map(lambda x: f"{x:.2f}")
+            lev["Proj Own%"] = lev["proj_own"].map(lambda x: f"{x:.0%}") if "proj_own" in lev.columns else "—"
+            show_cols = [c for c in ["team","opp","game_total","Implied Runs","Proj Own%","leverage","Signal"] if c in lev.columns]
+            lev_display = lev[show_cols].rename(columns={
+                "team":"Team","opp":"Opp","game_total":"Game O/U","leverage":"Leverage"
+            }).head(12)
+            if "Leverage" in lev_display.columns:
+                lev_display["Leverage"] = lev_display["Leverage"].map(lambda x: f"{x:.2f}x")
+            st.dataframe(lev_display, use_container_width=True, hide_index=True)
+            st.caption("Only teams with 4.5+ implied runs shown. Leverage > 1.15 = undervalued relative to field.")
 
     st.markdown("### Best Pitchers")
     pitcher_board = build_pitcher_board(pitcher_df)
@@ -911,7 +973,7 @@ def render_review_tab() -> None:
     with summary_cols[1]:
         render_summary_card("📈 Avg Proj", summary["avg_proj"])
     with summary_cols[2]:
-        render_summary_card("👥 Avg Ownership", summary["avg_own"])
+        render_summary_card("👥 Avg Player Own", summary["avg_own"], "Per lineup average")
     with summary_cols[3]:
         render_summary_card("🔥 Top Stack", summary["top_stack"])
     with summary_cols[4]:

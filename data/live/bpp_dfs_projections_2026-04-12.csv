@@ -1,35 +1,33 @@
 team,full_name,position,opponent,salary,dfs_avg,bust_pct,upside,pts_per_k
-CHC,Michael Busch,1B,CHC,4700.0,10.56,0.1,23,2.25
-PIT,Oneil Cruz,OF,CHC,5000.0,10.4,0.17,23,2.08
+CHC,Nico Hoerner,2B,CHC,4600.0,10.06,0.1,21,2.19
 KC,Bobby Witt Jr.,SS,KC,6100.0,10.01,0.13,22,1.64
-CHC,Nico Hoerner,2B,CHC,4600.0,9.99,0.1,21,2.17
+PIT,Oneil Cruz,OF,CHC,5000.0,9.97,0.17,22,1.99
 KC,Maikel Garcia,3B,KC,4900.0,9.75,0.1,20,1.99
 MIN,Byron Buxton,OF,TOR,4900.0,9.71,0.17,22,1.98
-CHC,Pete Crow,OF,CHC,5700.0,9.7,0.19,22,1.7
 NYY,Aaron Judge,OF,TB,6500.0,9.68,0.14,22,1.49
-PIT,Brandon Lowe,2B,CHC,4500.0,9.67,0.16,22,2.15
-PIT,Ryan O&#039;HearnR. O&#039;Hearn,1B/OF,CHC,4000.0,9.66,0.14,21,2.42
+PIT,Brandon Lowe,2B,CHC,4500.0,9.46,0.16,21,2.1
 KC,Vinnie Pasquantino,1B,KC,4200.0,9.2,0.13,21,2.19
+PIT,Ryan O&#039;HearnR. O&#039;Hearn,1B/OF,CHC,4000.0,9.19,0.15,21,2.3
 ARI,Corbin Carroll,OF,PHI,5900.0,9.07,0.15,20,1.54
-CHC,Seiya Suzuki,OF,CHC,4400.0,9.05,0.13,21,2.06
-CHC,Ian Happ,OF,CHC,4000.0,8.88,0.14,21,2.22
+CHC,Seiya Suzuki,OF,CHC,4400.0,9.05,0.13,20,2.06
 LAA,Zach Neto,SS,CIN,4800.0,8.84,0.17,21,1.84
-CHC,Alex Bregman,3B,CHC,4400.0,8.79,0.11,19,2.0
+CHC,Pete Crow,OF,CHC,5700.0,8.72,0.21,21,1.53
 MIL,William Contreras,C,MIL,5100.0,8.71,0.13,19,1.71
 MIL,Brice Turang,2B,MIL,5300.0,8.7,0.15,19,1.64
 KC,Salvador Perez,C,KC,3600.0,8.7,0.17,21,2.42
 TEX,Corey Seager,SS,LAD,4100.0,8.68,0.13,20,2.12
-PIT,Bryan Reynolds,OF,CHC,4100.0,8.64,0.17,20,2.11
+PIT,Spencer Horwitz,1B,CHC,3100.0,8.68,0.16,20,2.8
 ARI,Geraldo Perdomo,SS,PHI,4500.0,8.63,0.13,19,1.92
 LAD,Shohei Ohtani,1B/OF,LAD,6500.0,8.62,0.21,20,1.33
-PIT,Spencer Horwitz,1B,CHC,3100.0,8.58,0.16,20,2.77
+PIT,Bryan Reynolds,OF,CHC,4100.0,8.61,0.16,20,2.1
+CHC,Ian Happ,OF,CHC,4000.0,8.61,0.14,20,2.15
 PHI,Kyle Schwarber,OF,PHI,6200.0,8.55,0.13,20,1.38
 SD,Fernando Tatis Jr.,OF,SD,5500.0,8.54,0.17,19,1.55
 BOS,Willson Contreras,1B,STL,4100.0,8.44,0.14,19,2.06
-PIT,Marcell Ozuna,OF,CHC,3200.0,8.41,0.17,19,2.63
+CHC,Alex Bregman,3B,CHC,4400.0,8.42,0.11,18,1.91
 BAL,Gunnar Henderson,SS,BAL,5800.0,8.37,0.14,18,1.44
+CHC,Carson Kelly,C,CHC,3200.0,8.36,0.15,19,2.61
 MIL,Christian Yelich,OF,MIL,5600.0,8.36,0.16,19,1.49
-CHC,Carson Kelly,C,CHC,3200.0,8.35,0.16,19,2.61
 SD,Ramon Laureano,OF,SD,4100.0,8.34,0.19,19,2.03
 PHI,Bryce Harper,1B,PHI,5200.0,8.33,0.16,19,1.6
 TEX,Brandon Nimmo,OF,LAD,4000.0,8.27,0.16,18,2.07
@@ -38,17 +36,19 @@ BOS,Jarren Duran,OF,STL,4700.0,8.25,0.16,18,1.76
 MIN,Luke Keaschall,2B,TOR,4300.0,8.19,0.18,19,1.9
 BOS,Roman Anthony,OF,STL,5200.0,8.18,0.13,18,1.57
 SD,Manny Machado,3B,SD,4900.0,8.16,0.16,19,1.67
-SEA,Cal Raleigh,C,SEA,5100.0,8.13,0.16,20,1.59
+PIT,Marcell Ozuna,OF,CHC,3200.0,8.16,0.16,19,2.55
+CHC,Moises Ballesteros,C,CHC,3200.0,8.15,0.16,19,2.55
 MIL,Jake Bauers,1B,MIL,3900.0,8.13,0.16,19,2.08
+SEA,Cal Raleigh,C,SEA,5100.0,8.13,0.16,20,1.59
 NYY,Jazz Chisholm,2B,TB,4100.0,8.12,0.24,19,1.98
+CHC,Dansby Swanson,SS,CHC,3400.0,8.11,0.18,19,2.39
 STL,Ivan Herrera,C,STL,3700.0,8.09,0.13,18,2.19
 PHI,Trea Turner,SS,PHI,5400.0,8.08,0.2,19,1.5
 CIN,Elly De La Cruz,SS,CIN,6000.0,8.07,0.16,18,1.35
 SD,Jackson Merrill,OF,SD,4700.0,8.03,0.19,19,1.71
 NYY,Trent Grisham,OF,TB,3700.0,8.02,0.16,19,2.17
-PIT,Nick Gonzales,2B/3B,CHC,3000.0,8.02,0.19,19,2.67
 MIN,Trevor Larnach,OF,TOR,2900.0,8.01,0.17,19,2.76
-CHC,Dansby Swanson,SS,CHC,3400.0,7.97,0.19,19,2.34
+PIT,Nick Gonzales,2B/3B,CHC,3000.0,7.97,0.19,19,2.66
 CHW,Lenyn Sosa,1B,KC,2500.0,7.96,0.19,19,3.18
 NYY,Ben Rice,1B,TB,5300.0,7.93,0.18,19,1.5
 WAS,Luis Garcia,1B,MIL,3200.0,7.84,0.22,19,2.45
@@ -65,7 +65,6 @@ NYY,Cody Bellinger,OF,TB,4400.0,7.59,0.21,18,1.73
 WAS,James Wood,OF,MIL,5400.0,7.59,0.19,18,1.41
 BAL,Pete Alonso,1B,BAL,4900.0,7.58,0.14,17,1.55
 SF,Willy Adames,SS,BAL,4200.0,7.56,0.15,17,1.8
-PIT,Konnor Griffin,SS,CHC,3100.0,7.56,0.26,19,2.44
 PHI,Brandon Marsh,OF,PHI,3600.0,7.52,0.21,19,2.09
 SF,Matt Chapman,3B,BAL,4000.0,7.51,0.12,16,1.88
 BOS,Wilyer Abreu,OF,STL,4800.0,7.49,0.18,18,1.56
@@ -80,7 +79,6 @@ TOR,Vladimir Guerrero Jr.,1B,TOR,5500.0,7.38,0.16,17,1.34
 STL,Alec Burleson,1B,STL,4300.0,7.38,0.15,17,1.72
 BOS,Trevor Story,SS,STL,3700.0,7.35,0.21,17,1.99
 TB,Chandler Simpson,OF,TB,4000.0,7.32,0.21,16,1.83
-CHC,Moises Ballesteros,C,CHC,3200.0,7.31,0.21,18,2.28
 TOR,Jesus Sanchez,OF,TOR,3500.0,7.3,0.2,18,2.09
 MIL,Garrett Mitchell,OF,MIL,3500.0,7.3,0.21,18,2.09
 KC,Carter Jensen,C,KC,4100.0,7.29,0.18,18,1.78
@@ -101,6 +99,7 @@ CIN,Eugenio Suarez,3B,CIN,4700.0,6.97,0.19,17,1.48
 TEX,Jake Burger,1B,LAD,3800.0,6.97,0.25,18,1.83
 MIL,Sal Frelick,OF,MIL,4200.0,6.96,0.19,16,1.66
 SEA,Randy Arozarena,OF,SEA,4200.0,6.95,0.19,16,1.65
+PIT,Konnor Griffin,SS,CHC,3100.0,6.95,0.26,17,2.24
 SF,Luis Arraez,2B,BAL,4000.0,6.93,0.17,15,1.73
 STL,Nolan Gorman,3B,STL,3600.0,6.91,0.19,17,1.92
 CHW,Colson Montgomery,3B/SS,KC,4300.0,6.9,0.23,18,1.6
@@ -234,6 +233,7 @@ COL,Troy Johnston,1B/OF,SD,3700.0,4.34,0.38,14,1.17
 ATH,Denzel Clarke,OF,NYM,2200.0,4.16,0.37,11,1.89
 LAD,Alex Freeland,2B,LAD,2800.0,4.08,0.39,11,1.46
 TB,Hunter Feduccia,C,TB,2600.0,3.81,0.38,10,1.47
+CHC,Michael Busch,1B,CHC,4700.0,3.56,0.5,14,0.76
 NYM,Luis Robert,OF,NYM,5300.0,3.46,0.49,11,0.65
 KC,Jonathan India,2B,KC,3500.0,3.29,0.43,9,0.94
 TEX,Sam Haggerty,OF,LAD,2400.0,3.19,0.57,10,1.33
@@ -244,7 +244,6 @@ DET,Wenceel Perez,OF,DET,2600.0,2.73,0.54,8,1.05
 SD,Nick Castellanos,1B/OF,SD,3000.0,2.71,0.59,9,0.9
 TEX,Ezequiel Duran,2B/3B,LAD,2100.0,2.69,0.58,8,1.28
 NYY,Giancarlo Stanton,OF,TB,4100.0,2.56,0.57,7,0.62
-PIT,Joey Bart,C,CHC,2600.0,2.5,0.56,7,0.96
 BAL,Blaze Alexander,2B/3B,BAL,2800.0,2.33,0.58,7,0.83
 MIN,James Outman,OF,TOR,2100.0,2.3,0.63,7,1.1
 SF,Casey Schmitt,1B/2B,BAL,3000.0,2.28,0.61,7,0.76
@@ -252,6 +251,7 @@ ARI,Ketel Marte,2B,PHI,5300.0,2.25,0.64,8,0.42
 MIN,Victor Caratini,1B/C,TOR,3000.0,2.24,0.62,7,0.75
 NYY,Austin Wells,C,TB,2600.0,2.23,0.62,7,0.86
 LAA,Yoan Moncada,3B,CIN,3300.0,2.23,0.6,7,0.68
+PIT,Joey Bart,C,CHC,2600.0,2.2,0.58,7,0.85
 LAA,Travis d&#039;ArnaudT. d&#039;Arnaud,C,CIN,2500.0,2.11,0.64,5,0.84
 COL,Jake Mc,OF,SD,2500.0,2.1,0.65,7,0.84
 DET,Jake Rogers,C,DET,2300.0,2.09,0.64,7,0.91

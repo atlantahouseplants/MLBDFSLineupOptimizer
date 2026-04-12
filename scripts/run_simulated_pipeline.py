@@ -181,6 +181,9 @@ def main() -> None:
         ascending=False,
     )
     final_count = int(args.num_lineups)
+    # max_stack_exposure: no single team as primary stack in >35% of lineups
+    # Prevents the whole portfolio being one team's stack
+    _max_stack_exp = getattr(sim_config, "max_stack_exposure", 0.35)
     portfolio = select_portfolio(
         contest_result,
         num_lineups=final_count,
@@ -189,6 +192,7 @@ def main() -> None:
         max_batter_exposure=sim_config.max_batter_exposure,
         max_pitcher_exposure=sim_config.max_pitcher_exposure,
         diversity_weight=sim_config.diversity_weight,
+        max_stack_exposure=_max_stack_exp,
     )
     portfolio_df = portfolio.to_dataframe()
     selected_ids = [res.lineup_id for res in portfolio.selected]
