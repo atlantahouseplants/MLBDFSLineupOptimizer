@@ -623,12 +623,24 @@ def load_review_files() -> tuple[Path | None, Path | None]:
 
     saved_upload = st.session_state.get("last_upload_output_path")
     if saved_upload and Path(saved_upload).exists():
-        upload_path = Path(saved_upload)
+        _saved = Path(saved_upload)
+        # Check if there is a bigger file (simulated may have fewer lineups than basic)
+        _basic = pick_output_file("_fanduel_upload.csv", preferred_tag)
+        _sim = pick_output_file("_simulated_upload.csv", preferred_tag)
+        # Use whichever upload file has the most lineups
+        def _line_count(p):
+            try: return sum(1 for _ in open(p)) - 1  # subtract header
+            except: return 0
+        candidates = [p for p in [_sim, _basic, _saved] if p and Path(p).exists()]
+        upload_path = max(candidates, key=_line_count) if candidates else _saved
     else:
-        # Prefer simulated upload over basic upload
-        upload_path = pick_output_file("_simulated_upload.csv", preferred_tag)
-        if not upload_path:
-            upload_path = pick_output_file("_fanduel_upload.csv", preferred_tag)
+        _sim = pick_output_file("_simulated_upload.csv", preferred_tag)
+        _basic = pick_output_file("_fanduel_upload.csv", preferred_tag)
+        def _line_count(p):
+            try: return sum(1 for _ in open(p)) - 1
+            except: return 0
+        candidates = [p for p in [_sim, _basic] if p and p.exists()]
+        upload_path = max(candidates, key=_line_count) if candidates else _sim
 
     return lineups_path, upload_path
 

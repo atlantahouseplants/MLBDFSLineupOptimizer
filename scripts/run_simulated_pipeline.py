@@ -198,6 +198,23 @@ def main() -> None:
     selected_ids = [res.lineup_id for res in portfolio.selected]
     selected_lineups = _selected_lineups(lineups, selected_ids)
 
+    # Fallback: if portfolio selection fell short of requested count, supplement
+    # with the next-best candidates ranked by selection_metric
+    if len(selected_lineups) < final_count:
+        shortfall = final_count - len(selected_lineups)
+        used_ids = set(selected_ids)
+        # Sort all candidates by top_1pct_rate desc, take the next best
+        remaining = contest_result.rank_by(sim_config.selection_metric)
+        extras = [r for r in remaining if r.lineup_id not in used_ids][:shortfall]
+        extra_ids = [r.lineup_id for r in extras]
+        extra_lineups = _selected_lineups(lineups, extra_ids)
+        selected_lineups = selected_lineups + extra_lineups
+        selected_ids = selected_ids + extra_ids
+        print(
+            f"Portfolio selection shortfall: requested {final_count}, selected {len(selected_lineups) - len(extra_lineups)}, "
+            f"supplemented with {len(extra_lineups)} additional top-ranked lineups."
+        )
+
     tag = pipeline_result.get("tag", "slate")
     output_dir = Path(pipeline_result.get("output_dir", Path(args.output_dir)))
     output_dir.mkdir(parents=True, exist_ok=True)

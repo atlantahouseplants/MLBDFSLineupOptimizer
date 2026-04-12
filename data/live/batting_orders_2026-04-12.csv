@@ -1,4 +1,13 @@
 team,order_position,player_name
+BAL,1,Gunnar Henderson
+BAL,2,Taylor Ward
+BAL,3,Pete Alonso
+BAL,4,Samuel Basallo
+BAL,5,Dylan Beavers
+BAL,6,Leody Taveras
+BAL,7,Colton Cowser
+BAL,8,Coby Mayo
+BAL,9,Jeremiah Jackson
 SF,1,Willy Adames
 SF,2,Rafael Devers
 SF,3,Matt Chapman
@@ -179,3 +188,20 @@ CHC,6,Carson Kelly
 CHC,7,Pete Crow-Armstrong
 CHC,8,Dansby Swanson
 CHC,9,Matt Shaw
+PIT,1,Oneil Cruz
+PIT,2,Brandon Lowe
+PIT,3,Bryan Reynolds
+PIT,4,Marcell Ozuna
+PIT,5,Nick Yorke
+PIT,6,Spencer Horwitz
+PIT,7,Konnor Griffin
+PIT,8,Joey Bart
+SD,1,Ramón Laureano
+SD,2,Fernando Tatis Jr.
+SD,3,Jackson Merrill
+SD,4,Manny Machado
+SD,5,Xander Bogaerts
+SD,6,Nick Castellanos
+SD,7,Ty France
+SD,8,Bryce Johnson
+SD,9,Freddy Fermin
