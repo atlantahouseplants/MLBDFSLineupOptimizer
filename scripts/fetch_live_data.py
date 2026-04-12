@@ -38,6 +38,7 @@ if _env_path.exists():
 import pandas as pd
 
 from slate_optimizer.ingestion.mlb_api import fetch_mlb_lineups
+from slate_optimizer.ingestion.bpp_api import fetch_bpp_data
 from slate_optimizer.ingestion.odds_api import fetch_vegas_lines
 
 
@@ -62,8 +63,25 @@ def main() -> None:
     print(f"Fetching live data for {d}...")
     print()
 
+    # ── BallparkPal simulation data ────────────────────────────────────────
+    print("[0/3] BallparkPal Export Center (simulation data)...")
+    bundle = fetch_bpp_data(date_str=d)
+    if bundle:
+        s = bundle.summary()
+        print(f"  Batters: {s['batters']}  Pitchers: {s['pitchers']}  Games: {s['games']}  Teams: {s['teams']}")
+        bpp_paths = bundle.to_csvs(str(output_dir))
+        print(f"  Saved → {output_dir}/bpp_*_{d}.csv")
+        # Also save Excel files for direct BallparkPalLoader ingestion
+        bundle.to_excels(str(output_dir))
+        print(f"  Also saved BallparkPal_*.xlsx for pipeline ingestion")
+    else:
+        bpp_paths = {}
+        print("  BPP_SESSION not set or expired — update in .env")
+        print("  Without this, pipeline falls back to manual Excel exports")
+    print()
+
     # ── MLB lineups + probable pitchers ───────────────────────────────────
-    print("[1/2] MLB Stats API (batting orders + probable pitchers)...")
+    print("[1/3] MLB Stats API (batting orders + probable pitchers)...")
     batting_df, pitchers_df = fetch_mlb_lineups(date_str=d)
 
     if not batting_df.empty:
@@ -92,7 +110,7 @@ def main() -> None:
     print()
 
     # ── Vegas lines ────────────────────────────────────────────────────────
-    print("[2/2] Odds API (Vegas lines)...")
+    print("[2/3] Odds API (Vegas lines)...")
     vegas = fetch_vegas_lines()
 
     if vegas is None:
