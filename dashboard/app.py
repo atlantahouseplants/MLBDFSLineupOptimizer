@@ -920,12 +920,67 @@ def render_review_tab() -> None:
         st.markdown("</div>", unsafe_allow_html=True)
 
 
+def _load_env() -> None:
+    """Load API keys from .env in repo root into environment."""
+    import os
+    env_path = REPO_ROOT / ".env"
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                os.environ.setdefault(k.strip(), v.strip())
+
+
+def _data_is_fresh() -> bool:
+    """Return True if live data files exist and are from today."""
+    from datetime import date
+    today = date.today().strftime("%Y-%m-%d")
+    batter_file = LIVE_DIR / f"bpp_batters_{today}.csv"
+    vegas_file = LIVE_DIR / f"vegas_lines_{today}.csv"
+    return batter_file.exists() and vegas_file.exists()
+
+
+def _auto_fetch_if_stale() -> None:
+    """Silently fetch live data in the background if today's data is missing."""
+    if _data_is_fresh():
+        return
+    if st.session_state.get("auto_fetch_done"):
+        return
+    fetch_script = REPO_ROOT / "scripts" / "fetch_live_data.py"
+    if not fetch_script.exists():
+        return
+    with st.spinner("⏳ Fetching today's live data (BPP + Vegas + lineups)..."):
+        result = subprocess.run(
+            [sys.executable, str(fetch_script)],
+            capture_output=True, text=True, cwd=str(REPO_ROOT)
+        )
+        st.session_state["auto_fetch_done"] = True
+        if result.returncode == 0:
+            st.cache_data.clear()
+        else:
+            # Don't crash — just note it failed silently
+            st.session_state["auto_fetch_error"] = result.stdout[-500:] + result.stderr[-200:]
+
+
 def main() -> None:
     inject_css()
+    _load_env()
     init_session_state()
+    _auto_fetch_if_stale()
     files = get_live_files()
 
     st.title("MLB DFS Daily Workflow")
+
+    # Show auto-fetch error if it occurred
+    if st.session_state.get("auto_fetch_error"):
+        with st.expander("⚠️ Live data auto-fetch failed — click to see why"):
+            st.code(st.session_state["auto_fetch_error"], language="text")
+            st.markdown("**Fix:** Update `BPP_SESSION` in your `.env` file — your BallparkPal session expired.")
+            if st.button("Clear error"):
+                del st.session_state["auto_fetch_error"]
+                del st.session_state["auto_fetch_done"]
+                st.rerun()
     selected_tab = st.radio(
         "Workflow",
         TAB_OPTIONS,
