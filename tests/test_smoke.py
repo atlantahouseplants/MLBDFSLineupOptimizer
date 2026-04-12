@@ -358,3 +358,84 @@ def test_data_quality_report_keys(synthetic_players: pd.DataFrame) -> None:
     }
     assert isinstance(report, dict)
     assert set(report) == expected_keys
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Auto-fetch module tests
+# ──────────────────────────────────────────────────────────────────────
+
+def test_mlb_api_fetch_structure(monkeypatch) -> None:
+    """Mock MLB Stats API response and verify fetch_mlb_lineups returns correct columns."""
+    import importlib
+    import unittest.mock as mock
+
+    from slate_optimizer.ingestion import mlb_api
+
+    fake_response = {
+        "totalItems": 1,
+        "dates": [
+            {
+                "games": [
+                    {
+                        "teams": {
+                            "home": {"team": {"abbreviation": "NYY"}, "probablePitcher": {"fullName": "Gerrit Cole", "pitchHand": {"code": "R"}}},
+                            "away": {"team": {"abbreviation": "BOS"}, "probablePitcher": {"fullName": "Chris Sale", "pitchHand": {"code": "L"}}},
+                        },
+                        "lineups": {
+                            "homePlayers": [
+                                {"fullName": "Aaron Judge"},
+                                {"fullName": "Juan Soto"},
+                                {"fullName": "Giancarlo Stanton"},
+                                {"fullName": "Anthony Volpe"},
+                                {"fullName": "Austin Wells"},
+                                {"fullName": "Jazz Chisholm"},
+                                {"fullName": "Paul Goldschmidt"},
+                                {"fullName": "Oswaldo Cabrera"},
+                                {"fullName": "Ben Rice"},
+                            ],
+                            "awayPlayers": [
+                                {"fullName": "Jarren Duran"},
+                                {"fullName": "Rafael Devers"},
+                                {"fullName": "Triston Casas"},
+                                {"fullName": "Masataka Yoshida"},
+                                {"fullName": "Tyler O'Neill"},
+                                {"fullName": "David Hamilton"},
+                                {"fullName": "Connor Wong"},
+                                {"fullName": "Romy Gonzalez"},
+                                {"fullName": "Ceddanne Rafaela"},
+                            ],
+                        },
+                    }
+                ]
+            }
+        ],
+    }
+
+    mock_resp = mock.MagicMock()
+    mock_resp.raise_for_status.return_value = None
+    mock_resp.json.return_value = fake_response
+
+    with mock.patch.object(mlb_api._requests, "get", return_value=mock_resp):
+        batting_df, pitchers_df = mlb_api.fetch_mlb_lineups(date_str="2026-04-15")
+
+    assert set(batting_df.columns) >= {"team_code", "order_position", "player_name", "confirmed"}
+    assert len(batting_df) == 18  # 9 home + 9 away
+    assert set(batting_df["team_code"].unique()) == {"NYY", "BOS"}
+    assert batting_df["order_position"].max() == 9
+
+    assert set(pitchers_df.columns) >= {"team_code", "player_name", "pitcher_hand"}
+    assert len(pitchers_df) == 2
+    cole = pitchers_df[pitchers_df["player_name"] == "Gerrit Cole"].iloc[0]
+    assert cole["pitcher_hand"] == "R"
+    sale = pitchers_df[pitchers_df["player_name"] == "Chris Sale"].iloc[0]
+    assert sale["pitcher_hand"] == "L"
+
+
+def test_odds_api_no_key(monkeypatch) -> None:
+    """fetch_vegas_lines returns None when no API key is set."""
+    import os
+    from slate_optimizer.ingestion.odds_api import fetch_vegas_lines
+
+    monkeypatch.delenv("ODDS_API_KEY", raising=False)
+    result = fetch_vegas_lines(api_key=None)
+    assert result is None

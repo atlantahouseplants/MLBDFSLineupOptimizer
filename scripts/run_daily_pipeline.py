@@ -127,6 +127,16 @@ def build_parser(add_help: bool = True) -> argparse.ArgumentParser:
         action="store_true",
         help="Write merged slate + projections CSVs alongside optimizer outputs.",
     )
+    parser.add_argument(
+        "--auto-fetch",
+        action="store_true",
+        help="Auto-fetch batting orders + Vegas lines before running pipeline.",
+    )
+    parser.add_argument(
+        "--live-data-dir",
+        default="data/live",
+        help="Directory for auto-fetched live data files (default: data/live).",
+    )
     return parser
 
 
@@ -468,8 +478,59 @@ def run_pipeline(args: argparse.Namespace) -> dict:
     }
 
 
+def _run_auto_fetch(args: argparse.Namespace) -> None:
+    """Run fetch_live_data.py logic inline if --auto-fetch is set."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+    from datetime import date as _date
+    from slate_optimizer.ingestion.mlb_api import fetch_mlb_lineups
+    from slate_optimizer.ingestion.odds_api import fetch_vegas_lines
+
+    live_dir = Path(args.live_data_dir)
+    live_dir.mkdir(parents=True, exist_ok=True)
+    d = _date.today().strftime("%Y-%m-%d")
+
+    print("[auto-fetch] Fetching batting orders from MLB Stats API...")
+    batting_df, pitchers_df = fetch_mlb_lineups(date_str=d)
+
+    orders_path = live_dir / f"batting_orders_{d}.csv"
+    if not batting_df.empty:
+        batting_df[["team_code", "order_position", "player_name"]].rename(
+            columns={"team_code": "team"}
+        ).to_csv(orders_path, index=False)
+        print(f"  {len(batting_df)} lineup slots across {batting_df['team_code'].nunique()} teams → {orders_path}")
+        if not args.batting_orders_csv:
+            args.batting_orders_csv = str(orders_path)
+    else:
+        print("  No confirmed lineups yet.")
+
+    pitchers_path = live_dir / f"probable_pitchers_{d}.csv"
+    if not pitchers_df.empty:
+        out = pitchers_df.rename(columns={"team_code": "team", "pitcher_hand": "throws"})
+        out["bats"] = ""
+        out[["player_name", "team", "bats", "throws"]].to_csv(pitchers_path, index=False)
+        print(f"  {len(pitchers_df)} probable pitchers → {pitchers_path}")
+        if not args.handedness_csv:
+            args.handedness_csv = str(pitchers_path)
+
+    print("[auto-fetch] Fetching Vegas lines from Odds API...")
+    vegas = fetch_vegas_lines()
+    if vegas is None:
+        print("  ODDS_API_KEY not set — skipping Vegas auto-fetch.")
+    elif not vegas.games.empty:
+        vegas_path = live_dir / f"vegas_lines_{d}.csv"
+        save_cols = [c for c in ["game", "total", "home_ml", "away_ml"] if c in vegas.games.columns]
+        vegas.games[save_cols].to_csv(vegas_path, index=False)
+        print(f"  {len(vegas.games)} games → {vegas_path}")
+        if not args.vegas_lines_csv:
+            args.vegas_lines_csv = str(vegas_path)
+    print()
+
+
 def main() -> None:
     args = parse_args()
+    if getattr(args, "auto_fetch", False):
+        _run_auto_fetch(args)
     run_pipeline(args)
 
 if __name__ == "__main__":
