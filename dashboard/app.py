@@ -846,7 +846,7 @@ def render_run_tab(files: dict[str, Path | None]) -> None:
         )
         submit_count = st.number_input(
             "Lineups to Submit",
-            min_value=1, max_value=300, value=20, step=10,
+            min_value=1, max_value=350, value=20, step=10,
             help="How many lineups you actually want to enter. Must be less than Pool Size."
         )
         stack_style = st.selectbox(
