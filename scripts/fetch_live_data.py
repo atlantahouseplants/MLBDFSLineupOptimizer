@@ -70,10 +70,18 @@ def main() -> None:
         s = bundle.summary()
         print(f"  Batters: {s['batters']}  Pitchers: {s['pitchers']}  Games: {s['games']}  Teams: {s['teams']}")
         bpp_paths = bundle.to_csvs(str(output_dir))
-        print(f"  Saved → {output_dir}/bpp_*_{d}.csv")
-        # Also save Excel files for direct BallparkPalLoader ingestion
+        s2 = bundle.summary()
+        n_proj = s2["dfs_projections"]
+        n_pf = s2["park_factors"]
+        n_bo = len(bundle.batting_orders())
+        n_hand = len(bundle.handedness())
+        print(f"  DFS projections: {n_proj} players (Bust/Median/Upside)")
+        print(f"  Park factors: {n_pf} stadiums")
+        bpp_paths = bundle.to_csvs(str(output_dir))
         bundle.to_excels(str(output_dir))
-        print(f"  Also saved BallparkPal_*.xlsx for pipeline ingestion")
+        print(f"  Batting orders: {n_bo} confirmed lineup slots → no manual CSV needed")
+        print(f"  Handedness: {n_hand} players → no manual CSV needed")
+        print(f"  Saved → {output_dir}/bpp_*_{d}.csv + BallparkPal_*.xlsx")
     else:
         bpp_paths = {}
         print("  BPP_SESSION not set or expired — update in .env")
