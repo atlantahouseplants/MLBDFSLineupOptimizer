@@ -1,271 +1,172 @@
 team,order_position,player_name
-MIN,5,Josh Bell
-MIN,1,Byron Buxton
-TOR,9,Tyler Heineman
-MIN,9,Tristan Gray
-TOR,4,Jesus Sanchez
-TOR,2,Daulton Varsho
-MIN,2,Trevor Larnach
-TOR,1,Nathan Lukes
-MIN,7,Kody Clemens
-TOR,3,Vladimir Guerrero Jr.
-TOR,7,Andres Gimenez
-MIN,4,Matt Wallner
-TOR,5,Kazuma Okamoto
-TOR,6,Ernie Clement
-TOR,8,Davis Schneider
-MIN,6,Ryan Jeffers
-MIN,8,Brooks Lee
-MIN,3,Luke Keaschall
-NYY,5,Giancarlo Stanton
-NYY,2,Aaron Judge
-NYY,3,Cody Bellinger
-TB ,7,Jake Fraley
-NYY,8,Ryan McMahon
-TB ,4,Yandy Diaz
-TB ,5,Cedric Mullins
-TB ,6,Nick Fortes
-NYY,1,Trent Grisham
-NYY,6,Jazz Chisholm
-TB ,3,Jonathan Aranda
-NYY,9,Austin Wells
-TB ,9,Taylor Walls
-NYY,7,Jose Caballero
-TB ,2,Junior Caminero
-NYY,4,Ben Rice
-TB ,1,Chandler Simpson
-TB ,8,Ben Williamson
-BOS,3,Willson Contreras
-BOS,5,Trevor Story
-BOS,8,Carlos Narvaez
-STL,5,Nolan Gorman
-STL,2,Ivan Herrera
-STL,3,Alec Burleson
-BOS,4,Wilyer Abreu
-BOS,9,Ceddanne Rafaela
-BOS,2,Jarren Duran
-STL,8,Pedro Pages
-STL,9,Victor Scott II
-STL,4,Jordan Walker
-STL,6,Masyn Winn
-BOS,6,Marcelo Mayer
-STL,7,Thomas Saggese
-BOS,1,Roman Anthony
-BOS,7,Caleb Durbin
-STL,1,JJ Wetherholt
-HOU,3,Jose Altuve
-HOU,6,Christian Walker
-HOU,4,Carlos Correa
-SEA,8,J.P. Crawford
-SEA,4,Josh Naylor
-SEA,2,Cal Raleigh
-HOU,1,Jeremy Pena
-SEA,5,Randy Arozarena
-SEA,6,Luke Raley
-HOU,2,Yordan Alvarez
-HOU,5,Isaac Paredes
-HOU,9,Yainer Diaz
-SEA,3,Julio Rodriguez
-SEA,1,Brendan Donovan
-SEA,7,Dominic Canzone
-HOU,8,Joey Loperfido
-HOU,7,Cam Smith
-SEA,9,Cole Young
-SD ,4,Manny Machado
-SD ,6,Xander Bogaerts
-SD ,5,Miguel Andujar
-SD ,8,Jake Cronenworth
-COL,7,Willi Castro
-SD ,1,Ramon Laureano
-SD ,7,Ty France
-SD ,2,Fernando Tatis Jr.
-COL,2,Mickey Moniak
-COL,1,Edouard Julien
-SD ,9,Luis Campusano
-COL,5,Ezequiel Tovar
-COL,4,TJ Rumfield
-COL,8,Brenton Doyle
-COL,6,Troy Johnston
-COL,9,Kyle Karros
-COL,3,Hunter Goodman
-SD ,3,Jackson Merrill
-ARI,7,Ildemaro Vargas
-PHI,3,Bryce Harper
-ARI,6,Nolan Arenado
-PHI,8,J.T. Realmuto
-ARI,1,Ketel Marte
+SF,1,Willy Adames
+SF,2,Rafael Devers
+SF,3,Matt Chapman
+SF,4,Casey Schmitt
+SF,5,Jung Hoo Lee
+SF,6,Heliot Ramos
+SF,7,Daniel Susac
+SF,8,Jerar Encarnacion
+SF,9,Christian Koss
 PHI,1,Trea Turner
 PHI,2,Kyle Schwarber
-PHI,4,Alec Bohm
-PHI,6,Adolis Garcia
-PHI,7,Brandon Marsh
-ARI,4,Gabriel Moreno
-ARI,3,Geraldo Perdomo
-ARI,8,Alek Thomas
-ARI,9,Jorge Barrosa
-ARI,5,Adrian Del Castillo
+PHI,3,Bryce Harper
+PHI,4,Brandon Marsh
 PHI,5,Bryson Stott
-ARI,2,Corbin Carroll
+PHI,6,Adolis García
+PHI,7,Alec Bohm
+PHI,8,Rafael Marchán
 PHI,9,Justin Crawford
-NYM,7,Marcus Semien
-NYM,3,Jorge Polanco
+AZ,1,Ildemaro Vargas
+AZ,2,Corbin Carroll
+AZ,3,Geraldo Perdomo
+AZ,4,Jose Fernandez
+AZ,5,Nolan Arenado
+AZ,6,Tim Tawa
+AZ,7,James McCann
+AZ,8,Alek Thomas
+AZ,9,Jorge Barrosa
+TOR,1,Ernie Clement
+TOR,2,Daulton Varsho
+TOR,3,Vladimir Guerrero Jr.
+TOR,4,Jesús Sánchez
+TOR,5,Kazuma Okamoto
+TOR,6,Nathan Lukes
+TOR,7,Eloy Jiménez
+TOR,8,Andrés Giménez
+TOR,9,Brandon Valenzuela
+MIN,1,Kody Clemens
+MIN,2,Trevor Larnach
+MIN,3,Luke Keaschall
+MIN,4,Josh Bell
+MIN,5,Matt Wallner
+MIN,6,Victor Caratini
+MIN,7,Tristan Gray
+MIN,8,Brooks Lee
+MIN,9,James Outman
+CIN,1,TJ Friedl
+CIN,2,Matt McLain
+CIN,3,Elly De La Cruz
+CIN,4,Sal Stewart
+CIN,5,Eugenio Suárez
+CIN,6,Nathaniel Lowe
+CIN,7,Spencer Steer
+CIN,8,Noelvi Marte
+CIN,9,P.J. Higgins
+LAA,1,Zach Neto
+LAA,2,Mike Trout
+LAA,3,Jo Adell
+LAA,4,Jorge Soler
+LAA,5,Vaughn Grissom
+LAA,6,Nolan Schanuel
+LAA,7,Logan O'Hoppe
+LAA,8,Oswald Peraza
+LAA,9,Bryce Teodosio
 NYM,1,Francisco Lindor
-ATH,6,Jeff McNeil
-ATH,8,Carlos Cortes
-NYM,2,Bo Bichette
-NYM,6,Mark Vientos
-ATH,3,Shea Langeliers
-ATH,1,Lawrence Butler
-ATH,9,Denzel Clarke
-NYM,4,Luis Robert
-NYM,9,Francisco Alvarez
+NYM,2,Jorge Polanco
+NYM,3,Jared Young
+NYM,4,Bo Bichette
 NYM,5,Brett Baty
-ATH,4,Tyler Soderstrom
-ATH,7,Max Muncy
+NYM,6,Marcus Semien
+NYM,7,Carson Benge
+NYM,8,Luis Torrens
+NYM,9,Tyrone Taylor
+ATH,1,Lawrence Butler
 ATH,2,Nick Kurtz
-NYM,8,Carson Benge
-ATH,5,Jacob Wilson
-MIL,3,Christian Yelich
-MIL,4,Jake Bauers
-WAS,8,Keibert Ruiz
-MIL,2,William Contreras
-MIL,8,Blake Perkins
-MIL,7,David Hamilton
-MIL,1,Brice Turang
-MIL,5,Garrett Mitchell
-WAS,2,Luis Garcia
-WAS,7,Jose Tena
-WAS,5,C.J. Abrams
-WAS,6,Nasim Nunez
-MIL,6,Sal Frelick
-MIL,9,Joey Ortiz
-WAS,3,Brady House
-WAS,1,James Wood
-WAS,4,Daylen Lile
-WAS,9,Jacob Young
-LAD,4,Freddie Freeman
-LAD,5,Max Muncy
-TEX,5,Joc Pederson
-LAD,6,Teoscar Hernandez
-TEX,1,Brandon Nimmo
-TEX,3,Corey Seager
-TEX,7,Danny Jansen
-LAD,1,Shohei Ohtani
-LAD,2,Kyle Tucker
-LAD,3,Will Smith
-TEX,4,Jake Burger
-TEX,8,Josh Smith
-TEX,9,Josh Jung
-LAD,7,Andy Pages
-LAD,9,Alex Freeland
-TEX,6,Evan Carter
-TEX,2,Wyatt Langford
-LAD,8,Hyeseong Kim
-KC ,4,Salvador Perez
-CHW,9,Derek Hill
-KC ,6,Jonathan India
-KC ,9,Kyle Isbel
-KC ,1,Maikel Garcia
-CHW,2,Lenyn Sosa
-KC ,2,Bobby Witt Jr.
-CHW,4,Miguel Vargas
-CHW,8,Luisangel Acuna
-KC ,3,Vinnie Pasquantino
-KC ,8,Isaac Collins
-CHW,7,Tanner Murray
-KC ,7,Jac Caglianone
-KC ,5,Carter Jensen
-CHW,5,Colson Montgomery
-CHW,6,Edgar Quero
-CHW,1,Chase Meidroth
-CHW,3,Munetaka Murakami
+ATH,3,Shea Langeliers
+ATH,4,Tyler Soderstrom
+ATH,5,Carlos Cortes
+ATH,6,Max Muncy
+ATH,7,Jeff McNeil
+ATH,8,Darell Hernaiz
+ATH,9,Denzel Clarke
+DET,1,Kevin McGonigle
+DET,2,Gleyber Torres
+DET,3,Colt Keith
+DET,4,Riley Greene
+DET,5,Dillon Dingler
+DET,6,Kerry Carpenter
+DET,7,Spencer Torkelson
+DET,8,Zach McKinstry
+DET,9,Javier Báez
 MIA,1,Austin Slater
-DET,3,Gleyber Torres
-DET,7,Zach McKinstry
-MIA,7,Xavier Edwards
+MIA,2,Agustín Ramírez
+MIA,3,Jakob Marsee
 MIA,4,Otto Lopez
-DET,9,Wenceel Perez
-DET,8,Spencer Torkelson
+MIA,5,Heriberto Hernández
 MIA,6,Connor Norby
-DET,4,Kerry Carpenter
-MIA,5,Heriberto Hernandez
-MIA,2,Agustin Ramirez
-DET,5,Riley Greene
-DET,1,Colt Keith
+MIA,7,Xavier Edwards
 MIA,8,Deyvison De Los Santos
 MIA,9,Javier Sanoja
-DET,6,Dillon Dingler
-MIA,3,Jakob Marsee
-DET,2,Kevin McGonigle
-LAA,2,Mike Trout
-CIN,5,Eugenio Suarez
-LAA,8,Jeimer Candelario
-LAA,4,Jorge Soler
-LAA,5,Yoan Moncada
-CIN,9,Ke'Bryan Hayes
-CIN,8,Tyler Stephenson
-LAA,3,Jo Adell
-CIN,7,Will Benson
-CIN,6,Spencer Steer
-LAA,9,Bryce Teodosio
-CIN,1,TJ Friedl
-LAA,6,Oswald Peraza
-CIN,2,Matt McLain
-LAA,7,Logan O'Hoppe
-CIN,3,Elly De La Cruz
-LAA,1,Zach Neto
-CIN,4,Sal Stewart
-PIT,5,Marcell Ozuna
-CHC,3,Alex Bregman
-CHC,7,Carson Kelly
-CHC,9,Dansby Swanson
-PIT,4,Ryan O'Hearn
+TB,1,Chandler Simpson
+TB,2,Junior Caminero
+TB,3,Jonathan Aranda
+TB,4,Yandy Díaz
+TB,5,Jake Fraley
+TB,6,Cedric Mullins
+TB,7,Richie Palacios
+TB,8,Taylor Walls
+TB,9,Hunter Feduccia
+NYY,1,Trent Grisham
+NYY,2,Ben Rice
+NYY,3,Aaron Judge
+NYY,4,Cody Bellinger
+NYY,5,Jazz Chisholm Jr.
+NYY,6,Randal Grichuk
+NYY,7,J.C. Escarra
+NYY,8,Ryan McMahon
+NYY,9,José Caballero
+KC,1,Maikel Garcia
+KC,2,Bobby Witt Jr.
+KC,3,Vinnie Pasquantino
+KC,4,Salvador Perez
+KC,5,Carter Jensen
+KC,6,Michael Massey
+KC,7,Jac Caglianone
+KC,8,Isaac Collins
+KC,9,Kyle Isbel
+CWS,1,Miguel Vargas
+CWS,2,Chase Meidroth
+CWS,3,Munetaka Murakami
+CWS,4,Lenyn Sosa
+CWS,5,Edgar Quero
+CWS,6,Colson Montgomery
+CWS,7,Tanner Murray
+CWS,8,Luisangel Acuña
+CWS,9,Derek Hill
+MIL,1,Brice Turang
+MIL,2,William Contreras
+MIL,3,Christian Yelich
+MIL,4,Garrett Mitchell
+MIL,5,Jake Bauers
+MIL,6,Sal Frelick
+MIL,7,Brandon Lockridge
+MIL,8,David Hamilton
+MIL,9,Joey Ortiz
+STL,1,JJ Wetherholt
+STL,2,Iván Herrera
+STL,3,Alec Burleson
+STL,4,Jordan Walker
+STL,5,Nolan Gorman
+STL,6,Ramón Urías
+STL,7,José Fermín
+STL,8,Thomas Saggese
+STL,9,Victor Scott II
+BOS,1,Roman Anthony
+BOS,2,Caleb Durbin
+BOS,3,Jarren Duran
+BOS,4,Willson Contreras
+BOS,5,Wilyer Abreu
+BOS,6,Trevor Story
+BOS,7,Marcelo Mayer
+BOS,8,Connor Wong
+BOS,9,Ceddanne Rafaela
 CHC,1,Nico Hoerner
+CHC,2,Moisés Ballesteros
+CHC,3,Alex Bregman
 CHC,4,Ian Happ
-PIT,2,Brandon Lowe
-PIT,1,Oneil Cruz
-PIT,3,Bryan Reynolds
 CHC,5,Seiya Suzuki
-PIT,9,Henry Davis
-CHC,2,Michael Busch
-PIT,7,Spencer Horwitz
-CHC,6,Pete Crow-Armstrong
-PIT,6,Nick Gonzales
-CHC,8,Moises Ballesteros
-PIT,8,Konnor Griffin
-BAL,2,Taylor Ward
-BAL,3,Pete Alonso
-BAL,5,Tyler O'Neill
-SF ,1,Willy Adames
-SF ,5,Rafael Devers
-SF ,3,Luis Arraez
-SF ,2,Matt Chapman
-SF ,8,Harrison Bader
-SF ,6,Jerar Encarnacion
-BAL,7,Jeremiah Jackson
-SF ,4,Heliot Ramos
-SF ,9,Patrick Bailey
-BAL,8,Colton Cowser
-BAL,1,Gunnar Henderson
-BAL,6,Dylan Beavers
-BAL,9,Coby Mayo
-BAL,4,Samuel Basallo
-SF ,7,Jung Hoo Lee
-ATL,5,Mike Yastrzemski
-CLE,8,Austin Hedges
-CLE,3,Jose Ramirez
-ATL,3,Matt Olson
-ATL,7,Dominic Smith
-ATL,9,Eli White
-ATL,8,Mauricio Dubon
-ATL,6,Ozzie Albies
-CLE,6,Rhys Hoskins
-ATL,1,Ronald Acuna Jr.
-ATL,4,Austin Riley
-CLE,9,Brayan Rocchio
-CLE,1,Steven Kwan
-CLE,4,David Fry
-CLE,2,Angel Martinez
-CLE,7,Juan Brito
-ATL,2,Drake Baldwin
-CLE,5,Chase DeLauter
+CHC,6,Carson Kelly
+CHC,7,Pete Crow-Armstrong
+CHC,8,Dansby Swanson
+CHC,9,Matt Shaw

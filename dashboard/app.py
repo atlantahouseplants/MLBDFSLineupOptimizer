@@ -29,6 +29,16 @@ PIPELINE_MESSAGE_MAP = {
     "Estimated ownership": "✅ Ownership estimated",
     "No feasible": "❌ No lineups generated — try removing the ownership cap",
     "Saved FanDuel upload": "✅ FanDuel upload file saved",
+    "fit_player_distributions": "⚙️ Fitting player score distributions...",
+    "Fitting distributions": "⚙️ Fitting player score distributions...",
+    "simulate_slate": "⚙️ Running Monte Carlo simulation...",
+    "simulate_field": "⚙️ Simulating field...",
+    "simulate_contest": "⚙️ Simulating contest performance...",
+    "Wrote simulation metrics": "✅ Simulation complete",
+    "Wrote portfolio summary": "✅ Portfolio selected",
+    "Wrote simulated FanDuel": "✅ Simulated upload file saved",
+    "Portfolio win rate": "📊 Portfolio stats calculated",
+    "select_portfolio": "⚙️ Selecting best portfolio...",
 }
 
 TAB_OPTIONS = ["Today's Slate", "Run Optimizer", "Review Lineups"]
@@ -454,7 +464,8 @@ def extract_generated_count(text: str) -> int | None:
 
 
 def run_pipeline(
-    num_lineups: int,
+    pool_size: int,
+    submit_count: int,
     stack_style: str,
     bring_back: bool,
     max_own: float,
@@ -463,12 +474,14 @@ def run_pipeline(
     python_exe = sys.executable
     stack_template_str = STACK_STYLE_MAP[stack_style]
     tag = datetime.now().strftime("run-%Y%m%d-%H%M%S")
-    cmd = [python_exe, str(REPO_ROOT / "scripts" / "run_daily_pipeline.py")]
+    # Use the simulated pipeline: generate pool → MC sim → select best portfolio
+    cmd = [python_exe, str(REPO_ROOT / "scripts" / "run_simulated_pipeline.py")]
     cmd += ["--bpp-source", str(REPO_ROOT / "data" / "live")]
     cmd += ["--fanduel-csv", str(Path(st.session_state["uploaded_fd_path"]))]
     cmd += ["--output-dir", str(REPO_ROOT / "data" / "output")]
     cmd += ["--write-intermediate"]
-    cmd += ["--num-lineups", str(num_lineups)]
+    cmd += ["--num-candidates", str(pool_size)]   # how many to generate
+    cmd += ["--num-lineups", str(submit_count)]   # how many to select for submission
     cmd += ["--stack-templates", stack_template_str]
     cmd += ["--tag", tag]
     if bring_back:
@@ -507,20 +520,42 @@ def run_pipeline(
     return_code = process.wait()
 
     lineups_path = OUTPUT_DIR / f"{tag}_lineups.csv"
-    upload_path = OUTPUT_DIR / f"{tag}_fanduel_upload.csv"
-    success = return_code == 0 and lineups_path.exists() and upload_path.exists() and generated_count > 0
+    # Simulated pipeline produces _simulated_upload.csv; fall back to basic upload
+    upload_path = OUTPUT_DIR / f"{tag}_simulated_upload.csv"
+    if not upload_path.exists():
+        upload_path = OUTPUT_DIR / f"{tag}_fanduel_upload.csv"
+    sim_results_path = OUTPUT_DIR / f"{tag}_sim_results.csv"
+    success = return_code == 0 and upload_path.exists()
 
     if success:
         st.session_state["last_run_tag"] = tag
-        st.session_state["last_lineups_path"] = str(lineups_path)
+        st.session_state["last_lineups_path"] = str(lineups_path) if lineups_path.exists() else str(upload_path)
         st.session_state["last_upload_output_path"] = str(upload_path)
         st.session_state["last_run_lineup_count"] = generated_count
+
+        # Show simulation portfolio stats if available
+        portfolio_path = OUTPUT_DIR / f"{tag}_sim_portfolio.csv"
+        sim_stats = ""
+        if portfolio_path.exists():
+            try:
+                import pandas as _pd
+                pf = _pd.read_csv(portfolio_path)
+                if not pf.empty and "win_rate" in pf.columns:
+                    wr = pf["win_rate"].mean()
+                    t1 = pf["top_1pct_rate"].mean()
+                    roi = pf["expected_roi"].mean()
+                    sim_stats = f"  \n📊 **Sim stats:** Win rate {wr:.2%} | Top-1% rate {t1:.2%} | ROI {roi:.2f}x"
+            except Exception:
+                pass
+
         st.session_state["last_run_message"] = (
-            f"✅ Done! Generated {generated_count} lineups.\n\n"
-            f"📁 FanDuel upload file: {upload_path.relative_to(REPO_ROOT)}"
+            f"✅ Done! Selected {submit_count} lineups from {pool_size} simulated.\n\n"
+            f"📁 FanDuel upload: {upload_path.relative_to(REPO_ROOT)}{sim_stats}"
         )
-        st.success(f"✅ Done! Generated {generated_count} lineups.")
-        st.write(f"📁 FanDuel upload file: `{upload_path.relative_to(REPO_ROOT)}`")
+        st.success(f"✅ Done! Selected best {submit_count} lineups from a pool of {pool_size}.")
+        if sim_stats:
+            st.markdown(sim_stats)
+        st.write(f"📁 Upload file: `{upload_path.relative_to(REPO_ROOT)}`")
         with upload_path.open("rb") as handle:
             st.download_button(
                 "Download FanDuel Upload CSV",
@@ -559,7 +594,10 @@ def load_review_files() -> tuple[Path | None, Path | None]:
     if saved_upload and Path(saved_upload).exists():
         upload_path = Path(saved_upload)
     else:
-        upload_path = pick_output_file("_fanduel_upload.csv", preferred_tag)
+        # Prefer simulated upload over basic upload
+        upload_path = pick_output_file("_simulated_upload.csv", preferred_tag)
+        if not upload_path:
+            upload_path = pick_output_file("_fanduel_upload.csv", preferred_tag)
 
     return lineups_path, upload_path
 
@@ -798,29 +836,34 @@ def render_run_tab(files: dict[str, Path | None]) -> None:
     checklist_cols[2].markdown(checklist_badge(vegas_ready, "Vegas Lines"))
     checklist_cols[3].markdown(checklist_badge(batting_ready, "Batting Orders", warning=not batting_ready))
 
+    st.markdown("**Lineup Settings**")
     left_col, right_col = st.columns(2)
     with left_col:
-        num_lineups = st.number_input("Lineups", min_value=1, max_value=300, value=20, step=10)
+        pool_size = st.number_input(
+            "Candidate Pool Size",
+            min_value=50, max_value=2000, value=500, step=50,
+            help="Generate this many lineups first, then simulation picks the best ones to submit."
+        )
+        submit_count = st.number_input(
+            "Lineups to Submit",
+            min_value=1, max_value=300, value=20, step=10,
+            help="How many lineups you actually want to enter. Must be less than Pool Size."
+        )
         stack_style = st.selectbox(
             "Stack Style",
-            [
-                "4-3 (recommended)",
-                "4-4 (two big stacks)",
-                "5-3 (power stack)",
-                "3-3-2 (spread)",
-            ],
+            ["4-3 (recommended)", "4-4 (two big stacks)", "5-3 (power stack)", "3-3-2 (spread)"],
             index=0,
         )
     with right_col:
         bring_back = st.toggle("Bring-Back", value=True, help="Require 1+ hitter from opposing team in stacks")
         max_own = st.number_input(
             "Max Lineup Ownership (optional)",
-            min_value=0.0,
-            max_value=5.0,
-            value=0.0,
-            step=0.1,
-            help="Cap total projected ownership per lineup. 0 = no cap. Try 2.5 to stay contrarian.",
+            min_value=0.0, max_value=5.0, value=0.0, step=0.1,
+            help="Cap total projected ownership per lineup. 0 = no cap.",
         )
+        st.markdown("")
+        st.markdown("")
+        st.info(f"**How it works:** Generates {pool_size:,} candidate lineups → Monte Carlo simulation → selects best {submit_count} for your portfolio", icon="🎯")
 
     blocked_reasons = []
     if not fd_ready:
@@ -839,7 +882,8 @@ def render_run_tab(files: dict[str, Path | None]) -> None:
 
     if run_clicked:
         run_pipeline(
-            num_lineups=int(num_lineups),
+            pool_size=int(pool_size),
+            submit_count=int(submit_count),
             stack_style=stack_style,
             bring_back=bring_back,
             max_own=float(max_own),
@@ -872,6 +916,38 @@ def render_review_tab() -> None:
         render_summary_card("🔥 Top Stack", summary["top_stack"])
     with summary_cols[4]:
         render_summary_card("⚾ Main Pitcher", summary["main_pitcher"])
+
+    # Show simulation metrics if available
+    sim_results_files = sorted(OUTPUT_DIR.glob("*_sim_results.csv"), reverse=True)
+    if sim_results_files:
+        sim_path = sim_results_files[0]
+        # prefer the one matching our tag
+        tag_pref = st.session_state.get("last_run_tag")
+        if tag_pref:
+            tagged = OUTPUT_DIR / f"{tag_pref}_sim_results.csv"
+            if tagged.exists():
+                sim_path = tagged
+        try:
+            sim_df = load_csv(str(sim_path))
+            if not sim_df.empty and "top_1pct_rate" in sim_df.columns:
+                st.markdown("### Simulation Results")
+                sc1, sc2, sc3, sc4 = st.columns(4)
+                sc1.metric("Avg Win Rate", f"{sim_df['win_rate'].mean():.2%}")
+                sc2.metric("Avg Top-1% Rate", f"{sim_df['top_1pct_rate'].mean():.2%}")
+                sc3.metric("Avg Cash Rate", f"{sim_df['cash_rate'].mean():.2%}")
+                sc4.metric("Avg Expected ROI", f"{sim_df['expected_roi'].mean():.2f}x")
+
+                with st.expander("📊 Per-lineup simulation scores (top 20)"):
+                    show_cols = [c for c in ["lineup_id","mean_score","top_1pct_rate","win_rate","cash_rate","expected_roi","total_ownership","field_duplication_rate"] if c in sim_df.columns]
+                    display = sim_df.sort_values("top_1pct_rate", ascending=False).head(20)[show_cols].copy()
+                    for col in ["top_1pct_rate","win_rate","cash_rate"]:
+                        if col in display.columns:
+                            display[col] = display[col].map(lambda x: f"{x:.2%}")
+                    if "expected_roi" in display.columns:
+                        display["expected_roi"] = display["expected_roi"].map(lambda x: f"{x:.2f}x")
+                    st.dataframe(display, use_container_width=True, hide_index=True)
+        except Exception:
+            pass
 
     st.markdown("### Player Exposure Board")
     exposure_df = build_exposure_df(lineups_df)
