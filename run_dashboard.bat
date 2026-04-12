@@ -30,4 +30,4 @@ echo.
 echo Opening in your browser...
 echo.
 
-streamlit run dashboard/daily_workflow.py --server.headless true --browser.gatherUsageStats false %*
+streamlit run dashboard/app.py --server.headless true --browser.gatherUsageStats false %*

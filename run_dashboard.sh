@@ -30,7 +30,7 @@ echo ""
 echo "Opening in your browser..."
 echo ""
 
-streamlit run dashboard/daily_workflow.py \
+streamlit run dashboard/app.py \
     --server.headless true \
     --browser.gatherUsageStats false \
     "$@"

@@ -709,6 +709,34 @@ def render_today_tab(files: dict[str, Path | None]) -> None:
             "" if files["batting"] else "Lineups post 2hrs before gametime",
         )
 
+    # Refresh live data button
+    st.markdown("---")
+    refresh_col, info_col = st.columns([1, 3])
+    with refresh_col:
+        if st.button("🔄 Refresh Live Data", use_container_width=True,
+                     help="Fetches fresh BPP simulations, Vegas lines, and batting orders"):
+            with st.spinner("Fetching live data..."):
+                fetch_script = REPO_ROOT / "scripts" / "fetch_live_data.py"
+                result = subprocess.run(
+                    [sys.executable, str(fetch_script)],
+                    capture_output=True, text=True, cwd=str(REPO_ROOT)
+                )
+                if result.returncode == 0:
+                    st.cache_data.clear()
+                    st.success("Live data refreshed!")
+                    st.rerun()
+                else:
+                    st.error("Refresh failed — check your BPP_SESSION and ODDS_API_KEY in .env")
+                    with st.expander("Error details"):
+                        st.code(result.stdout + result.stderr, language="text")
+    with info_col:
+        if files.get("batter"):
+            date_str = extract_data_date(files)
+            st.caption(f"ℹ️ Data loaded for **{date_str}**. Click Refresh to pull today's latest simulations.")
+        else:
+            st.caption("ℹ️ No live data found. Click **Refresh Live Data** to fetch today's slate.")
+    st.markdown("---")
+
     batter_df = load_csv(str(files["batter"])) if files["batter"] else pd.DataFrame()
     pitcher_df = load_csv(str(files["pitcher"])) if files["pitcher"] else pd.DataFrame()
     projection_df = load_csv(str(files["projection"])) if files["projection"] else pd.DataFrame()
