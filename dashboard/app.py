@@ -831,6 +831,16 @@ def render_today_tab(files: dict[str, Path | None]) -> None:
     st.subheader("Today's Slate")
     st.caption(f"Data date: {extract_data_date(files)}")
 
+    batting_confirmed_teams = 0
+    total_teams = 0
+    if files["batting"]:
+        try:
+            bo_df = load_csv(str(files["batting"]))
+            batting_confirmed_teams = bo_df["team"].nunique() if "team" in bo_df.columns else 0
+            total_teams = 30
+        except Exception:
+            pass
+
     status_cols = st.columns(3)
     with status_cols[0]:
         render_status_card("BPP Data", "✅ Ready" if files["batter"] else "❌ Missing")
@@ -841,10 +851,16 @@ def render_today_tab(files: dict[str, Path | None]) -> None:
             "" if files["vegas"] else "Run fetch_live_data.py",
         )
     with status_cols[2]:
+        if batting_confirmed_teams > 0:
+            batting_value = f"✅ {batting_confirmed_teams}/{total_teams} teams confirmed"
+            batting_help = "Optimizer will only use confirmed starters for these teams"
+        else:
+            batting_value = "⚠️ No lineups yet"
+            batting_help = "All BPP-projected players included. Check back 2-3hrs before gametime."
         render_status_card(
             "Batting Orders",
-            "✅ Ready" if files["batting"] else "⚠️ Missing",
-            "" if files["batting"] else "Lineups post 2hrs before gametime",
+            batting_value,
+            batting_help,
         )
 
     # Refresh live data button

@@ -144,6 +144,12 @@ def build_parser(add_help: bool = True) -> argparse.ArgumentParser:
         default="data/live",
         help="Directory for auto-fetched live data files (default: data/live).",
     )
+    parser.add_argument(
+        "--no-lineup-filter",
+        action="store_true",
+        default=False,
+        help="Skip confirmed lineup filtering (include all players in pool). Use for testing only.",
+    )
     return parser
 
 
@@ -193,6 +199,80 @@ def _print_stack_summary(lineups: List[LineupResult]) -> None:
     for _, row in stack_counts.head(10).iterrows():
         pct = row["appearances"] / (len(lineups) * 9)
         print(f"  {row['team_code']}: {row['appearances']} spots ({pct:.0%} of hitters)")
+
+
+def _filter_to_confirmed_starters(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Keep confirmed starters while preserving fallback coverage for teams without posted lineups.
+    """
+    if df.empty:
+        print("Player pool: 0 confirmed/projected starters (0 non-starters removed)")
+        return df
+
+    def _numeric_value(value: object) -> float | None:
+        parsed = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+        if pd.isna(parsed):
+            return None
+        return float(parsed)
+
+    teams_with_confirmed = set()
+    if "batting_order_position" in df.columns:
+        batters = df[df["player_type"] == "batter"]
+        confirmed_batters = batters[
+            pd.to_numeric(batters["batting_order_position"], errors="coerce").notna()
+        ]
+        teams_with_confirmed = set(
+            confirmed_batters["team_code"].dropna().astype(str).unique()
+        )
+
+    original_count = len(df)
+    kept: list[pd.DataFrame] = []
+
+    pitcher_group = df[df["player_type"] == "pitcher"]
+    batter_group = df[df["player_type"] == "batter"]
+    other_group = df[~df["player_type"].isin(["pitcher", "batter"])]
+
+    if not pitcher_group.empty:
+        teams_with_confirmed_sp = set()
+        if "is_confirmed_lineup" in pitcher_group.columns:
+            teams_with_confirmed_sp = set(
+                pitcher_group.loc[
+                    pitcher_group["is_confirmed_lineup"] == True, "team_code"
+                ]
+                .dropna()
+                .astype(str)
+                .unique()
+            )
+
+        def keep_pitcher(row: pd.Series) -> bool:
+            if row.get("is_confirmed_lineup", False):
+                return True
+            return str(row.get("team_code", "")) not in teams_with_confirmed_sp
+
+        kept.append(pitcher_group[pitcher_group.apply(keep_pitcher, axis=1)])
+
+    if not batter_group.empty:
+        def keep_batter(row: pd.Series) -> bool:
+            team = str(row.get("team_code", ""))
+            if team not in teams_with_confirmed:
+                return True
+            order_pos = _numeric_value(row.get("batting_order_position"))
+            return order_pos is not None and order_pos >= 1
+
+        kept.append(batter_group[batter_group.apply(keep_batter, axis=1)])
+
+    if not other_group.empty:
+        kept.append(other_group)
+
+    filtered = pd.concat(kept, ignore_index=True) if kept else df
+    removed = original_count - len(filtered)
+    print(f"Player pool: {len(filtered)} confirmed/projected starters ({removed} non-starters removed)")
+    if "team_code" in filtered.columns:
+        all_teams = set(df["team_code"].dropna().astype(str).unique())
+        print(
+            f"  Teams with confirmed orders: {len(teams_with_confirmed)} | Teams on late-game hold: {len(all_teams - teams_with_confirmed)}"
+        )
+    return filtered
 
 
 def estimate_max_lineups(optimizer_df: pd.DataFrame) -> int:
@@ -482,6 +562,8 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         pass  # calibration save is best-effort, never block the pipeline
 
     optimizer_df = build_optimizer_dataset(combined, projections)
+    if not args.no_lineup_filter:
+        optimizer_df = _filter_to_confirmed_starters(optimizer_df)
     estimated_max_lineups = estimate_max_lineups(optimizer_df)
     if args.num_lineups > estimated_max_lineups:
         print(
