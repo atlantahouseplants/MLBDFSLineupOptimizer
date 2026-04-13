@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
@@ -124,14 +125,20 @@ def lineups_to_fanduel_upload(lineups: Sequence[LineupResult]) -> pd.DataFrame:
         return pd.DataFrame(columns=FANDUEL_UPLOAD_COLUMNS)
     rows: List[List[str]] = []
     skipped = 0
-    for lineup in lineups:
+    for lineup_idx, lineup in enumerate(lineups):
         try:
             rows.append(_lineup_to_row(lineup.dataframe))
-        except ValueError:
+        except ValueError as exc:
             skipped += 1
+            print(
+                f"Warning: skipped FanDuel lineup {lineup_idx} due to invalid slot assignment: {exc}",
+                file=sys.stderr,
+            )
     if skipped:
-        import sys
-        print(f"Warning: skipped {skipped}/{len(lineups)} lineups with invalid position assignments", file=sys.stderr)
+        print(
+            f"Warning: dropped {skipped}/{len(lineups)} FanDuel lineups during export",
+            file=sys.stderr,
+        )
     upload_df = pd.DataFrame(rows, columns=FANDUEL_UPLOAD_COLUMNS)
     return upload_df
 

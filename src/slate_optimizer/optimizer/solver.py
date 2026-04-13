@@ -234,6 +234,20 @@ def _build_base_lp(
             if maximum:
                 prob += lpSum(decision_vars[idx] for idx in mask[mask].index) <= maximum
 
+    # Ensure at least 3 distinct players can cover the 2B/3B/SS infield slots.
+    # This avoids lineups that satisfy the LP but cannot be exported into valid
+    # FanDuel positions because one multi-eligible player is the only coverage.
+    infield_pos_col = "roster_position" if "roster_position" in pool.columns else "position"
+    infield_mask = pool[infield_pos_col].apply(
+        lambda pos: bool(
+            {"2B", "3B", "SS"}.intersection(
+                {p.strip() for p in str(pos).upper().replace("-", "/").split("/")} - {"UTIL", ""}
+            )
+        )
+    )
+    if infield_mask.sum() >= 3:
+        prob += lpSum(decision_vars[idx] for idx in infield_mask[infield_mask].index) >= 3
+
     # Exactly 8 hitters
     hitters_mask = pool["player_type"].str.lower() != "pitcher"
     prob += lpSum(decision_vars[idx] for idx in hitters_mask[hitters_mask].index) == TOTAL_PLAYERS - 1
