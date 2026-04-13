@@ -188,6 +188,54 @@ def _print_stack_summary(lineups: List[LineupResult]) -> None:
         pct = row["appearances"] / (len(lineups) * 9)
         print(f"  {row['team_code']}: {row['appearances']} spots ({pct:.0%} of hitters)")
 
+
+def estimate_max_lineups(optimizer_df: pd.DataFrame) -> int:
+    def _estimate_num_games(df: pd.DataFrame) -> int:
+        if "game_key" in df.columns:
+            game_keys = (
+                df["game_key"]
+                .dropna()
+                .astype(str)
+                .str.strip()
+            )
+            if not game_keys.empty:
+                return int(game_keys.nunique())
+        if {"team_code", "opponent_code"}.issubset(df.columns):
+            pairs = (
+                df[["team_code", "opponent_code"]]
+                .dropna()
+                .astype(str)
+                .apply(lambda row: "@".join(sorted([row["team_code"], row["opponent_code"]])), axis=1)
+            )
+            if not pairs.empty:
+                return int(pairs.nunique())
+        return 0
+
+    num_games = _estimate_num_games(optimizer_df)
+    player_types = optimizer_df.get("player_type", pd.Series(index=optimizer_df.index, dtype="object"))
+    salaries = pd.to_numeric(optimizer_df.get("salary"), errors="coerce").fillna(0)
+    num_eligible_pitchers = int(
+        (
+            player_types.astype(str).str.lower().eq("pitcher")
+            & salaries.ge(6500)
+        ).sum()
+    )
+
+    if num_games <= 4:
+        max_lineups = 30
+    elif num_games <= 6:
+        max_lineups = 75
+    elif num_games <= 9:
+        max_lineups = 150
+    else:
+        max_lineups = 500
+
+    print(
+        f"Slate size: {num_games} games, {num_eligible_pitchers} eligible pitchers. "
+        f"Practical max lineups: ~{max_lineups}"
+    )
+    return max_lineups
+
 def run_pipeline(args: argparse.Namespace) -> dict:
     tag = args.tag or datetime.now().strftime("%Y%m%d")
 
@@ -403,6 +451,13 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         pass  # calibration save is best-effort, never block the pipeline
 
     optimizer_df = build_optimizer_dataset(combined, projections)
+    estimated_max_lineups = estimate_max_lineups(optimizer_df)
+    if args.num_lineups > estimated_max_lineups:
+        print(
+            f"Warning: requested {args.num_lineups} lineups, but this slate projects to support only about "
+            f"{estimated_max_lineups}. Capping lineup request."
+        )
+        args.num_lineups = estimated_max_lineups
 
     config = OptimizerConfig.load(Path(args.config)) if args.config else OptimizerConfig()
     optimizer_df = config.apply_exposure_overrides(optimizer_df)
@@ -578,6 +633,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 
 

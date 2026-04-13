@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -11,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PYTHON_EXE = REPO_ROOT / ".venv" / "bin" / "python"
 LIVE_DIR = REPO_ROOT / "data" / "live"
 OUTPUT_DIR = REPO_ROOT / "data" / "output"
 FD_UPLOAD_PATH = LIVE_DIR / "fanduel_today.csv"
@@ -463,6 +463,34 @@ def save_uploaded_fanduel_file(upload) -> tuple[Path, int]:
     return FD_UPLOAD_PATH, player_count
 
 
+def recommended_lineups_for_games(game_count: int) -> int:
+    if game_count <= 4:
+        return 30
+    if game_count <= 6:
+        return 75
+    if game_count <= 9:
+        return 150
+    return 500
+
+
+def recommended_pool_size_for_games(game_count: int) -> int:
+    if game_count <= 4:
+        return 50
+    if game_count <= 6:
+        return 100
+    return 500
+
+
+def load_uploaded_fanduel_context(uploaded_path: Path | None) -> tuple[pd.DataFrame, int]:
+    if uploaded_path is None or not uploaded_path.exists():
+        return pd.DataFrame(), 0
+    fd_df = load_csv(str(uploaded_path))
+    if fd_df.empty or "Game" not in fd_df.columns:
+        return fd_df, 0
+    game_count = int(fd_df["Game"].dropna().astype(str).str.strip().nunique())
+    return fd_df, game_count
+
+
 def checklist_badge(ok: bool, label: str, warning: bool = False) -> str:
     icon = "✅" if ok else ("⚠️" if warning else "❌")
     return f"{icon} {label}"
@@ -497,7 +525,7 @@ def run_pipeline(
     max_own: float,
     files: dict[str, Path | None],
 ) -> None:
-    python_exe = sys.executable
+    python_exe = str(REPO_ROOT / ".venv" / "bin" / "python")
     stack_template_str = STACK_STYLE_MAP[stack_style]
     tag = datetime.now().strftime("run-%Y%m%d-%H%M%S")
     # Use the simulated pipeline: generate pool → MC sim → select best portfolio
@@ -801,7 +829,7 @@ def render_today_tab(files: dict[str, Path | None]) -> None:
             with st.spinner("Fetching live data..."):
                 fetch_script = REPO_ROOT / "scripts" / "fetch_live_data.py"
                 result = subprocess.run(
-                    [sys.executable, str(fetch_script)],
+                    [str(PYTHON_EXE), str(fetch_script)],
                     capture_output=True, text=True, cwd=str(REPO_ROOT)
                 )
                 if result.returncode == 0:
@@ -900,6 +928,7 @@ def render_run_tab(files: dict[str, Path | None]) -> None:
 
     uploaded_path = Path(st.session_state["uploaded_fd_path"]) if st.session_state.get("uploaded_fd_path") else None
     fd_ready = bool(uploaded_path and uploaded_path.exists())
+    _, game_count = load_uploaded_fanduel_context(uploaded_path)
     bpp_ready = all(files[key] is not None for key in ("batter", "pitcher", "projection"))
     vegas_ready = files["vegas"] is not None
     batting_ready = files["batting"] is not None
@@ -910,12 +939,20 @@ def render_run_tab(files: dict[str, Path | None]) -> None:
     checklist_cols[2].markdown(checklist_badge(vegas_ready, "Vegas Lines"))
     checklist_cols[3].markdown(checklist_badge(batting_ready, "Batting Orders", warning=not batting_ready))
 
+    if game_count and game_count <= 6:
+        recommended = recommended_lineups_for_games(game_count)
+        st.warning(
+            f"Small slate detected ({game_count} games). We recommend {recommended} lineups max for this slate size. "
+            "Generating more may produce too many similar lineups."
+        )
+
     st.markdown("**Lineup Settings**")
+    pool_default = recommended_pool_size_for_games(game_count) if game_count else 500
     left_col, right_col = st.columns(2)
     with left_col:
         pool_size = st.number_input(
             "Candidate Pool Size",
-            min_value=50, max_value=2000, value=500, step=50,
+            min_value=50, max_value=2000, value=pool_default, step=50,
             help="Generate this many lineups first, then simulation picks the best ones to submit."
         )
         submit_count = st.number_input(
@@ -1102,7 +1139,7 @@ def _auto_fetch_if_stale() -> None:
         return
     with st.spinner("⏳ Fetching today's live data (BPP + Vegas + lineups)..."):
         result = subprocess.run(
-            [sys.executable, str(fetch_script)],
+            [str(PYTHON_EXE), str(fetch_script)],
             capture_output=True, text=True, cwd=str(REPO_ROOT)
         )
         st.session_state["auto_fetch_done"] = True

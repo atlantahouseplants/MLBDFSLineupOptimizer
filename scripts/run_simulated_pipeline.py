@@ -126,6 +126,45 @@ def _selected_lineups(lineups, selected_ids) -> list:
     return selections
 
 
+def _lineup_signature(lineup) -> tuple[str, ...]:
+    player_ids = lineup.dataframe.get("fd_player_id")
+    if player_ids is None:
+        return tuple()
+    return tuple(sorted(player_ids.astype(str).tolist()))
+
+
+def _dedupe_lineups(lineups) -> list:
+    deduped = []
+    seen: set[tuple[str, ...]] = set()
+    for lineup in lineups:
+        signature = _lineup_signature(lineup)
+        if not signature or signature in seen:
+            continue
+        seen.add(signature)
+        deduped.append(lineup)
+    return deduped
+
+
+def _rerun_with_relaxed_constraints(
+    args: argparse.Namespace,
+    pipeline_namespace: argparse.Namespace,
+) -> dict | None:
+    relaxed_namespace = argparse.Namespace(**vars(pipeline_namespace))
+    original_min_stack = int(getattr(relaxed_namespace, "min_stack_size", 0) or 0)
+    relaxed_namespace.min_stack_size = max(0, original_min_stack - 1)
+    relaxed_namespace.bring_back = False
+    print(
+        "Retrying pipeline with relaxed settings: "
+        f"min_stack_size={relaxed_namespace.min_stack_size}, bring_back=False"
+    )
+    retry_result = daily_pipeline.run_pipeline(relaxed_namespace)
+    retry_lineups = retry_result.get("lineups", [])
+    if not retry_lineups:
+        print("Relaxed retry did not add any feasible lineups.")
+        return None
+    return retry_result
+
+
 def main() -> None:
     args = parse_args()
     if args.num_candidates < args.num_lineups:
@@ -133,9 +172,29 @@ def main() -> None:
 
     pipeline_namespace = argparse.Namespace(**vars(args))
     pipeline_namespace.num_lineups = args.num_candidates
+    requested_candidates = int(args.num_candidates)
     pipeline_result = daily_pipeline.run_pipeline(pipeline_namespace)
     optimizer_df: pd.DataFrame = pipeline_result.get("optimizer_df", pd.DataFrame())
     lineups = pipeline_result.get("lineups", [])
+    generated_count = len(lineups)
+
+    if generated_count < requested_candidates * 0.75:
+        print(
+            f"Small slate: only {generated_count} of {requested_candidates} lineups generated. "
+            "Auto-relaxing constraints for next attempt."
+        )
+        retry_result = _rerun_with_relaxed_constraints(args, pipeline_namespace)
+        if retry_result is not None:
+            retry_lineups = retry_result.get("lineups", [])
+            combined_lineups = _dedupe_lineups([*lineups, *retry_lineups])
+            added_count = len(combined_lineups) - len(_dedupe_lineups(lineups))
+            lineups = combined_lineups
+            if optimizer_df.empty:
+                optimizer_df = retry_result.get("optimizer_df", pd.DataFrame())
+            print(
+                f"Relaxed retry generated {len(retry_lineups)} lineups; "
+                f"combined candidate pool now has {len(lineups)} unique lineups ({added_count:+d} net new)."
+            )
     if not lineups:
         raise SystemExit("Pipeline did not generate any lineups; cannot run simulation.")
 
