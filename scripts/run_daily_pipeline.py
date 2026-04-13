@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import itertools
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -102,6 +103,11 @@ def build_parser(add_help: bool = True) -> argparse.ArgumentParser:
     parser.add_argument("--salary-cap", type=int, default=35000, help="Salary cap override.")
     parser.add_argument("--min-stack-size", type=int, default=4, help="Min hitters from one team.")
     parser.add_argument("--stack-templates", default=None, help="Comma-separated stack sizes (e.g., 4,3).")
+    parser.add_argument(
+        "--stack-rotation",
+        default=None,
+        help='Pipe-separated stack rotation templates, e.g. "4,3|4,4|3,3,2". Overrides --stack-templates when set.',
+    )
     parser.add_argument("--max-lineup-ownership", type=float, default=None, help="Optional cap on total lineup ownership.")
     parser.add_argument(
         "--bring-back",
@@ -244,12 +250,37 @@ def run_pipeline(args: argparse.Namespace) -> dict:
             return []
         return [item.strip() for item in value.split(',') if item.strip()]
 
+    def _parse_rotation_templates(value: str | None) -> List[tuple[int, ...]]:
+        if not value:
+            return []
+        templates: List[tuple[int, ...]] = []
+        for part in value.split("|"):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                template = tuple(int(x.strip()) for x in part.split(",") if x.strip())
+            except ValueError:
+                raise SystemExit("Invalid --stack-rotation format (use pipe-separated comma-separated integers).")
+            template = tuple(size for size in template if size > 0)
+            if template:
+                templates.append(template)
+        if value and not templates:
+            raise SystemExit("Invalid --stack-rotation format (use pipe-separated comma-separated integers).")
+        return templates
+
     cli_stack_templates = None
     if args.stack_templates:
         try:
             cli_stack_templates = [int(s.strip()) for s in args.stack_templates.split(',') if s.strip()]
         except ValueError:
             raise SystemExit("Invalid --stack-templates format (use comma-separated integers).")
+    rotation_templates = _parse_rotation_templates(args.stack_rotation)
+    stack_rotation_list = None
+    if rotation_templates:
+        cycle = itertools.cycle(rotation_templates)
+        stack_rotation_list = [next(cycle) for _ in range(args.num_lineups)]
+        print(f"Building rotation lineup pool with templates: {rotation_templates}")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -500,7 +531,8 @@ def run_pipeline(args: argparse.Namespace) -> dict:
             salary_cap=salary_cap,
             min_stack_size=max(0, min_stack_size),
             stack_player_types=(config.stack_player_types if config.stack_player_types else ("batter",)),
-            stack_templates=stack_templates,
+            stack_templates=(None if stack_rotation_list is not None else stack_templates),
+            stack_rotation=stack_rotation_list,
             max_lineup_ownership=max_lineup_ownership,
             bring_back_enabled=bring_back_enabled,
             bring_back_count=bring_back_count,
@@ -633,5 +665,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

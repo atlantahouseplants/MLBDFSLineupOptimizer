@@ -22,6 +22,24 @@ STACK_STYLE_MAP = {
     "3-3-2 (spread)": "3,3,2",
 }
 
+AUTO_STACK_ROTATION = "4,3|5,3|4,4|3,3,2|4,2,2|3,2,2,1"
+
+AVAILABLE_STACKS = {
+    "4-3 (primary + secondary)": "4,3",
+    "4-4 (two big stacks)": "4,4",
+    "5-3 (power stack)": "5,3",
+    "4-2-2 (split secondary)": "4,2,2",
+    "3-3-2 (spread)": "3,3,2",
+    "3-2-2-1 (wide spread)": "3,2,2,1",
+    "4-2-1-1 (one big + minors)": "4,2,1,1",
+}
+
+DEFAULT_CUSTOM_STACKS = [
+    "4-3 (primary + secondary)",
+    "4-4 (two big stacks)",
+    "3-3-2 (spread)",
+]
+
 PIPELINE_MESSAGE_MAP = {
     "Loaded Vegas": "✅ Vegas lines loaded",
     "Loaded batting orders": "✅ Batting orders loaded",
@@ -39,6 +57,8 @@ PIPELINE_MESSAGE_MAP = {
     "Wrote simulated FanDuel": "✅ Simulated upload file saved",
     "Portfolio win rate": "📊 Portfolio stats calculated",
     "select_portfolio": "⚙️ Selecting best portfolio...",
+    "stack_rotation": "⚙️ Building rotation lineup pool...",
+    "Building rotation": "⚙️ Building diverse stack rotation...",
 }
 
 TAB_OPTIONS = ["Today's Slate", "Run Optimizer", "Review Lineups"]
@@ -520,13 +540,14 @@ def extract_generated_count(text: str) -> int | None:
 def run_pipeline(
     pool_size: int,
     submit_count: int,
+    stack_mode: str,
     stack_style: str,
+    custom_stack_selections: list[str],
     bring_back: bool,
     max_own: float,
     files: dict[str, Path | None],
 ) -> None:
     python_exe = str(REPO_ROOT / ".venv" / "bin" / "python")
-    stack_template_str = STACK_STYLE_MAP[stack_style]
     tag = datetime.now().strftime("run-%Y%m%d-%H%M%S")
     # Use the simulated pipeline: generate pool → MC sim → select best portfolio
     cmd = [python_exe, str(REPO_ROOT / "scripts" / "run_simulated_pipeline.py")]
@@ -537,7 +558,13 @@ def run_pipeline(
     cmd += ["--num-candidates", str(pool_size)]   # how many to generate
     cmd += ["--num-lineups", str(submit_count)]   # how many to select for submission
     cmd += ["--max-player-exposure", "0.65"]      # no player in >65% of lineups
-    cmd += ["--stack-templates", stack_template_str]
+    if stack_mode == "Auto (recommended)":
+        cmd += ["--stack-rotation", AUTO_STACK_ROTATION]
+    elif stack_mode == "Custom Mix":
+        rotation = "|".join(AVAILABLE_STACKS[label] for label in custom_stack_selections)
+        cmd += ["--stack-rotation", rotation]
+    else:
+        cmd += ["--stack-templates", STACK_STYLE_MAP[stack_style]]
     cmd += ["--tag", tag]
     if bring_back:
         cmd += ["--bring-back"]
@@ -960,11 +987,38 @@ def render_run_tab(files: dict[str, Path | None]) -> None:
             min_value=1, max_value=350, value=20, step=10,
             help="How many lineups you actually want to enter. Must be less than Pool Size."
         )
-        stack_style = st.selectbox(
-            "Stack Style",
-            ["4-3 (recommended)", "4-4 (two big stacks)", "5-3 (power stack)", "3-3-2 (spread)"],
-            index=0,
+        stack_mode = st.radio(
+            "Stack Mode",
+            ["Auto (recommended)", "Custom Mix", "Single Stack"],
+            horizontal=True,
         )
+        stack_style = "4-3 (recommended)"
+        custom_stack_selections: list[str] = []
+        if stack_mode == "Auto (recommended)":
+            st.info(
+                "Auto mode uses a smart rotation: 60% heavy stacks (4-3, 5-3), 30% medium (4-4, 3-3-2), "
+                "10% spread (4-2-2, 3-2-2). Best for portfolios of 50+ lineups."
+            )
+        elif stack_mode == "Custom Mix":
+            custom_stack_selections = st.multiselect(
+                "Stack types to include",
+                list(AVAILABLE_STACKS.keys()),
+                default=DEFAULT_CUSTOM_STACKS,
+            )
+            if custom_stack_selections:
+                approx_per_type = round(pool_size / len(custom_stack_selections))
+                st.caption(
+                    f"With {pool_size:,} candidates and {len(custom_stack_selections)} stack types selected, "
+                    f"roughly {approx_per_type:,} lineups of each type will be built."
+                )
+            else:
+                st.warning("Select at least one stack type for Custom Mix.")
+        else:
+            stack_style = st.selectbox(
+                "Stack Style",
+                ["4-3 (recommended)", "4-4 (two big stacks)", "5-3 (power stack)", "3-3-2 (spread)"],
+                index=0,
+            )
     with right_col:
         bring_back = st.toggle("Bring-Back", value=True, help="Require 1+ hitter from opposing team in stacks")
         max_own = st.number_input(
@@ -981,6 +1035,8 @@ def render_run_tab(files: dict[str, Path | None]) -> None:
         blocked_reasons.append("Upload a FanDuel salary CSV first.")
     if not bpp_ready:
         blocked_reasons.append("BPP batter, pitcher, and projection files are required.")
+    if stack_mode == "Custom Mix" and not custom_stack_selections:
+        blocked_reasons.append("Select at least one stack type for Custom Mix.")
 
     button_cols = st.columns([1, 2, 1])
     with button_cols[1]:
@@ -995,7 +1051,9 @@ def render_run_tab(files: dict[str, Path | None]) -> None:
         run_pipeline(
             pool_size=int(pool_size),
             submit_count=int(submit_count),
+            stack_mode=stack_mode,
             stack_style=stack_style,
+            custom_stack_selections=custom_stack_selections,
             bring_back=bring_back,
             max_own=float(max_own),
             files=files,

@@ -34,6 +34,7 @@ def build_parser() -> argparse.ArgumentParser:
         description=__doc__,
         parents=[parent],
         add_help=True,
+        conflict_handler="resolve",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -82,6 +83,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--sim-upload",
         default=None,
         help="Path for FanDuel upload CSV built from the simulated portfolio (defaults to <tag>_simulated_upload.csv).",
+    )
+    parser.add_argument(
+        "--stack-rotation",
+        default=None,
+        help='Comma-separated list of stack templates for rotation, pipe-separated. E.g. "4,3|4,4|3,3,2" means rotate through 4-3, 4-4, and 3-3-2 templates.',
     )
     return parser
 
