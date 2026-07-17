@@ -64,27 +64,44 @@ def main() -> None:
     print()
 
     # ── BallparkPal simulation data ────────────────────────────────────────
-    print("[0/3] BallparkPal Export Center (simulation data)...")
-    bundle = fetch_bpp_data(date_str=d)
+    # Preferred source: official BallparkPal API (BPP_API_KEY). Falls back to
+    # the legacy session-cookie scrape (BPP_SESSION), then to manual Excels.
+    bundle = None
+    if os.getenv("BPP_API_KEY"):
+        print("[0/3] BallparkPal official API (simulation data)...")
+        from slate_optimizer.ingestion.bpp_official_api import fetch_bpp_api_data
+
+        bundle = fetch_bpp_api_data(date_str=d)
+        if bundle is None:
+            print("  Official API fetch failed — check BPP_API_KEY / API access page.")
+    if bundle is None and os.getenv("BPP_SESSION"):
+        if not os.getenv("BPP_API_KEY"):
+            print("[0/3] BallparkPal Export Center via session cookie (legacy)...")
+        else:
+            print("  Falling back to legacy session-cookie scrape...")
+        bundle = fetch_bpp_data(date_str=d)
     if bundle:
         s = bundle.summary()
         print(f"  Batters: {s['batters']}  Pitchers: {s['pitchers']}  Games: {s['games']}  Teams: {s['teams']}")
-        bpp_paths = bundle.to_csvs(str(output_dir))
-        s2 = bundle.summary()
-        n_proj = s2["dfs_projections"]
-        n_pf = s2["park_factors"]
+        n_proj = s["dfs_projections"]
+        n_pf = s["park_factors"]
         n_bo = len(bundle.batting_orders())
         n_hand = len(bundle.handedness())
-        print(f"  DFS projections: {n_proj} players (Bust/Median/Upside)")
-        print(f"  Park factors: {n_pf} stadiums")
-        bpp_paths = bundle.to_csvs(str(output_dir))
+        if n_proj:
+            print(f"  DFS projections: {n_proj} players (Bust/Median/Upside)")
+        print(f"  Park factors: {n_pf} games")
+        if s.get("hitter_park_factors"):
+            print(f"  Hitter park factors: {s['hitter_park_factors']} players")
+        if s.get("probabilities"):
+            print(f"  Market probabilities: {s['probabilities']} items")
+        bundle.to_csvs(str(output_dir))
         bundle.to_excels(str(output_dir))
-        print(f"  Batting orders: {n_bo} confirmed lineup slots → no manual CSV needed")
+        print(f"  Batting orders: {n_bo} lineup slots → no manual CSV needed")
         print(f"  Handedness: {n_hand} players → no manual CSV needed")
         print(f"  Saved → {output_dir}/bpp_*_{d}.csv + BallparkPal_*.xlsx")
     else:
-        bpp_paths = {}
-        print("  BPP_SESSION not set or expired — update in .env")
+        print("  No BallparkPal source available.")
+        print("  Set BPP_API_KEY (preferred) or BPP_SESSION (legacy) in .env.")
         print("  Without this, pipeline falls back to manual Excel exports")
     print()
 

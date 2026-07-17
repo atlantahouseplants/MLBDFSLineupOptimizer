@@ -10,6 +10,7 @@ if not exist ".env" (
     (
         echo BPP_SESSION=p3g7jubi4i49s30qkpcfr0hbtq
         echo ODDS_API_KEY=6d20401fd47d415664f3d50f1b0a0849
+        echo BPP_API_KEY=
         echo BPP_EMAIL=sarah@atlantahouseplant.com
     ) > .env
     echo .env created.
