@@ -24,6 +24,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stack-templates", default=None)
     parser.add_argument("--max-lineup-ownership", type=float, default=None)
     parser.add_argument("--config", default=None)
+    parser.add_argument("--projection-sources", default=None)
+    parser.add_argument("--projection-weights", default=None)
+    parser.add_argument("--projection-baseline-weight", type=float, default=None)
     parser.add_argument("--platoon-opposite-boost", type=float, default=None, help="Multiplier for hitters vs opposite-hand pitchers (default 1.06).")
     parser.add_argument("--platoon-same-penalty", type=float, default=None, help="Multiplier for same-hand matchups (default 0.95).")
     parser.add_argument("--platoon-switch-boost", type=float, default=None, help="Multiplier for switch hitters (default 1.03).")
@@ -50,6 +53,12 @@ def main() -> None:
         pipeline_cmd += ["--max-lineup-ownership", str(args.max_lineup_ownership)]
     if args.config:
         pipeline_cmd += ["--config", args.config]
+    if args.projection_sources:
+        pipeline_cmd += ["--projection-sources", args.projection_sources]
+    if args.projection_weights:
+        pipeline_cmd += ["--projection-weights", args.projection_weights]
+    if args.projection_baseline_weight is not None:
+        pipeline_cmd += ["--projection-baseline-weight", str(args.projection_baseline_weight)]
     if args.platoon_opposite_boost is not None:
         pipeline_cmd += ["--platoon-opposite-boost", str(args.platoon_opposite_boost)]
     if args.platoon_same_penalty is not None:

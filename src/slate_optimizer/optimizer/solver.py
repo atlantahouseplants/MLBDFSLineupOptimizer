@@ -6,6 +6,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple
 
+import numpy as np
 import pandas as pd
 from pulp import (
     LpBinary,
@@ -39,6 +40,18 @@ _SLOT_CAPS = {
     "OF": 4,     # 3 OF slots + UTIL
 }
 
+FANDUEL_ASSIGNMENT_SLOTS = {
+    "P": ("P",),
+    "C1B": ("C", "1B"),
+    "2B": ("2B",),
+    "3B": ("3B",),
+    "SS": ("SS",),
+    "OF1": ("OF",),
+    "OF2": ("OF",),
+    "OF3": ("OF",),
+    "UTIL": ("C", "1B", "2B", "3B", "SS", "OF"),
+}
+
 # ──────────────────────────────────────────────────────────────────────
 # Stack presets: each tuple sums to 8 (total batters in a FanDuel lineup).
 # Groups of 1 need no LP constraint — only groups >= 2 are enforced.
@@ -58,18 +71,56 @@ STACK_PRESETS: OrderedDict[str, Optional[Tuple[int, ...]]] = OrderedDict([
 ])
 
 
+def _parse_position_tokens(value: object) -> set[str]:
+    if not isinstance(value, str):
+        return set()
+    parts = value.upper().replace("-", "/").split("/")
+    return {part.strip() for part in parts if part.strip() and part.strip() != "UTIL"}
+
+
+def _preferred_position_values(df: pd.DataFrame) -> pd.Series:
+    values = df.get("position", pd.Series("", index=df.index)).fillna("").astype(str)
+    if "roster_position" not in df.columns:
+        return values
+    roster = df["roster_position"].fillna("").astype(str)
+    roster_clean = roster.str.strip().str.upper()
+    has_roster = ~roster_clean.isin(("", "NAN", "NONE"))
+    return values.mask(has_roster, roster)
+
+
 def _position_mask(df: pd.DataFrame, keyword: str) -> pd.Series:
     keyword = keyword.upper()
-    tokens = keyword.split("/")
-    pos_col = "roster_position" if "roster_position" in df.columns else "position"
+    tokens = set(keyword.split("/"))
+    position_values = _preferred_position_values(df)
 
     def matches(value: str) -> bool:
-        text = str(value).upper()
-        parts = text.replace("-", "/").split("/")
-        parts = [p for p in parts if p != "UTIL"]
-        return any(tok in parts for tok in tokens)
+        parts = _parse_position_tokens(value)
+        return bool(parts.intersection(tokens))
 
-    return df[pos_col].map(matches)
+    return position_values.map(matches)
+
+
+def _eligible_assignment_slots(row: pd.Series) -> List[str]:
+    player_type = str(row.get("player_type", "")).lower()
+    roster_pos = str(row.get("roster_position", "")).strip()
+    roster_clean = roster_pos.upper()
+    raw_position = roster_pos if roster_clean not in ("", "NAN", "NONE") else row.get("position", "")
+    tokens = _parse_position_tokens(raw_position)
+
+    if player_type == "pitcher":
+        return ["P"] if "P" in tokens else []
+
+    slots: List[str] = []
+    for slot, slot_tokens in FANDUEL_ASSIGNMENT_SLOTS.items():
+        if slot == "P":
+            continue
+        if slot == "UTIL":
+            if tokens.intersection(slot_tokens):
+                slots.append(slot)
+            continue
+        if tokens.intersection(slot_tokens):
+            slots.append(slot)
+    return slots
 
 
 @dataclass
@@ -77,6 +128,8 @@ class LineupResult:
     dataframe: pd.DataFrame
     total_salary: int
     total_projection: float
+    stack_template_used: Optional[Tuple[int, ...]] = None
+    stacks_dropped: bool = False
 
 
 def _max_usage(df: pd.DataFrame, num_lineups: int) -> Dict[str, int]:
@@ -87,8 +140,11 @@ def _max_usage(df: pd.DataFrame, num_lineups: int) -> Dict[str, int]:
             exposure = float(exposure)
         except (TypeError, ValueError):
             exposure = 1.0
-        allowed = max(1, int(round(exposure * num_lineups)))
-        usage[row["fd_player_id"]] = allowed
+        if not np.isfinite(exposure):
+            exposure = 1.0
+        exposure = min(1.0, max(0.0, exposure))
+        allowed = 0 if exposure <= 0 else max(1, int(np.floor(exposure * num_lineups + 1e-9)))
+        usage[str(row["fd_player_id"])] = allowed
     return usage
 
 
@@ -103,6 +159,14 @@ def _build_base_lp(
     max_lineup_ownership: Optional[float],
     previous_lineups: List[List[str]],
     tag: str = "",
+    leverage_weight: float = 0.0,
+    randomness: float = 0.0,
+    rng: Optional[np.random.Generator] = None,
+    locked_player_ids: Optional[set[str]] = None,
+    ceiling_weight: float = 0.0,
+    ownership_penalty_weight: float = 0.0,
+    min_salary: Optional[int] = None,
+    min_uniques: int = 1,
 ) -> Tuple[LpProblem, Dict[int, LpVariable]]:
     """Build the LP with all constraints except stack/bring-back."""
     label = f"mlb_lineup_{lineup_index}{tag}"
@@ -112,14 +176,88 @@ def _build_base_lp(
         for idx in pool.index
     }
 
-    # Objective: maximize projected score
-    prob += lpSum(pool.loc[idx, "proj_fd_mean"] * var for idx, var in decision_vars.items())
+    # Objective: maximize a GPP score with optional noise:
+    #   base = (1 - ceiling_weight) * mean + ceiling_weight * upside
+    #   score = base * (1 + leverage_weight * leverage_score) * (1 + noise)
+    #           - ownership_penalty_weight * ownership * mean_scale
+    # ceiling_weight = 0 reproduces the legacy mean-only objective.
+    has_leverage = "player_leverage_score" in pool.columns and leverage_weight > 0
+
+    ceiling_weight = min(1.0, max(0.0, float(ceiling_weight)))
+    upside_series = None
+    if ceiling_weight > 0:
+        for candidate in ("proj_fd_upside", "proj_fd_ceiling"):
+            if candidate in pool.columns:
+                upside_series = pd.to_numeric(pool[candidate], errors="coerce")
+                break
+        if upside_series is not None:
+            upside_series = upside_series.where(upside_series > 0).fillna(
+                pd.to_numeric(pool["proj_fd_mean"], errors="coerce").fillna(0.0)
+            )
+
+    ownership_series = None
+    if ownership_penalty_weight > 0 and "proj_fd_ownership" in pool.columns:
+        ownership_series = pd.to_numeric(pool["proj_fd_ownership"], errors="coerce").fillna(0.0)
+        if float(ownership_series.max()) > 1.5:  # percent scale -> decimal
+            ownership_series = ownership_series / 100.0
+        ownership_series = ownership_series.clip(lower=0.0, upper=1.0)
+    mean_scale = float(pd.to_numeric(pool["proj_fd_mean"], errors="coerce").fillna(0.0).mean()) or 1.0
+
+    # Generate per-player noise for diversity across lineups
+    if randomness > 0 and rng is not None:
+        noise = rng.normal(0, randomness, size=len(pool))
+    else:
+        noise = np.zeros(len(pool))
+
+    obj_coeffs = {}
+    for i, (idx, var) in enumerate(decision_vars.items()):
+        proj = pool.loc[idx, "proj_fd_mean"]
+        if upside_series is not None:
+            proj = (1.0 - ceiling_weight) * proj + ceiling_weight * float(upside_series.loc[idx])
+        if has_leverage:
+            proj = proj * (1.0 + leverage_weight * pool.loc[idx, "player_leverage_score"])
+        coeff = proj * (1.0 + noise[i])
+        if ownership_series is not None:
+            coeff -= ownership_penalty_weight * float(ownership_series.loc[idx]) * mean_scale
+        obj_coeffs[idx] = coeff
+
+    prob += lpSum(obj_coeffs[idx] * var for idx, var in decision_vars.items())
 
     # Salary constraint
     prob += lpSum(pool.loc[idx, "salary"] * var for idx, var in decision_vars.items()) <= salary_cap
+    if min_salary is not None and min_salary > 0:
+        prob += lpSum(pool.loc[idx, "salary"] * var for idx, var in decision_vars.items()) >= int(min_salary)
 
     # Exactly 9 players
     prob += lpSum(var for var in decision_vars.values()) == TOTAL_PLAYERS
+
+    if locked_player_ids:
+        id_series = pool["fd_player_id"].astype(str)
+        for locked_id in locked_player_ids:
+            locked_indices = id_series[id_series == str(locked_id)].index.tolist()
+            if locked_indices:
+                prob += lpSum(decision_vars[idx] for idx in locked_indices) == 1
+
+    assignment_vars: Dict[Tuple[int, str], LpVariable] = {}
+    for idx, row in pool.iterrows():
+        eligible_slots = _eligible_assignment_slots(row)
+        if not eligible_slots:
+            prob += decision_vars[idx] == 0
+            continue
+        player_slot_vars = []
+        for slot in eligible_slots:
+            var = LpVariable(f"slot{tag}_{idx}_{slot}", lowBound=0, upBound=1, cat=LpBinary)
+            assignment_vars[(idx, slot)] = var
+            player_slot_vars.append(var)
+        prob += lpSum(player_slot_vars) == decision_vars[idx]
+
+    first_decision_var = next(iter(decision_vars.values()))
+    for slot in FANDUEL_ASSIGNMENT_SLOTS:
+        slot_vars = [var for (idx, slot_name), var in assignment_vars.items() if slot_name == slot]
+        if slot_vars:
+            prob += lpSum(slot_vars) == 1
+        else:
+            prob += 0 * first_decision_var == 1
 
     # Position constraints
     pitcher_mask = _position_mask(pool, "P")
@@ -180,15 +318,22 @@ def _build_base_lp(
             pool.loc[idx, "proj_fd_ownership"] * var for idx, var in decision_vars.items()
         ) <= max_lineup_ownership
 
-    # Exclusion constraints for previous lineups
+    # Exclusion constraints for previous lineups.
+    # min_uniques = N means each new lineup must differ from every previous
+    # lineup by at least N players (legacy behavior is N=1: merely not identical).
+    min_uniques = max(1, int(min_uniques))
+    max_shared = TOTAL_PLAYERS - min_uniques
+    player_id_to_index = {
+        str(pid): idx for idx, pid in pool["fd_player_id"].astype(str).items()
+    }
     for lineup in previous_lineups:
         indices = [
-            pool.index[pool["fd_player_id"] == pid][0]
+            player_id_to_index[str(pid)]
             for pid in lineup
-            if pid in pool["fd_player_id"].values
+            if str(pid) in player_id_to_index
         ]
-        if indices:
-            prob += lpSum(decision_vars[idx] for idx in indices) <= len(indices) - 1
+        if indices and len(indices) > max_shared:
+            prob += lpSum(decision_vars[idx] for idx in indices) <= max_shared
 
     return prob, decision_vars
 
@@ -203,8 +348,15 @@ def _add_stack_constraints(
     decision_vars: Dict[int, LpVariable],
     stack_template: Tuple[int, ...],
     min_game_total: Optional[float] = None,
+    leverage_weight: float = 0.0,
 ) -> List[Tuple[str, str, LpVariable]]:
-    """Add assignment-based stack constraints ensuring distinct teams per group."""
+    """Add assignment-based stack constraints ensuring distinct teams per group.
+
+    When leverage_weight > 0 and the pool has team_leverage_score, a bonus is
+    added to the objective for assigning high-leverage teams to stack slots.
+    The bonus scales with leverage_weight, team score, and slot size — nudging
+    the solver toward low-owned, high-run-expectancy teams for stacks.
+    """
     # Only constrain groups with >= 2 batters
     constrained = [(slot_idx, size) for slot_idx, size in enumerate(stack_template) if size >= 2]
     if not constrained:
@@ -267,10 +419,34 @@ def _add_stack_constraints(
     for slot_idx, group_size in constrained:
         slot_vars = [assign_vars[(tc, slot_idx)] for tc in team_codes if (tc, slot_idx) in assign_vars]
         if slot_vars:
-            prob += lpSum(slot_vars) >= 1
+            prob += lpSum(slot_vars) == 1
         else:
             # No team can fill this slot — template is infeasible
             return []
+
+    # ── Team leverage bonus ───────────────────────────────────────────────────
+    # Add objective bonus for assigning high-leverage teams to stack slots.
+    # Bonus = leverage_weight * team_leverage_score * slot_size * mean_proj
+    # This nudges the solver toward low-owned, high-run-expectancy teams.
+    if leverage_weight > 0 and "team_leverage_score" in pool.columns and assign_vars:
+        mean_proj = float(pool["proj_fd_mean"].mean()) if "proj_fd_mean" in pool.columns else 35.0
+        # Build per-team leverage score (use the team's own value from any player row)
+        team_leverage: Dict[str, float] = {}
+        for tc in team_codes:
+            idx = team_batter_indices[tc]
+            if len(idx) > 0 and "team_leverage_score" in pool.columns:
+                team_leverage[tc] = float(pool.loc[idx[0], "team_leverage_score"])
+
+        slot_size_map = {slot_idx: size for slot_idx, size in constrained}
+        bonus_terms = []
+        for (tc, slot_idx), var in assign_vars.items():
+            score = team_leverage.get(tc, 0.0)
+            slot_size = slot_size_map.get(slot_idx, 1)
+            bonus = leverage_weight * score * slot_size * mean_proj
+            if bonus != 0.0:
+                bonus_terms.append(bonus * var)
+        if bonus_terms:
+            prob.objective += lpSum(bonus_terms)
 
     # Build stack_details for bring-back (use the primary/largest slot)
     primary_slot = constrained[0][0]
@@ -300,10 +476,20 @@ def generate_lineups(
     bring_back_enabled: bool = False,
     bring_back_count: int = 1,
     min_game_total_for_stacks: Optional[float] = None,
+    leverage_weight: float = 0.0,
+    randomness: float = 0.05,
+    locked_player_ids: Optional[Sequence[str]] = None,
+    ceiling_weight: float = 0.0,
+    ownership_penalty_weight: float = 0.0,
+    min_salary: Optional[int] = None,
+    min_uniques: int = 1,
 ) -> List[LineupResult]:
     df = dataset.copy()
+    df["fd_player_id"] = df["fd_player_id"].astype(str).str.strip()
+    df["player_type"] = df["player_type"].astype(str)
     df["proj_fd_mean"] = pd.to_numeric(df["proj_fd_mean"], errors="coerce").fillna(0.0)
     df["salary"] = pd.to_numeric(df["salary"], errors="coerce").fillna(0).astype(int)
+    rng = np.random.default_rng()
 
     # Resolve stack template: rotation > single template > legacy fallback
     if stack_rotation is not None:
@@ -313,6 +499,8 @@ def generate_lineups(
         stack_template = tuple(min(s, MAX_HITTERS_PER_TEAM) for s in stack_templates if s and s > 0)
         if not stack_template:
             stack_template = None
+    elif stack_template is None and min_stack_size and min_stack_size > 1:
+        stack_template = (min(int(min_stack_size), MAX_HITTERS_PER_TEAM),)
 
     bring_back_count = max(1, int(bring_back_count))
 
@@ -321,13 +509,14 @@ def generate_lineups(
     previous_lineups: List[List[str]] = []
     results: List[LineupResult] = []
     _seen_sets: set = set()
+    locked_id_set = {str(pid).strip() for pid in (locked_player_ids or []) if str(pid).strip()}
 
     max_attempts = num_lineups * 4 + 20
     for lineup_index in range(max_attempts):
         if len(results) >= num_lineups:
             break
         eligible_mask = df["fd_player_id"].map(
-            lambda pid: usage_counts.get(pid, 0) < usage_limits.get(pid, 0)
+            lambda pid: usage_counts.get(str(pid), 0) < usage_limits.get(str(pid), 0)
         )
         pool = df[eligible_mask].reset_index(drop=True)
         if len(pool) < TOTAL_PLAYERS:
@@ -336,6 +525,13 @@ def generate_lineups(
         # Build base LP (no stacks)
         prob, decision_vars = _build_base_lp(
             pool, lineup_index, salary_cap, max_lineup_ownership, previous_lineups,
+            leverage_weight=leverage_weight,
+            randomness=randomness, rng=rng,
+            locked_player_ids=locked_id_set,
+            ceiling_weight=ceiling_weight,
+            ownership_penalty_weight=ownership_penalty_weight,
+            min_salary=min_salary,
+            min_uniques=min_uniques,
         )
 
         # Pick the template for this lineup (rotation or single)
@@ -347,11 +543,17 @@ def generate_lineups(
         # Try adding stack constraints
         stack_info: List[Tuple[str, str, LpVariable]] = []
         used_stacks = current_template is not None
+        requires_stack_constraints = bool(
+            current_template and any(size >= 2 for size in current_template)
+        )
+        stack_constraints_unavailable = False
         if used_stacks:
             stack_info = _add_stack_constraints(
                 prob, pool, decision_vars, current_template,
                 min_game_total=min_game_total_for_stacks,
+                leverage_weight=leverage_weight,
             )
+            stack_constraints_unavailable = requires_stack_constraints and not stack_info
 
         # Bring-back constraints (only when stacks applied)
         if bring_back_enabled and stack_info:
@@ -364,18 +566,45 @@ def generate_lineups(
                     continue
                 prob += lpSum(decision_vars[idx] for idx in opp_indices) >= bring_back_count * stack_var
 
-        status = prob.solve(PULP_CBC_CMD(msg=False))
+        fell_back_to_no_stacks = False
+        if stack_constraints_unavailable:
+            warnings.warn(
+                f"Lineup {lineup_index}: stack template {current_template} could not be applied, solving without stacks.",
+                stacklevel=2,
+            )
+            prob, decision_vars = _build_base_lp(
+                pool, lineup_index, salary_cap, max_lineup_ownership, previous_lineups, tag="_ns_empty",
+                leverage_weight=leverage_weight,
+                randomness=randomness, rng=rng,
+                locked_player_ids=locked_id_set,
+                ceiling_weight=ceiling_weight,
+                ownership_penalty_weight=ownership_penalty_weight,
+                min_salary=min_salary,
+                min_uniques=min_uniques,
+            )
+            status = prob.solve(PULP_CBC_CMD(msg=False))
+            fell_back_to_no_stacks = True
+        else:
+            status = prob.solve(PULP_CBC_CMD(msg=False))
 
         # Fallback: if stacks made it infeasible, solve without stacks
-        if status != LpStatusOptimal and used_stacks:
+        if status != LpStatusOptimal and used_stacks and not fell_back_to_no_stacks:
             warnings.warn(
                 f"Lineup {lineup_index}: stack template {current_template} infeasible, solving without stacks.",
                 stacklevel=2,
             )
             prob, decision_vars = _build_base_lp(
                 pool, lineup_index, salary_cap, max_lineup_ownership, previous_lineups, tag="_ns",
+                leverage_weight=leverage_weight,
+                randomness=randomness, rng=rng,
+                locked_player_ids=locked_id_set,
+                ceiling_weight=ceiling_weight,
+                ownership_penalty_weight=ownership_penalty_weight,
+                min_salary=min_salary,
+                min_uniques=min_uniques,
             )
             status = prob.solve(PULP_CBC_CMD(msg=False))
+            fell_back_to_no_stacks = True
 
         if status != LpStatusOptimal:
             break
@@ -384,21 +613,24 @@ def generate_lineups(
         lineup_df = pool.loc[selected_indices].copy()
         lineup_df = lineup_df.sort_values(by=["player_type", "position"], ascending=[True, True])
 
-        player_set = frozenset(lineup_df["fd_player_id"].tolist())
+        player_ids = lineup_df["fd_player_id"].astype(str).tolist()
+        player_set = frozenset(player_ids)
         if player_set in _seen_sets:
-            previous_lineups.append(lineup_df["fd_player_id"].tolist())
+            previous_lineups.append(player_ids)
             continue
         _seen_sets.add(player_set)
 
-        for pid in lineup_df["fd_player_id"]:
+        for pid in player_ids:
             usage_counts[pid] = usage_counts.get(pid, 0) + 1
 
-        previous_lineups.append(lineup_df["fd_player_id"].tolist())
+        previous_lineups.append(player_ids)
         results.append(
             LineupResult(
                 dataframe=lineup_df,
                 total_salary=int(lineup_df["salary"].sum()),
                 total_projection=float(lineup_df["proj_fd_mean"].sum()),
+                stack_template_used=current_template if not fell_back_to_no_stacks else None,
+                stacks_dropped=fell_back_to_no_stacks,
             )
         )
 

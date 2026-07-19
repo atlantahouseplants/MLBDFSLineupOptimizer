@@ -30,4 +30,6 @@ echo.
 echo Opening in your browser...
 echo.
 
-streamlit run dashboard/daily_workflow.py --server.headless true --browser.gatherUsageStats false %*
+REM Port 8501/8502 are reserved by a WSL2/Hyper-V relay on this machine, so use 8600.
+start "" http://localhost:8600
+streamlit run dashboard/daily_workflow.py --server.headless true --server.port 8600 --browser.gatherUsageStats false %*

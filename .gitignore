@@ -27,6 +27,9 @@ exported_lineups*.csv
 Untitled*.csv
 FanDuel-*.csv.csv
 
+# Environment / secrets
+.env
+
 # OS clutter
 .DS_Store
 Thumbs.db
@@ -36,3 +39,9 @@ Thumbs.db
 *.tmp
 *~
 src/slate_optimizer.egg-info/
+
+# Local generated output archives (large, regenerable)
+outputs/
+
+# Claude Code local settings
+.claude/

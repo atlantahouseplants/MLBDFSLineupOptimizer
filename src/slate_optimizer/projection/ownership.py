@@ -1,12 +1,14 @@
 """Ownership projection blending utilities."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Sequence
 
 import numpy as np
 import pandas as pd
+
+from slate_optimizer.ingestion.name_resolver import build_player_name_lookup, resolve_name_series
 
 _COLUMN_MAP = {
     "fd_player_id": "fd_player_id",
@@ -58,36 +60,40 @@ def _clean_ownership(series: pd.Series) -> pd.Series:
 
 
 def _create_name_lookup(players_df: pd.DataFrame) -> pd.Series:
-    if "full_name" not in players_df.columns:
-        return pd.Series(dtype=str)
-    lookup = (
-        players_df[["fd_player_id", "full_name"]]
-        .dropna()
-        .assign(full_name=lambda df: df["full_name"].astype(str).str.strip().str.lower())
-        .drop_duplicates("full_name")
-        .set_index("full_name")["fd_player_id"]
-    )
-    lookup = lookup.astype(str)
-    return lookup
+    return build_player_name_lookup(players_df)
 
 
-def _load_source(path: Path, name_lookup: pd.Series) -> pd.DataFrame:
+def _load_source(path: Path, name_lookup: pd.Series) -> tuple[pd.DataFrame, int, List[str]]:
     df = pd.read_csv(path)
     df = _standardize_source(df)
     if "fd_player_id" not in df.columns and "full_name" in df.columns and not name_lookup.empty:
-        df["fd_player_id"] = (
-            df["full_name"].astype(str).str.strip().str.lower().map(name_lookup)
-        )
+        df["fd_player_id"] = resolve_name_series(df["full_name"], name_lookup)
     if "fd_player_id" not in df.columns:
         raise ValueError(f"Ownership file {path} missing fd_player_id column")
     if "proj_fd_ownership" not in df.columns:
         raise ValueError(f"Ownership file {path} missing ownership column")
 
-    df["fd_player_id"] = df["fd_player_id"].astype(str).str.strip()
+    df["fd_player_id"] = df["fd_player_id"].astype("string").str.strip()
+    missing_ids = df["fd_player_id"].isna() | df["fd_player_id"].str.lower().isin({"", "nan", "none", "<na>"})
+    unmatched_names: List[str] = []
+    if "full_name" in df.columns:
+        unmatched_names = (
+            df.loc[missing_ids.fillna(True), "full_name"]
+            .dropna()
+            .astype(str)
+            .str.strip()
+            .replace("", pd.NA)
+            .dropna()
+            .drop_duplicates()
+            .head(25)
+            .tolist()
+        )
+    source_players = int(df["fd_player_id"].nunique(dropna=True)) + len(unmatched_names)
+    df.loc[missing_ids.fillna(True), "fd_player_id"] = pd.NA
     df["proj_fd_ownership"] = _clean_ownership(df["proj_fd_ownership"])
     df = df.dropna(subset=["fd_player_id", "proj_fd_ownership"])
     grouped = df.groupby("fd_player_id")["proj_fd_ownership"].mean().reset_index()
-    return grouped
+    return grouped, source_players, unmatched_names
 
 
 def _estimate_fallback(
@@ -118,6 +124,8 @@ def _estimate_fallback(
 
     proj = projections_df[["fd_player_id", "proj_fd_mean"]].copy()
     proj["fd_player_id"] = proj["fd_player_id"].astype(str)
+    proj["proj_fd_mean"] = pd.to_numeric(proj["proj_fd_mean"], errors="coerce")
+    proj = proj.groupby("fd_player_id", as_index=False)["proj_fd_mean"].mean()
     merged = meta.merge(proj, on="fd_player_id", how="left")
     merged["salary"] = pd.to_numeric(merged["salary"], errors="coerce").fillna(
         merged["salary"].median()
@@ -167,11 +175,37 @@ def _estimate_fallback(
     return pd.Series(fallback.values, index=merged["fd_player_id"], name="proj_fd_ownership")
 
 
+def _fallback_ownership(
+    players_df: pd.DataFrame,
+    projections_df: pd.DataFrame,
+    model_config: OwnershipModelConfig | None = None,
+) -> tuple[pd.Series, str]:
+    """Internal ownership estimate: structural model first, legacy rank blend as safety net.
+
+    A custom-tuned OwnershipModelConfig (non-default weights/clamps from the
+    dashboard's manual panel) is an explicit user override, so it routes to the
+    legacy rank-blend model that those settings control.
+    """
+    if model_config is not None and model_config != OwnershipModelConfig():
+        return _estimate_fallback(players_df, projections_df, model_config=model_config), "fallback_model"
+    try:
+        from slate_optimizer.projection.ownership_model import estimate_structural_ownership
+
+        estimated = estimate_structural_ownership(players_df, projections_df)
+        if estimated is not None and not estimated.empty and estimated.notna().any():
+            return estimated, "structural_model"
+    except Exception:  # pragma: no cover - any failure falls back to the legacy model
+        pass
+    return _estimate_fallback(players_df, projections_df, model_config=model_config), "fallback_model"
+
+
 @dataclass
 class OwnershipSourceDetail:
     name: str
     weight: float
     matched_players: int
+    source_players: int = 0
+    unmatched_players: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -182,6 +216,7 @@ class OwnershipBlendResult:
     source_count: int
     covered_players: int
     sources: list[OwnershipSourceDetail]
+    external_coverage: pd.Series = field(default_factory=lambda: pd.Series(dtype=bool))
 
 
 def compute_ownership_series(
@@ -199,8 +234,11 @@ def compute_ownership_series(
     unique_ids = projections_df["fd_player_id"].astype(str).drop_duplicates().tolist()
 
     prepared_sources: List[pd.DataFrame] = []
+    source_meta: List[tuple[int, List[str]]] = []
     for path in source_paths:
-        prepared_sources.append(_load_source(Path(path), name_lookup))
+        source_df, source_players, unmatched_names = _load_source(Path(path), name_lookup)
+        prepared_sources.append(source_df)
+        source_meta.append((source_players, unmatched_names))
 
     source_details: List[OwnershipSourceDetail] = []
     normalized_weights: List[float] = []
@@ -218,22 +256,28 @@ def compute_ownership_series(
 
         blended = pd.Series(0.0, index=unique_ids, dtype=float)
         coverage = pd.Series(False, index=unique_ids, dtype=bool)
-        for weight, source, path_obj in zip(normalized_weights, prepared_sources, source_paths):
+        for weight, source, path_obj, meta in zip(normalized_weights, prepared_sources, source_paths, source_meta):
             src_series = source.set_index("fd_player_id")["proj_fd_ownership"]
-            coverage.loc[src_series.index] = True
-            blended = blended.add(src_series * weight, fill_value=0.0)
-            matched = int(src_series.index.nunique())
+            matched_index = src_series.index.intersection(coverage.index)
+            coverage.loc[matched_index] = True
+            blended = blended.add(src_series * weight, fill_value=0.0).reindex(unique_ids).fillna(0.0)
+            matched = int(src_series.index.intersection(unique_ids).nunique())
+            source_players, unmatched_names = meta
             source_details.append(
                 OwnershipSourceDetail(
                     name=Path(path_obj).name,
                     weight=float(weight),
                     matched_players=matched,
+                    source_players=source_players,
+                    unmatched_players=_format_unmatched_ownership_players(
+                        source.loc[~source["fd_player_id"].astype(str).isin(unique_ids)],
+                        unmatched_names,
+                    ),
                 )
             )
 
-        fallback = _estimate_fallback(players_df, projections_df, model_config=model_config).reindex(unique_ids).fillna(
-            0.05
-        )
+        fallback, fallback_name = _fallback_ownership(players_df, projections_df, model_config)
+        fallback = fallback.reindex(unique_ids).fillna(0.05)
         blended = blended.where(coverage, fallback)
         covered_players = int(coverage.sum())
         fallback_gap = int(len(unique_ids) - covered_players)
@@ -241,18 +285,20 @@ def compute_ownership_series(
             remaining_weight = max(0.0, 1.0 - sum(detail.weight for detail in source_details))
             source_details.append(
                 OwnershipSourceDetail(
-                    name="fallback_model",
+                    name=fallback_name,
                     weight=remaining_weight,
                     matched_players=fallback_gap,
+                    source_players=fallback_gap,
                 )
             )
     else:
-        fallback = _estimate_fallback(players_df, projections_df, model_config=model_config)
+        fallback, fallback_name = _fallback_ownership(players_df, projections_df, model_config)
         blended = fallback.reindex(unique_ids).fillna(0.05)
         covered_players = len(unique_ids)
         source_details.append(
-            OwnershipSourceDetail(name="fallback_model", weight=1.0, matched_players=len(unique_ids))
+            OwnershipSourceDetail(name=fallback_name, weight=1.0, matched_players=len(unique_ids), source_players=len(unique_ids))
         )
+        coverage = pd.Series(False, index=unique_ids, dtype=bool)
 
     blended = blended.clip(lower=0.0, upper=1.0)
     ownership_series = pd.Series(blended.values, index=unique_ids, name="proj_fd_ownership")
@@ -261,7 +307,22 @@ def compute_ownership_series(
         source_count=len(prepared_sources),
         covered_players=covered_players,
         sources=source_details,
+        external_coverage=coverage.reindex(unique_ids).fillna(False).astype(bool),
     )
+
+
+def _format_unmatched_ownership_players(source_df: pd.DataFrame, missing_name_matches: List[str]) -> List[str]:
+    values: List[str] = []
+    for name in missing_name_matches:
+        clean = str(name).strip()
+        if clean and clean not in values:
+            values.append(clean)
+    if source_df is not None and not source_df.empty:
+        for _, row in source_df.head(25).iterrows():
+            fd_id = str(row.get("fd_player_id", "") or "").strip()
+            if fd_id and fd_id not in values:
+                values.append(fd_id)
+    return values[:25]
 
 
 

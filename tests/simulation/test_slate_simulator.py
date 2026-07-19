@@ -73,6 +73,21 @@ class TestSlateSimulator(unittest.TestCase):
         self.assertEqual(len(lineup_scores), 500)
         self.assertGreater(lineup_scores.mean(), 0.0)
 
+    def test_stratified_simulation_runs(self) -> None:
+        dataset = self._dataset()
+        dists = fit_player_distributions(dataset)
+        corr = build_correlation_matrix(dataset, CorrelationConfig(teammate_base=0.25))
+        slate = simulate_slate(
+            dists,
+            corr,
+            num_simulations=120,
+            seed=123,
+            use_stratified=True,
+            num_strata=6,
+        )
+        self.assertEqual(slate.scores.shape, (120, len(dataset)))
+        self.assertTrue(np.all(slate.scores >= -1e-6))
+
 
 if __name__ == "__main__":
     unittest.main()

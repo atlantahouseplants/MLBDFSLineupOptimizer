@@ -138,6 +138,27 @@ def _prefix_except(df: pd.DataFrame, prefix: str, exclude: Iterable[str]) -> pd.
     return df.rename(columns=rename_map)
 
 
+def _collapse_duplicate_player_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """Collapse duplicate BallparkPal rows before merging into FanDuel players."""
+    keys = ["canonical_name", "team_code"]
+    if df.empty or not set(keys).issubset(df.columns):
+        return df
+    if not df.duplicated(keys, keep=False).any():
+        return df
+
+    agg_map: Dict[str, str] = {}
+    for col in df.columns:
+        if col in keys:
+            continue
+        if pd.api.types.is_bool_dtype(df[col]):
+            agg_map[col] = "max"
+        elif pd.api.types.is_numeric_dtype(df[col]):
+            agg_map[col] = "mean"
+        else:
+            agg_map[col] = "first"
+    return df.groupby(keys, as_index=False, dropna=False).agg(agg_map)
+
+
 def _apply_last_name_fallback(
     merged_df: pd.DataFrame,
     fd_df: pd.DataFrame,
@@ -210,6 +231,36 @@ def build_player_dataset(
     bundle: BallparkPalBundle, fanduel_players: pd.DataFrame, alias_map: CanonicalMap | None = None
 ) -> Tuple[pd.DataFrame, MergeDiagnostics]:
     fd_prepared = _prepare_fanduel_players(fanduel_players, alias_map=alias_map)
+
+    # ── Filter out players who are confirmed out/unavailable ──────────────────
+    _OUT_STATUSES = {"O", "OUT", "NA", "SUSP", "IR", "IL"}
+    if "injury_indicator" in fd_prepared.columns:
+        injury_flag = (
+            fd_prepared["injury_indicator"]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            .str.upper()
+        )
+        fd_prepared = fd_prepared[~injury_flag.isin(_OUT_STATUSES)].copy()
+
+    # ── Pitchers: only keep probable starters ─────────────────────────────────
+    # FanDuel marks probable starters with "Yes" in Probable Pitcher column.
+    # Only apply this filter when the column is actually populated (not all blank).
+    if "probable_pitcher" in fd_prepared.columns:
+        probable_flag = (
+            fd_prepared["probable_pitcher"]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            .str.upper()
+        )
+        # Only filter if at least one pitcher is marked as probable (column is populated)
+        if probable_flag.isin({"YES", "Y", "TRUE", "1"}).any():
+            is_pitcher = fd_prepared["player_type"] == "pitcher"
+            is_probable = probable_flag.isin({"YES", "Y", "TRUE", "1"})
+            fd_prepared = fd_prepared[~is_pitcher | is_probable].copy()
+
     fd_hitters = fd_prepared[fd_prepared["player_type"] == "batter"].copy()
     fd_pitchers = fd_prepared[fd_prepared["player_type"] == "pitcher"].copy()
 
@@ -219,6 +270,8 @@ def build_player_dataset(
     bpp_pitchers = _prepare_ballparkpal_table(
         bundle.pitchers, bundle.teams, bundle.games, alias_map=alias_map
     )
+    bpp_hitters = _collapse_duplicate_player_rows(bpp_hitters)
+    bpp_pitchers = _collapse_duplicate_player_rows(bpp_pitchers)
 
     pref_hitters = _prefix_except(
         bpp_hitters,

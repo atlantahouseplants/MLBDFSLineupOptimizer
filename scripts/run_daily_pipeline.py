@@ -15,6 +15,7 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 from slate_optimizer.data.storage import SlateDatabase
+from slate_optimizer.analysis.stack_exposure import build_stack_exposure_plan
 from slate_optimizer.ingestion.aliases import load_alias_map
 from slate_optimizer.ingestion.ballparkpal import BallparkPalLoader
 from slate_optimizer.ingestion.batting_orders import BattingOrderLoader
@@ -30,7 +31,7 @@ from slate_optimizer.optimizer import (
     generate_lineups,
 )
 from slate_optimizer.optimizer.export import write_fanduel_upload
-from slate_optimizer.projection import compute_baseline_projections, compute_ownership_series
+from slate_optimizer.projection import blend_projection_sources, compute_baseline_projections, compute_ownership_series
 
 def build_parser(add_help: bool = True) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -94,6 +95,22 @@ def build_parser(add_help: bool = True) -> argparse.ArgumentParser:
         "--ownership-weights",
         default=None,
         help="Comma-separated weights for ownership sources (defaults to equal weights).",
+    )
+    parser.add_argument(
+        "--projection-sources",
+        default=None,
+        help="Comma-separated projection CSV/XLSX files to blend (supports Ballpark DFS Optimizer workbooks).",
+    )
+    parser.add_argument(
+        "--projection-weights",
+        default=None,
+        help="Comma-separated weights for projection sources (defaults to equal weights).",
+    )
+    parser.add_argument(
+        "--projection-baseline-weight",
+        type=float,
+        default=1.0,
+        help="Weight for the BallparkPal baseline when blending projection sources.",
     )
     parser.add_argument("--db-path", default="data/slates.db", help="SQLite DB to persist the slate.")
     parser.add_argument("--output-dir", default="data/processed", help="Directory for projections/datasets/lineups.")
@@ -207,6 +224,20 @@ def run_pipeline(args: argparse.Namespace) -> dict:
             raise SystemExit("--ownership-weights requires --ownership-sources")
         if len(ownership_weights) != len(ownership_paths):
             raise SystemExit("Number of ownership weights must match ownership sources")
+
+    projection_source_paths = _parse_list(args.projection_sources)
+    projection_paths: List[Path] = [Path(path).expanduser() for path in projection_source_paths]
+    projection_weights = None
+    if args.projection_weights:
+        tokens = _parse_list(args.projection_weights)
+        try:
+            projection_weights = [float(token) for token in tokens]
+        except ValueError:
+            raise SystemExit("Invalid value in --projection-weights (must be numeric)")
+        if not projection_paths:
+            raise SystemExit("--projection-weights requires --projection-sources")
+        if len(projection_weights) != len(projection_paths):
+            raise SystemExit("Number of projection weights must match projection sources")
 
     recency_blend = None
     if args.recency_blend:
@@ -358,6 +389,22 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         platoon_switch_boost=platoon_switch_boost,
     )
 
+    projections, projection_blend = blend_projection_sources(
+        combined,
+        projections,
+        source_paths=projection_paths,
+        weights=projection_weights,
+        baseline_weight=args.projection_baseline_weight,
+    )
+    if projection_blend.source_count:
+        details = ", ".join(
+            f"{detail.name}:{detail.weight:.2f}/{detail.matched_players} matched"
+            for detail in projection_blend.sources
+        )
+        print(
+            f"Blended projections with baseline share {projection_blend.baseline_share:.2f}; {details}."
+        )
+
     ownership_result = compute_ownership_series(
         combined,
         projections,
@@ -378,6 +425,7 @@ def run_pipeline(args: argparse.Namespace) -> dict:
             "Using fallback ownership estimator (no external ownership sources provided)."
         )
     optimizer_df = build_optimizer_dataset(combined, projections)
+    stack_plan = build_stack_exposure_plan(optimizer_df)
 
     config = OptimizerConfig.load(Path(args.config)) if args.config else OptimizerConfig()
     optimizer_df = config.apply_exposure_overrides(optimizer_df)
@@ -410,6 +458,7 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         combined.to_csv(output_dir / f"{tag}_slate_players.csv", index=False)
         projections.to_csv(output_dir / f"{tag}_baseline_projections.csv", index=False)
         optimizer_df.to_csv(output_dir / f"{tag}_optimizer_dataset.csv", index=False)
+        stack_plan.to_csv(output_dir / f"{tag}_stack_exposure_plan.csv", index=False)
         if vegas_lines is not None:
             vegas_lines.games.to_csv(output_dir / f"{tag}_vegas_lines.csv", index=False)
 
@@ -432,6 +481,7 @@ def run_pipeline(args: argparse.Namespace) -> dict:
             "tag": tag,
             "output_dir": output_dir,
             "optimizer_df": optimizer_df,
+            "stack_plan": stack_plan,
             "lineups": [],
             "lineup_df": pd.DataFrame(),
             "salary_cap": salary_cap,
@@ -440,6 +490,13 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         }
 
     print(f"Generated {len(lineups)} lineups. Top lineup proj={lineups[0].total_projection:.2f}")
+    if not stack_plan.empty:
+        print("Top stack exposure recommendations:")
+        for _, row in stack_plan.head(5).iterrows():
+            print(
+                f"  {row['team_code']}: target {row['target_exposure']:.0%}, "
+                f"max {row['recommended_max_exposure']:.0%}, tier={row['tier']}"
+            )
     _print_exposure_summary(lineups)
     _print_stack_summary(lineups)
 
@@ -456,6 +513,7 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         "tag": tag,
         "output_dir": output_dir,
         "optimizer_df": optimizer_df,
+        "stack_plan": stack_plan,
         "lineups": lineups,
         "lineup_df": combined_lineups,
         "salary_cap": salary_cap,

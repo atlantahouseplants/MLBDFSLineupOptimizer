@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 import numpy as np
 import pandas as pd
 
 from slate_optimizer.optimizer.solver import LineupResult
 
+from .duplication import estimate_lineup_duplication
 from .field_simulator import SimulatedField
+from .payouts import PayoutBand, normalize_payout_bands, payout_from_percentiles
 from .slate_simulator import SlateSimulation
 
 __all__ = [
@@ -49,6 +51,17 @@ class LineupSimResult:
     leverage_score: float
     field_duplication_rate: float
     stack_teams: List[str]
+    duplication_score: float = 0.0
+    estimated_dupes: float = 0.0
+    uniqueness_score: float = 1.0
+    ownership_scenario_score: float = 1.0
+    worst_case_duplication_score: float = 0.0
+    worst_case_ownership: float = 0.0
+    ownership_scenario_spread: float = 0.0
+    expected_payout: float = 0.0
+    expected_profit: float = 0.0
+    payout_ev: float = 0.0
+    payout_cash_rate: float = 0.0
 
 
 @dataclass
@@ -58,6 +71,7 @@ class ContestSimResult:
     num_field_lineups: int
     num_candidates: int
     entry_fee: float
+    contest_entries: int = 0
 
     def to_dataframe(self) -> pd.DataFrame:
         return pd.DataFrame([vars(result) for result in self.lineup_results])
@@ -75,12 +89,14 @@ def simulate_contest(
     slate_sim: SlateSimulation,
     field_sim: SimulatedField,
     entry_fee: float = 20.0,
-    payout_structure: Optional[Dict[tuple, float]] = None,
+    payout_structure: Optional[Any] = None,
+    contest_entries: Optional[int] = None,
+    field_duplication_profile: Optional[Dict[str, Any]] = None,
 ) -> ContestSimResult:
     if not candidates:
         raise ValueError("No candidate lineups provided for simulation")
 
-    payout_structure = _prepare_payout_structure(payout_structure)
+    payout_model = _prepare_payout_model(payout_structure)
     player_index = slate_sim.player_id_to_index
 
     candidate_indices = _lineup_indices(candidates, player_index)
@@ -108,6 +124,7 @@ def simulate_contest(
     del field_scores  # free ~80MB
     ranks = _rank_scores(all_scores)
     total_lineups = all_scores.shape[1]
+    actual_contest_entries = int(contest_entries or total_lineups)
     del all_scores  # free ~120MB
     percentiles = (ranks + 1) / total_lineups * 100.0
     del ranks  # free ~120MB
@@ -121,8 +138,9 @@ def simulate_contest(
         metrics = _aggregate_metrics(
             lineup_scores,
             lineup_percentiles,
-            payout_structure,
+            payout_model,
             entry_fee,
+            actual_contest_entries,
         )
         lineup_df = candidate.dataframe
         player_ids = lineup_df["fd_player_id"].astype(str).tolist()
@@ -134,8 +152,15 @@ def simulate_contest(
             leverage_score = float(pd.to_numeric(lineup_df["player_leverage_score"], errors="coerce").fillna(0.0).sum())
         else:
             leverage_score = 0.0
-        dup_rate = _duplication_rate(player_ids, field_sets)
         stack_teams = _extract_stack_teams(lineup_df)
+        overlap_dup_rate = _duplication_rate(player_ids, field_sets)
+        dup_estimate = estimate_lineup_duplication(
+            lineup_df,
+            field_size=actual_contest_entries,
+            salary_cap=35_000,
+            field_profile=field_duplication_profile,
+        )
+        dup_rate = max(float(overlap_dup_rate), float(dup_estimate.duplication_score))
         lineup_results.append(
             LineupSimResult(
                 lineup_id=lineup_id,
@@ -158,6 +183,13 @@ def simulate_contest(
                 leverage_score=leverage_score,
                 field_duplication_rate=dup_rate,
                 stack_teams=stack_teams,
+                duplication_score=dup_estimate.duplication_score,
+                estimated_dupes=dup_estimate.estimated_dupes,
+                uniqueness_score=dup_estimate.uniqueness_score,
+                expected_payout=metrics["expected_payout"],
+                expected_profit=metrics["expected_profit"],
+                payout_ev=metrics["payout_ev"],
+                payout_cash_rate=metrics["payout_cash_rate"],
             )
         )
 
@@ -167,6 +199,7 @@ def simulate_contest(
         num_field_lineups=field_sim.num_lineups,
         num_candidates=len(candidates),
         entry_fee=entry_fee,
+        contest_entries=actual_contest_entries,
     )
 
 
@@ -195,8 +228,9 @@ def _rank_scores(all_scores: np.ndarray) -> np.ndarray:
 def _aggregate_metrics(
     lineup_scores: np.ndarray,
     percentiles: np.ndarray,
-    payout_structure: List[tuple[float, float, float]],
+    payout_model: Dict[str, Any],
     entry_fee: float,
+    contest_entries: int,
 ) -> Dict[str, float]:
     mean = float(lineup_scores.mean())
     median = float(np.median(lineup_scores))
@@ -213,9 +247,12 @@ def _aggregate_metrics(
     top_10pct = float(np.mean(percentiles >= 90.0))
     cash_rate = float(np.mean(percentiles >= 80.0))
 
-    multipliers = _payout_multipliers(percentiles, payout_structure)
-    roi = (multipliers - 1.0)
+    payouts = _payout_values(percentiles, payout_model, entry_fee, contest_entries)
+    expected_payout = float(payouts.mean())
+    expected_profit = expected_payout - float(entry_fee)
+    roi = (payouts - float(entry_fee)) / max(float(entry_fee), 1e-9)
     expected_roi = float(roi.mean())
+    payout_cash_rate = float(np.mean(payouts > 0))
 
     return {
         "mean": mean,
@@ -232,6 +269,10 @@ def _aggregate_metrics(
         "top_10pct": top_10pct,
         "cash_rate": cash_rate,
         "expected_roi": expected_roi,
+        "expected_payout": expected_payout,
+        "expected_profit": expected_profit,
+        "payout_ev": expected_profit,
+        "payout_cash_rate": payout_cash_rate,
     }
 
 
@@ -256,6 +297,36 @@ def _prepare_payout_structure(payout_structure: Optional[Dict[tuple, float]]):
         bands.sort(key=lambda x: x[0], reverse=True)
         return bands
     return DEFAULT_GPP_PAYOUTS
+
+
+def _prepare_payout_model(payout_structure: Optional[Any]) -> Dict[str, Any]:
+    if payout_structure:
+        if isinstance(payout_structure, dict):
+            if "bands" in payout_structure:
+                return {
+                    "kind": "rank",
+                    "bands": normalize_payout_bands(payout_structure.get("bands") or []),
+                }
+            if all(isinstance(key, tuple) and len(key) == 2 for key in payout_structure):
+                return {"kind": "percentile", "bands": _prepare_payout_structure(payout_structure)}
+        if isinstance(payout_structure, (list, tuple)):
+            rank_bands = normalize_payout_bands(payout_structure)
+            if rank_bands:
+                return {"kind": "rank", "bands": rank_bands}
+    return {"kind": "percentile", "bands": DEFAULT_GPP_PAYOUTS}
+
+
+def _payout_values(
+    percentiles: np.ndarray,
+    payout_model: Dict[str, Any],
+    entry_fee: float,
+    contest_entries: int,
+) -> np.ndarray:
+    if payout_model.get("kind") == "rank":
+        bands: Sequence[PayoutBand] = payout_model.get("bands") or []
+        return payout_from_percentiles(percentiles, bands, contest_entries)
+    multipliers = _payout_multipliers(percentiles, payout_model.get("bands") or DEFAULT_GPP_PAYOUTS)
+    return multipliers * float(entry_fee)
 
 
 def _field_lineup_sets(field_sim: SimulatedField) -> List[set[str]]:

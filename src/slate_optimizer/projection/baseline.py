@@ -230,6 +230,16 @@ def _weather_score(df: pd.DataFrame) -> pd.Series:
     return weather.clip(-0.5, 0.5)
 
 
+def _probability_column(df: pd.DataFrame, column: str) -> pd.Series:
+    if column in df.columns:
+        values = pd.to_numeric(df[column], errors="coerce").fillna(0.0)
+    else:
+        values = pd.Series(0.0, index=df.index, dtype=float)
+    if values.max() > 1.5:
+        values = values / 100.0
+    return values.clip(lower=0.0, upper=1.0)
+
+
 
 def compute_baseline_projections(
     players_df: pd.DataFrame,
@@ -344,23 +354,33 @@ def compute_baseline_projections(
         + 0.15 * recency_factor.clip(0.7, 1.3)
         + 0.1 * order_factor.clip(0.8, 1.2)
     ).clip(0.5, 0.95)
+    hit_probability = _probability_column(df, "bpp_hit_probability")
+    hitter_floor = (hitter_floor + 0.05 * hit_probability).clip(0.5, 0.98)
     pitcher_floor = (
         0.65
         + 0.1 * win_multiplier.clip(0.8, 1.2)
     ).clip(0.55, 0.95)
+    quality_start_probability = _probability_column(df, "bpp_quality_start")
+    pitcher_floor = (pitcher_floor + 0.08 * quality_start_probability).clip(0.55, 0.98)
     floor_multiplier.loc[hitters_mask] = hitter_floor.loc[hitters_mask]
     floor_multiplier.loc[pitchers_mask] = pitcher_floor.loc[pitchers_mask]
 
+    home_run_probability = _probability_column(df, "bpp_home_run_probability")
+    stolen_base_probability = _probability_column(df, "bpp_stolen_base_probability")
     hitter_ceiling = (
         1.2
         + 0.1 * (team_multiplier - 1.0)
         + 0.05 * (platoon_factor - 1.0)
         + 0.05 * recency_factor
-    ).clip(1.05, 1.8)
+        + 0.30 * home_run_probability
+        + 0.10 * stolen_base_probability
+        + 0.04 * hit_probability
+    ).clip(1.05, 2.0)
     pitcher_ceiling = (
         1.25
         + 0.1 * win_multiplier
-    ).clip(1.1, 1.8)
+        + 0.15 * quality_start_probability
+    ).clip(1.1, 1.9)
     ceiling_multiplier.loc[hitters_mask] = hitter_ceiling.loc[hitters_mask]
     ceiling_multiplier.loc[pitchers_mask] = pitcher_ceiling.loc[pitchers_mask]
 
@@ -395,4 +415,30 @@ def compute_baseline_projections(
     return output
 
 
-__all__ = ["compute_baseline_projections", "PROJECTION_COLUMNS"]
+def data_quality_report(players_df: pd.DataFrame) -> dict[str, int]:
+    df = players_df.copy()
+
+    def _numeric_column(column: str) -> pd.Series:
+        values = df.get(column)
+        if isinstance(values, pd.Series):
+            return pd.to_numeric(values, errors="coerce")
+        return pd.Series(pd.NA, index=df.index, dtype="Float64")
+
+    bpp_projection = _numeric_column("bpp_points_fd")
+    fppg = _numeric_column("fppg")
+    batting_order = _numeric_column("batting_order_position")
+    confirmed_lineup = pd.Series(df.get("is_confirmed_lineup", False), index=df.index).astype(bool)
+    vegas_team_total = _numeric_column("vegas_team_total")
+    recent_last7 = _numeric_column("recent_last7_fppg")
+
+    report = {
+        "n_players_with_bpp_projection": int(bpp_projection.notna().sum()),
+        "n_players_using_fppg_fallback": int(bpp_projection.isna().mul(fppg.notna()).sum()),
+        "n_players_with_confirmed_batting_order": int(batting_order.notna().mul(confirmed_lineup).sum()),
+        "n_players_with_vegas_data": int((vegas_team_total.fillna(0.0) > 0).sum()),
+        "n_players_with_recent_stats": int(recent_last7.notna().sum()),
+    }
+    return report
+
+
+__all__ = ["compute_baseline_projections", "PROJECTION_COLUMNS", "data_quality_report"]

@@ -14,11 +14,16 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 from slate_optimizer.optimizer.export import lineups_to_fanduel_upload
+from slate_optimizer.analysis.exposure_tuner import stack_cap_maps
+from slate_optimizer.analysis.portfolio_audit import audit_report_to_csv, build_portfolio_audit
+from slate_optimizer.analysis.stack_exposure import build_stack_exposure_plan, stack_plan_weights
 from slate_optimizer.simulation import (
     FieldQualityMix,
     SimulationConfig,
     build_correlation_matrix,
     fit_player_distributions,
+    parse_payout_ladder_text,
+    payout_ladder_to_dicts,
     select_portfolio,
     simulate_contest,
     simulate_field,
@@ -45,6 +50,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sim-config", default=None, help="Simulation config JSON path.")
     parser.add_argument("--num-sims", type=int, default=None, help="Override number of Monte Carlo iterations.")
     parser.add_argument("--field-size", type=int, default=None, help="Override simulated opponent lineup count.")
+    parser.add_argument("--contest-entries", type=int, default=None, help="Actual contest entry count for rank-based payout EV.")
+    parser.add_argument("--entry-fee", type=float, default=None, help="Contest entry fee.")
+    parser.add_argument("--payout-ladder", default=None, help="Path to rank,payout ladder text/CSV for contest EV.")
     parser.add_argument(
         "--selection-metric",
         default=None,
@@ -68,6 +76,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override pitcher vs opposing hitter correlation.",
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility.")
+    parser.add_argument("--no-portfolio-optimizer", action="store_true", help="Use the legacy greedy final selector.")
+    parser.add_argument("--no-stack-exposure-engine", action="store_true", help="Do not use team stack recommendations during final selection.")
+    parser.add_argument("--no-stack-auto-caps", action="store_true", help="Do not apply stack plan team max caps during final selection.")
+    parser.add_argument("--stack-auto-mins", action="store_true", help="Apply stack plan team minimums during final selection.")
+    parser.add_argument("--stack-target-weight", type=float, default=None, help="Override stack exposure plan weight.")
+    parser.add_argument("--portfolio-time-limit", type=int, default=None, help="ILP portfolio optimizer time limit in seconds.")
     parser.add_argument(
         "--sim-report",
         default=None,
@@ -77,6 +91,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--portfolio-report",
         default=None,
         help="Path for selected portfolio summary CSV (defaults to <tag>_sim_portfolio.csv).",
+    )
+    parser.add_argument(
+        "--stack-plan-report",
+        default=None,
+        help="Path for stack exposure plan CSV (defaults to <tag>_stack_exposure_plan.csv).",
+    )
+    parser.add_argument(
+        "--audit-report",
+        default=None,
+        help="Path for final portfolio audit report (defaults to <tag>_final_audit.csv).",
     )
     parser.add_argument(
         "--sim-upload",
@@ -98,6 +122,14 @@ def _apply_sim_overrides(args: argparse.Namespace, config: SimulationConfig) -> 
         config.num_field_lineups = int(args.field_size)
     if args.selection_metric:
         config.selection_metric = args.selection_metric
+    if args.contest_entries is not None:
+        config.contest_entries = int(args.contest_entries)
+    if args.entry_fee is not None:
+        config.entry_fee = float(args.entry_fee)
+    if args.payout_ladder:
+        text = Path(args.payout_ladder).read_text(encoding="utf-8")
+        bands = parse_payout_ladder_text(text)
+        config.payout_structure = payout_ladder_to_dicts(bands) if bands else None
     if args.diversity_weight is not None:
         config.diversity_weight = float(args.diversity_weight)
     if args.max_player_exposure is not None:
@@ -113,6 +145,18 @@ def _apply_sim_overrides(args: argparse.Namespace, config: SimulationConfig) -> 
         config.correlation.pitcher_vs_opposing = float(args.pitcher_vs_opposing)
     if args.seed is not None:
         config.seed = int(args.seed)
+    if args.no_portfolio_optimizer:
+        config.use_portfolio_optimizer = False
+    if args.no_stack_exposure_engine:
+        config.use_stack_exposure_engine = False
+    if args.no_stack_auto_caps:
+        config.use_stack_auto_caps = False
+    if args.stack_auto_mins:
+        config.use_stack_auto_mins = True
+    if args.stack_target_weight is not None:
+        config.stack_target_weight = float(args.stack_target_weight)
+    if args.portfolio_time_limit is not None:
+        config.portfolio_time_limit_seconds = int(args.portfolio_time_limit)
     return config
 
 
@@ -135,6 +179,10 @@ def main() -> None:
     pipeline_namespace.num_lineups = args.num_candidates
     pipeline_result = daily_pipeline.run_pipeline(pipeline_namespace)
     optimizer_df: pd.DataFrame = pipeline_result.get("optimizer_df", pd.DataFrame())
+    stack_plan = pipeline_result.get("stack_plan", pd.DataFrame())
+    if stack_plan is None or stack_plan.empty:
+        stack_plan = build_stack_exposure_plan(optimizer_df)
+    stack_min_caps, stack_max_caps = stack_cap_maps(stack_plan)
     lineups = pipeline_result.get("lineups", [])
     if not lineups:
         raise SystemExit("Pipeline did not generate any lineups; cannot run simulation.")
@@ -153,6 +201,8 @@ def main() -> None:
         num_simulations=sim_config.num_simulations,
         seed=sim_config.seed,
         use_antithetic=sim_config.use_antithetic,
+        use_stratified=sim_config.use_stratified,
+        num_strata=sim_config.num_strata,
     )
     quality_mix = FieldQualityMix(
         shark_pct=sim_config.field_quality_shark_pct,
@@ -175,6 +225,7 @@ def main() -> None:
         field_sim,
         entry_fee=sim_config.entry_fee,
         payout_structure=sim_config.payout_structure,
+        contest_entries=sim_config.contest_entries,
     )
     contest_df = contest_result.to_dataframe().sort_values(
         sim_config.selection_metric,
@@ -188,7 +239,22 @@ def main() -> None:
         max_overlap=sim_config.max_overlap,
         max_batter_exposure=sim_config.max_batter_exposure,
         max_pitcher_exposure=sim_config.max_pitcher_exposure,
+        pitcher_ids=set(
+            optimizer_df.loc[
+                optimizer_df["player_type"].astype(str).str.lower() == "pitcher",
+                "fd_player_id",
+            ].astype(str)
+        ),
         diversity_weight=sim_config.diversity_weight,
+        selection_leverage_weight=sim_config.selection_leverage_weight,
+        selection_ownership_weight=sim_config.selection_ownership_weight,
+        selection_duplication_weight=sim_config.selection_duplication_weight,
+        stack_team_weights=stack_plan_weights(stack_plan) if sim_config.use_stack_exposure_engine else None,
+        stack_target_weight=sim_config.stack_target_weight,
+        stack_team_min_exposures=stack_min_caps if sim_config.use_stack_auto_mins else None,
+        stack_team_max_exposures=stack_max_caps if sim_config.use_stack_auto_caps else None,
+        use_portfolio_optimizer=sim_config.use_portfolio_optimizer,
+        portfolio_time_limit_seconds=sim_config.portfolio_time_limit_seconds,
     )
     portfolio_df = portfolio.to_dataframe()
     selected_ids = [res.lineup_id for res in portfolio.selected]
@@ -204,9 +270,18 @@ def main() -> None:
         else output_dir / f"{tag}_sim_portfolio.csv"
     )
     upload_path = Path(args.sim_upload) if args.sim_upload else output_dir / f"{tag}_simulated_upload.csv"
+    stack_plan_path = (
+        Path(args.stack_plan_report)
+        if args.stack_plan_report
+        else output_dir / f"{tag}_stack_exposure_plan.csv"
+    )
+    audit_path = Path(args.audit_report) if args.audit_report else output_dir / f"{tag}_final_audit.csv"
 
     contest_df.to_csv(sim_report_path, index=False)
     print(f"Wrote simulation metrics to {sim_report_path}")
+    stack_plan_path.parent.mkdir(parents=True, exist_ok=True)
+    stack_plan.to_csv(stack_plan_path, index=False)
+    print(f"Wrote stack exposure plan to {stack_plan_path}")
     if not portfolio_df.empty:
         portfolio_df.to_csv(portfolio_report_path, index=False)
         print(f"Wrote portfolio summary to {portfolio_report_path}")
@@ -217,6 +292,16 @@ def main() -> None:
         fan_duel_df = lineups_to_fanduel_upload(selected_lineups)
         fan_duel_df.to_csv(upload_path, index=False)
         print(f"Wrote simulated FanDuel upload to {upload_path}")
+        audit_rows = []
+        for idx, lineup in enumerate(selected_lineups, start=1):
+            temp = lineup.dataframe.copy()
+            temp.insert(0, "lineup_id", idx)
+            audit_rows.append(temp)
+        audit_df = pd.concat(audit_rows, ignore_index=True) if audit_rows else pd.DataFrame()
+        audit = build_portfolio_audit(audit_df, optimizer_df=optimizer_df, stack_plan=stack_plan, salary_cap=int(salary_cap))
+        audit_path.parent.mkdir(parents=True, exist_ok=True)
+        audit_path.write_text(audit_report_to_csv(audit), encoding="utf-8")
+        print(f"Wrote final portfolio audit to {audit_path}")
     else:
         print("No lineups available for FanDuel upload from the simulated portfolio.")
 

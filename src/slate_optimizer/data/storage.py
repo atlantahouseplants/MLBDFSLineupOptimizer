@@ -85,6 +85,21 @@ CREATE TABLE IF NOT EXISTS lineup_results (
 """
 
 
+_CREATE_OWNERSHIP_HISTORY = """
+CREATE TABLE IF NOT EXISTS ownership_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    fd_player_id TEXT NOT NULL,
+    player_name TEXT,
+    player_type TEXT,
+    predicted_own REAL,
+    actual_own REAL,
+    features JSON,
+    created_at TEXT NOT NULL
+);
+"""
+
+
 @dataclass
 class SlateRecord:
     slate_id: int
@@ -113,7 +128,18 @@ class SlateDatabase:
         cur.execute(_CREATE_ACTUAL_SCORES)
         cur.execute(_CREATE_LINEUP_RESULTS)
         cur.execute(_CREATE_SIMULATION_ACCURACY)
+        cur.execute(_CREATE_OWNERSHIP_HISTORY)
         self.conn.commit()
+        self._ensure_column("lineup_results", "total_ownership", "REAL")
+        self._ensure_column("lineup_results", "total_upside", "REAL")
+        self._ensure_column("lineup_results", "total_salary", "REAL")
+
+    def _ensure_column(self, table: str, column: str, ddl_type: str) -> None:
+        cur = self.conn.cursor()
+        existing = {row["name"] for row in cur.execute(f"PRAGMA table_info({table})").fetchall()}
+        if column not in existing:
+            cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}")
+            self.conn.commit()
 
     def insert_slate(self, tag: str, fanduel_csv: Path, ballparkpal_dir: Path) -> SlateRecord:
         created_at = datetime.utcnow().isoformat()
@@ -269,6 +295,14 @@ class SlateDatabase:
 
     def insert_lineup_results(self, date: str, results: pd.DataFrame) -> None:
         created_at = datetime.utcnow().isoformat()
+
+        def _num(value):
+            try:
+                out = float(value)
+            except (TypeError, ValueError):
+                return None
+            return out if out == out else None  # drop NaN
+
         records = []
         for _, row in results.iterrows():
             records.append(
@@ -280,14 +314,17 @@ class SlateDatabase:
                     row.get("payout"),
                     row.get("roi"),
                     row.get("strategy_config_json"),
+                    _num(row.get("total_ownership")),
+                    _num(row.get("total_upside")),
+                    _num(row.get("total_salary")),
                     created_at,
                 )
             )
         cur = self.conn.cursor()
         cur.executemany(
             """
-            INSERT INTO lineup_results(date, lineup_id, total_actual_points, rank, payout, roi, strategy_config_json, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO lineup_results(date, lineup_id, total_actual_points, rank, payout, roi, strategy_config_json, total_ownership, total_upside, total_salary, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             records,
         )
@@ -315,6 +352,56 @@ class SlateDatabase:
         )
         self.conn.commit()
 
+    def insert_ownership_history(self, date: str, rows_df: pd.DataFrame) -> None:
+        """Store the per-player ownership training snapshot for a slate.
+
+        Expects columns fd_player_id, player_name, player_type, predicted_own,
+        actual_own, features (JSON string). Replaces any prior rows for the
+        same date so reprocessing a slate does not duplicate training data.
+        """
+        if rows_df is None or rows_df.empty:
+            return
+        created_at = datetime.utcnow().isoformat()
+        records = []
+        for _, row in rows_df.iterrows():
+            records.append(
+                (
+                    date,
+                    str(row.get("fd_player_id") or ""),
+                    row.get("player_name"),
+                    row.get("player_type"),
+                    row.get("predicted_own"),
+                    row.get("actual_own"),
+                    row.get("features"),
+                    created_at,
+                )
+            )
+        cur = self.conn.cursor()
+        cur.execute("DELETE FROM ownership_history WHERE date = ?", (date,))
+        cur.executemany(
+            """
+            INSERT INTO ownership_history(date, fd_player_id, player_name, player_type, predicted_own, actual_own, features, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            records,
+        )
+        self.conn.commit()
+
+    def fetch_ownership_history(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> pd.DataFrame:
+        cur = self.conn.cursor()
+        query = "SELECT * FROM ownership_history"
+        params: list[str] = []
+        if start_date and end_date:
+            query += " WHERE date BETWEEN ? AND ?"
+            params = [start_date, end_date]
+        query += " ORDER BY date"
+        rows = cur.execute(query, params).fetchall()
+        return pd.DataFrame(rows, columns=[col[0] for col in cur.description]) if rows else pd.DataFrame()
+
     def fetch_actual_scores(self, date: str) -> pd.DataFrame:
         cur = self.conn.cursor()
         rows = cur.execute(
@@ -328,6 +415,14 @@ class SlateDatabase:
         rows = cur.execute(
             "SELECT * FROM lineup_results WHERE date = ?",
             (date,),
+        ).fetchall()
+        return pd.DataFrame(rows, columns=[col[0] for col in cur.description]) if rows else pd.DataFrame()
+
+    def fetch_lineup_results_range(self, start_date: str, end_date: str) -> pd.DataFrame:
+        cur = self.conn.cursor()
+        rows = cur.execute(
+            "SELECT * FROM lineup_results WHERE date BETWEEN ? AND ? ORDER BY date",
+            (start_date, end_date),
         ).fetchall()
         return pd.DataFrame(rows, columns=[col[0] for col in cur.description]) if rows else pd.DataFrame()
 

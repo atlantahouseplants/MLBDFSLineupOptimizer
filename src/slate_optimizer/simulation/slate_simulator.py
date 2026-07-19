@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 import numpy as np
+from scipy.stats import norm
 from scipy.stats import t as student_t
 
 from .distributions import PlayerDistribution
@@ -64,6 +65,8 @@ def simulate_slate(
     num_simulations: int = 10_000,
     seed: Optional[int] = None,
     use_antithetic: bool = True,
+    use_stratified: bool = False,
+    num_strata: int = 10,
 ) -> SlateSimulation:
     if not distributions:
         raise ValueError("No player distributions provided")
@@ -87,6 +90,8 @@ def simulate_slate(
         correlation_model,
         base_draws,
         rng,
+        use_stratified=use_stratified,
+        num_strata=num_strata,
     )
 
     if use_antithetic:
@@ -105,11 +110,39 @@ def _student_t_copula_draws(
     correlation_model: CorrelationModel,
     num_draws: int,
     rng: np.random.Generator,
+    use_stratified: bool = False,
+    num_strata: int = 10,
 ) -> np.ndarray:
     p = len(correlation_model.player_ids)
-    z = rng.standard_normal(size=(num_draws, p))
+    if use_stratified:
+        z = _stratified_normal_draws(num_draws, p, max(2, int(num_strata)), rng)
+    else:
+        z = rng.standard_normal(size=(num_draws, p))
     correlated = z @ correlation_model.cholesky.T
     chi2 = rng.chisquare(df=correlation_model.nu, size=num_draws)
     scaled = correlated / np.sqrt((chi2 / correlation_model.nu)[:, None])
     uniforms = student_t.cdf(scaled, df=correlation_model.nu)
     return np.clip(uniforms, 1e-6, 1 - 1e-6)
+
+
+def _stratified_normal_draws(
+    num_draws: int,
+    num_players: int,
+    num_strata: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    strata = min(max(2, num_strata), max(2, num_draws))
+    draws = np.empty((num_draws, num_players), dtype=np.float64)
+    base_counts = np.full(strata, num_draws // strata, dtype=int)
+    base_counts[: num_draws % strata] += 1
+    edges = np.linspace(0.0, 1.0, strata + 1)
+    for col in range(num_players):
+        uniforms = []
+        for idx, count in enumerate(base_counts):
+            if count <= 0:
+                continue
+            uniforms.append(rng.uniform(edges[idx], edges[idx + 1], size=count))
+        col_uniforms = np.concatenate(uniforms)
+        rng.shuffle(col_uniforms)
+        draws[:, col] = norm.ppf(np.clip(col_uniforms, 1e-6, 1 - 1e-6))
+    return draws

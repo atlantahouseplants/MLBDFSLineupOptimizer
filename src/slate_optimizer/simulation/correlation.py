@@ -24,6 +24,7 @@ class CorrelationConfig:
     copula_nu: int = 5
     stack_priority_bonus: float = 0.05
     vegas_scaling_denominator: float = 8.5
+    vegas_scale_floor: float = 0.70
     vegas_scale_cap: float = 1.3
 
 
@@ -70,14 +71,14 @@ def build_correlation_matrix(
     n = len(player_ids)
     matrix = np.eye(n, dtype=np.float64)
 
-    # Extract arrays for vectorized comparison
-    player_type = df["player_type"].values
-    stack_key = df["stack_key"].values
-    game_key = df["game_key"].values
-    team_code = df["team_code"].values
-    opponent_code = df["opponent_code"].values
-    stack_priority = df["stack_priority"].values
-    vegas_total = df["vegas_game_total"].values
+    # Extract arrays for vectorized comparison (use to_numpy to avoid pandas StringArray broadcasting issues)
+    player_type = df["player_type"].to_numpy(dtype=str)
+    stack_key = df["stack_key"].to_numpy(dtype=str)
+    game_key = df["game_key"].to_numpy(dtype=str)
+    team_code = df["team_code"].to_numpy(dtype=str)
+    opponent_code = df["opponent_code"].to_numpy(dtype=str)
+    stack_priority = df["stack_priority"].to_numpy(dtype=str)
+    vegas_total = df["vegas_game_total"].to_numpy(dtype=np.float64)
     batting_order = df["batting_order_position"].to_numpy(dtype=np.float64, na_value=0.0)
     is_batter = player_type == "batter"
     is_pitcher = player_type == "pitcher"
@@ -116,7 +117,7 @@ def build_correlation_matrix(
     # Vegas scaling for teammates
     avg_vegas = (vegas_total[:, None] + vegas_total[None, :]) / 2.0
     has_vegas = (vegas_total[:, None] > 0) & (vegas_total[None, :] > 0)
-    vegas_scale = np.clip(avg_vegas / config.vegas_scaling_denominator, 1.0, config.vegas_scale_cap)
+    vegas_scale = np.clip(avg_vegas / config.vegas_scaling_denominator, config.vegas_scale_floor, config.vegas_scale_cap)
     scale_mask = teammate_mask & has_vegas
     matrix[scale_mask] *= vegas_scale[scale_mask]
 

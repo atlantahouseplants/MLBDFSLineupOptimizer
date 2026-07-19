@@ -26,6 +26,8 @@ class OptimizerConfig:
     bring_back_enabled: bool = False
     bring_back_count: int = 1
     min_game_total_for_stacks: Optional[float] = None
+    leverage_weight: float = 0.15
+    randomness: float = 0.05
 
     @classmethod
     def load(cls, path: Path) -> "OptimizerConfig":

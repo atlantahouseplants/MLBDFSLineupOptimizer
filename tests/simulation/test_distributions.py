@@ -71,6 +71,16 @@ class TestDistributions(unittest.TestCase):
             samples = dist.sample(500, np.random.default_rng(0))
             self.assertTrue(np.all(samples >= -1e-6))
 
+    def test_bust_median_upside_expand_hitter_distribution(self) -> None:
+        enhanced = self.dataset.copy()
+        enhanced.loc[enhanced["fd_player_id"] == "BAT1", "proj_fd_median"] = 7.0
+        enhanced.loc[enhanced["fd_player_id"] == "BAT1", "proj_fd_bust_rate"] = 0.35
+        enhanced.loc[enhanced["fd_player_id"] == "BAT1", "proj_fd_upside"] = 34.0
+        base_dist = fit_player_distributions(self.dataset)["BAT1"]
+        enhanced_dist = fit_player_distributions(enhanced)["BAT1"]
+        self.assertGreater(enhanced_dist.sigma, base_dist.sigma)
+        self.assertAlmostEqual(enhanced_dist.mean(), 12.0, delta=1.0)
+
 
 if __name__ == "__main__":
     unittest.main()

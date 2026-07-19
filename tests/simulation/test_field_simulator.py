@@ -12,7 +12,7 @@ import unittest
 
 import pandas as pd
 
-from slate_optimizer.simulation import FieldQualityMix, simulate_field
+from slate_optimizer.simulation import FieldQualityMix, FieldRealismProfile, simulate_field
 
 
 class TestFieldSimulator(unittest.TestCase):
@@ -71,6 +71,24 @@ class TestFieldSimulator(unittest.TestCase):
         self.assertEqual(field.lineups.shape[0], 50)
         self.assertEqual(field.lineups.shape[1], 9)
         self.assertTrue((field.lineups >= 0).all())
+        for lineup in field.lineups:
+            selected = dataset.iloc[lineup]
+            hitters = selected[selected["player_type"] != "pitcher"]
+            self.assertLessEqual(int(hitters["team_code"].value_counts().max()), 4)
+
+    def test_field_realism_profile_runs(self) -> None:
+        dataset = self._dataset()
+        field = simulate_field(
+            dataset,
+            num_opponent_lineups=20,
+            salary_cap=35000,
+            seed=7,
+            quality_mix=FieldQualityMix(shark_pct=0.5, rec_pct=0.5, random_pct=0.0),
+            realism_profile=FieldRealismProfile(value_chalk_bias=0.35, optimizer_train_bias=0.25),
+        )
+
+        self.assertEqual(field.num_lineups, 20)
+        self.assertEqual(len(field.ownership_used), len(dataset))
 
 
 if __name__ == "__main__":

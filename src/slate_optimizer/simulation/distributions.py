@@ -36,6 +36,8 @@ class PlayerDistribution:
     proj_floor: float
     proj_ceiling: float
     salary: int
+    proj_median: float = 0.0
+    bust_rate: float = 0.0
 
     def _lognormal(self):
         return lognorm(s=self.sigma, scale=math.exp(self.mu), loc=self.shift)
@@ -101,13 +103,23 @@ def fit_player_distributions(
         mean = float(record.get("proj_fd_mean", 0.0) or 0.0)
         floor = float(record.get("proj_fd_floor", mean * 0.8) or mean * 0.8)
         ceiling = float(record.get("proj_fd_ceiling", mean * 1.2) or mean * 1.2)
+        upside = float(record.get("proj_fd_upside", ceiling) or ceiling)
+        ceiling = max(ceiling, upside)
+        median_raw = record.get("proj_fd_median", None)
+        median = float(median_raw) if median_raw not in (None, "") else 0.0
+        if not math.isfinite(median) or median <= 0:
+            median = mean
+        bust_rate = float(record.get("proj_fd_bust_rate", 0.0) or 0.0)
+        if not math.isfinite(bust_rate):
+            bust_rate = 0.0
+        bust_rate = _clamp(bust_rate, 0.0, 1.0)
         salary = int(record.get("salary", 0) or 0)
 
         if player_type == "pitcher":
-            mu, sigma, shift = _fit_pitcher_normal(mean, floor, ceiling)
+            mu, sigma, shift = _fit_pitcher_normal(mean, floor, ceiling, bust_rate)
             dist_type: Literal["lognormal", "truncated_normal"] = "truncated_normal"
         else:
-            mu, sigma, shift = _fit_batter_lognormal(mean, floor, ceiling, salary)
+            mu, sigma, shift = _fit_batter_lognormal(mean, floor, ceiling, salary, median, bust_rate)
             player_type = "batter"
             dist_type = "lognormal"
 
@@ -124,14 +136,25 @@ def fit_player_distributions(
             proj_floor=floor,
             proj_ceiling=ceiling,
             salary=salary,
+            proj_median=median,
+            bust_rate=bust_rate,
         )
     return dists
 
 
-def _fit_batter_lognormal(mean: float, floor: float, ceiling: float, salary: int) -> tuple[float, float, float]:
-    shift = max(0.0, float(floor) * 0.5)
+def _fit_batter_lognormal(
+    mean: float,
+    floor: float,
+    ceiling: float,
+    salary: int,
+    median: float,
+    bust_rate: float,
+) -> tuple[float, float, float]:
+    bust_shift_discount = _clamp(1.0 - bust_rate * 0.8, 0.25, 1.0)
+    shift = max(0.0, float(floor) * 0.5 * bust_shift_discount)
     adj_mean = max(mean - shift, 0.1)
     adj_ceiling = max(ceiling - shift, adj_mean * 1.05)
+    adj_median = max(median - shift, 0.05)
     ratio = adj_ceiling / adj_mean
     salary = max(int(salary) if salary else 0, 1)
     salary_factor = _clamp(4000.0 / salary, 0.7, 1.3)
@@ -139,13 +162,18 @@ def _fit_batter_lognormal(mean: float, floor: float, ceiling: float, salary: int
         sigma = 0.6 * salary_factor
     else:
         sigma = math.sqrt(max(1e-6, math.log(ratio))) * salary_factor
+    if adj_mean > adj_median:
+        median_sigma = math.sqrt(max(1e-6, 2.0 * math.log(adj_mean / adj_median)))
+        sigma = max(sigma, median_sigma)
+    sigma *= _clamp(0.85 + bust_rate * 0.9, 0.85, 1.45)
     mu = math.log(max(adj_mean, 1e-3)) - 0.5 * sigma ** 2
     return mu, sigma, shift
 
 
-def _fit_pitcher_normal(mean: float, floor: float, ceiling: float) -> tuple[float, float, float]:
+def _fit_pitcher_normal(mean: float, floor: float, ceiling: float, bust_rate: float) -> tuple[float, float, float]:
     spread = max(ceiling - floor, 1.0)
     sigma = spread / (2.0 * 1.645)
     if not math.isfinite(sigma) or sigma <= 0:
         sigma = max(abs(mean) * 0.1, 3.0)
+    sigma *= _clamp(0.85 + bust_rate * 0.8, 0.85, 1.35)
     return mean, sigma, 0.0

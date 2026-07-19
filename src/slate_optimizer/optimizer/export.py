@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import csv
+import warnings
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
 
@@ -119,19 +120,36 @@ def _lineup_to_row(lineup_df: pd.DataFrame) -> List[str]:
     return ordered
 
 
-def lineups_to_fanduel_upload(lineups: Sequence[LineupResult]) -> pd.DataFrame:
+def validate_fanduel_lineups(lineups: Sequence[LineupResult]) -> List[Tuple[int, str]]:
+    errors: List[Tuple[int, str]] = []
+    for lineup_number, lineup in enumerate(lineups, start=1):
+        try:
+            _lineup_to_row(lineup.dataframe)
+        except ValueError as exc:
+            errors.append((lineup_number, str(exc)))
+    return errors
+
+
+def lineups_to_fanduel_upload(lineups: Sequence[LineupResult], *, strict: bool = False) -> pd.DataFrame:
     if not lineups:
         return pd.DataFrame(columns=FANDUEL_UPLOAD_COLUMNS)
     rows: List[List[str]] = []
-    skipped = 0
-    for lineup in lineups:
+    errors: List[Tuple[int, str]] = []
+    for lineup_number, lineup in enumerate(lineups, start=1):
         try:
             rows.append(_lineup_to_row(lineup.dataframe))
-        except ValueError:
-            skipped += 1
-    if skipped:
-        import sys
-        print(f"Warning: skipped {skipped}/{len(lineups)} lineups with invalid position assignments", file=sys.stderr)
+        except ValueError as exc:
+            errors.append((lineup_number, str(exc)))
+    if errors:
+        first_lineup, first_error = errors[0]
+        message = (
+            f"Skipped {len(errors)} FanDuel-invalid lineup(s) during export. "
+            f"First skipped lineup #{first_lineup}: {first_error}"
+        )
+        if strict:
+            raise ValueError(message)
+        warnings.warn(message, RuntimeWarning, stacklevel=2)
+    # Invalid lineups are dropped only after warning or raising in strict mode.
     upload_df = pd.DataFrame(rows, columns=FANDUEL_UPLOAD_COLUMNS)
     return upload_df
 
@@ -174,6 +192,49 @@ def extract_template_entries(csv_path: Path | str) -> Optional[pd.DataFrame]:
     return pd.DataFrame(entries)
 
 
+def assign_lineups_to_contests(
+    n_lineups: int,
+    template_entries: pd.DataFrame,
+) -> Dict[str, List[Optional[int]]]:
+    """Deal lineup indexes across the contests in an entries template.
+
+    Phase 1 deals unique lineups round-robin across contests so every contest
+    inherits the portfolio's exposure profile. Phase 2 (shortage) reuses
+    lineups across contests — legal on FanDuel — but never repeats a lineup
+    within the same contest. Entries that still cannot be filled get None.
+
+    Returns {contest_id: [lineup_index or None, ...]} with one slot per entry,
+    contests in first-appearance order.
+    """
+    contest_ids = list(dict.fromkeys(template_entries["contest_id"].astype(str)))
+    entry_counts = template_entries["contest_id"].astype(str).value_counts().to_dict()
+    assigned: Dict[str, List[Optional[int]]] = {cid: [] for cid in contest_ids}
+
+    next_lineup = 0
+    active = [cid for cid in contest_ids if entry_counts.get(cid, 0) > 0]
+    while active and next_lineup < n_lineups:
+        for cid in list(active):
+            if next_lineup >= n_lineups:
+                break
+            assigned[cid].append(next_lineup)
+            next_lineup += 1
+            if len(assigned[cid]) >= entry_counts[cid]:
+                active.remove(cid)
+
+    # Shortage: reuse lineups from other contests, skipping any already in this one.
+    for cid in contest_ids:
+        used = set(assigned[cid])
+        candidates = (idx for idx in range(n_lineups) if idx not in used)
+        while len(assigned[cid]) < entry_counts.get(cid, 0):
+            idx = next(candidates, None)
+            if idx is None:
+                break
+            assigned[cid].append(idx)
+        while len(assigned[cid]) < entry_counts.get(cid, 0):
+            assigned[cid].append(None)
+    return assigned
+
+
 def lineups_to_fanduel_template(
     lineups: Sequence[LineupResult],
     template_entries: Optional[pd.DataFrame] = None,
@@ -181,10 +242,11 @@ def lineups_to_fanduel_template(
     """Build a FanDuel-ready upload CSV with entry metadata.
 
     If *template_entries* is provided (from extract_template_entries), the
-    output includes entry_id/contest_id/contest_name/entry_fee columns so
-    the CSV can be uploaded directly to FanDuel without manual copy-paste.
-    Lineups are assigned round-robin to entries when there are more entries
-    than lineups.
+    output includes entry_id/contest_id/contest_name/entry_fee columns so the
+    CSV can be uploaded directly to FanDuel. When the template spans multiple
+    contests, lineups are dealt round-robin across contests and a lineup is
+    never assigned twice within the same contest; entries that cannot be
+    filled without an in-contest duplicate are omitted from the output.
     """
     base_df = lineups_to_fanduel_upload(lineups)
     if base_df.empty:
@@ -193,27 +255,34 @@ def lineups_to_fanduel_template(
     if template_entries is None or template_entries.empty:
         return base_df
 
-    n_entries = len(template_entries)
-    n_lineups = len(base_df)
-
-    # Repeat lineups round-robin if fewer lineups than entries
-    if n_lineups < n_entries:
-        repeats = (n_entries // n_lineups) + 1
-        base_df = pd.concat([base_df] * repeats, ignore_index=True).iloc[:n_entries]
-    elif n_lineups > n_entries:
-        base_df = base_df.iloc[:n_entries]
-
-    base_df = base_df.reset_index(drop=True)
     template_entries = template_entries.reset_index(drop=True)
+    assignment = assign_lineups_to_contests(len(base_df), template_entries)
 
-    result = pd.concat([template_entries, base_df], axis=1)
-    return result
+    # Walk entries in template order, consuming each contest's dealt lineups.
+    # Rows are built positionally because the upload columns contain
+    # duplicate labels (three OF slots).
+    cursors: Dict[str, int] = {cid: 0 for cid in assignment}
+    rows: List[List] = []
+    for _, entry in template_entries.iterrows():
+        cid = str(entry["contest_id"])
+        slot = cursors.get(cid, 0)
+        cursors[cid] = slot + 1
+        contest_slots = assignment.get(cid, [])
+        lineup_idx = contest_slots[slot] if slot < len(contest_slots) else None
+        if lineup_idx is None:
+            continue
+        rows.append(list(entry.values) + list(base_df.iloc[lineup_idx].values))
+
+    columns = list(template_entries.columns) + list(base_df.columns)
+    return pd.DataFrame(rows, columns=columns)
 
 
 __all__ = [
     "FANDUEL_UPLOAD_COLUMNS",
+    "assign_lineups_to_contests",
     "extract_template_entries",
     "lineups_to_fanduel_upload",
     "lineups_to_fanduel_template",
+    "validate_fanduel_lineups",
     "write_fanduel_upload",
 ]

@@ -115,10 +115,11 @@ class TestContestSimulator(unittest.TestCase):
             field,
             entry_fee=config.entry_fee,
             payout_structure=config.payout_structure,
+            contest_entries=config.contest_entries,
         )
         df = contest.to_dataframe()
         self.assertFalse(df.empty)
-        required = {"lineup_id", "mean_score", "win_rate", "top_1pct_rate", "expected_roi"}
+        required = {"lineup_id", "mean_score", "win_rate", "top_1pct_rate", "expected_roi", "payout_ev", "expected_payout"}
         self.assertTrue(required.issubset(df.columns))
 
         portfolio = select_portfolio(contest, num_lineups=2)

@@ -39,12 +39,13 @@ def calculate_ownership_accuracy(date: str, db_path: Path = DEFAULT_DB) -> Dict[
         on="fd_player_id",
         how="inner",
     )
-    merged["abs_diff"] = (
-        merged["proj_fd_ownership"].astype(float) - merged["actual_ownership_pct"].astype(float)
-    ).abs()
+    projected = pd.to_numeric(merged["proj_fd_ownership"], errors="coerce")
+    actual_own = pd.to_numeric(merged["actual_ownership_pct"], errors="coerce")
+    # Both series are decimals (0-1); buckets are labeled in percent points.
+    merged["abs_diff"] = (projected - actual_own).abs()
     mae = float(merged["abs_diff"].mean()) if not merged.empty else float("nan")
-    merged["projected_bucket"] = (merged["proj_fd_ownership"].astype(float) // 5).clip(lower=0)
-    merged["actual_bucket"] = (merged["actual_ownership_pct"].astype(float) // 5).clip(lower=0)
+    merged["projected_bucket"] = (projected * 100.0 // 5).clip(lower=0)
+    merged["actual_bucket"] = (actual_own * 100.0 // 5).clip(lower=0)
     db.close()
     bucketed = merged.groupby("projected_bucket")["abs_diff"].mean().rename("mae") if not merged.empty else pd.Series()
     bucket_dict = {int(bucket * 5): float(value) for bucket, value in bucketed.items()}
