@@ -39,7 +39,7 @@ pip install -r requirements.txt
 Create `.env` in the repo root:
 ```
 BPP_SESSION=<your BallparkPal PHPSESSID cookie>
-ODDS_API_KEY=6d20401fd47d415664f3d50f1b0a0849
+ODDS_API_KEY=<your-odds-api-key>
 ```
 
 ### BPP Session Cookie — refresh every ~7 days
