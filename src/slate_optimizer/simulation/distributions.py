@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import lognorm, truncnorm
 
+from slate_optimizer.projection.score_distributions import fit_player_distributions as calculate_player_metrics, _get_env_flag
+
 __all__ = [
     "PlayerDistribution",
     "fit_player_distributions",
@@ -94,6 +96,7 @@ def fit_player_distributions(
 
     volatility_scale = max(0.05, float(volatility_scale))
     dists: Dict[str, PlayerDistribution] = {}
+    computed_boom_bust_enabled = _get_env_flag("COMPUTED_BOOM_BUST", False)
     for record in optimizer_df.to_dict("records"):
         player_id = str(record.get("fd_player_id"))
         if not player_id:
@@ -101,19 +104,27 @@ def fit_player_distributions(
         full_name = str(record.get("full_name", ""))
         player_type = str(record.get("player_type", "batter")).lower()
         mean = float(record.get("proj_fd_mean", 0.0) or 0.0)
-        floor = float(record.get("proj_fd_floor", mean * 0.8) or mean * 0.8)
-        ceiling = float(record.get("proj_fd_ceiling", mean * 1.2) or mean * 1.2)
-        upside = float(record.get("proj_fd_upside", ceiling) or ceiling)
-        ceiling = max(ceiling, upside)
-        median_raw = record.get("proj_fd_median", None)
-        median = float(median_raw) if median_raw not in (None, "") else 0.0
-        if not math.isfinite(median) or median <= 0:
-            median = mean
-        bust_rate = float(record.get("proj_fd_bust_rate", 0.0) or 0.0)
-        if not math.isfinite(bust_rate):
-            bust_rate = 0.0
-        bust_rate = _clamp(bust_rate, 0.0, 1.0)
         salary = int(record.get("salary", 0) or 0)
+
+        if computed_boom_bust_enabled:
+            player_metrics = calculate_player_metrics(record, player_type)
+            median = player_metrics['median_fd_points']
+            floor = player_metrics['floor_fd_points']
+            ceiling = player_metrics['ceiling_fd_points']
+            bust_rate = player_metrics['bust_percentage']
+        else:
+            floor = float(record.get("proj_fd_floor", mean * 0.8) or mean * 0.8)
+            ceiling = float(record.get("proj_fd_ceiling", mean * 1.2) or mean * 1.2)
+            upside = float(record.get("proj_fd_upside", ceiling) or ceiling)
+            ceiling = max(ceiling, upside)
+            median_raw = record.get("proj_fd_median", None)
+            median = float(median_raw) if median_raw not in (None, "") else 0.0
+            if not math.isfinite(median) or median <= 0:
+                median = mean
+            bust_rate = float(record.get("proj_fd_bust_rate", 0.0) or 0.0)
+            if not math.isfinite(bust_rate):
+                bust_rate = 0.0
+            bust_rate = _clamp(bust_rate, 0.0, 1.0)
 
         if player_type == "pitcher":
             mu, sigma, shift = _fit_pitcher_normal(mean, floor, ceiling, bust_rate)

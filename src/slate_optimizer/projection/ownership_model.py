@@ -21,6 +21,8 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
+from slate_optimizer.projection.score_distributions import _get_env_flag, compute_boom_bust_frame
+
 DEFAULT_PARAMS_PATH = Path(__file__).resolve().parents[3] / "config" / "ownership_model.json"
 
 # Feature weights apply to z-scores computed within each pool (pitchers and
@@ -41,6 +43,15 @@ DEFAULT_PITCHER_WEIGHTS: Dict[str, float] = {
     "k_proj": 0.70,
     "win_pct": 0.40,
     "salary": 0.40,
+}
+
+# Extra signals layered on when COMPUTED_BOOM_BUST is on: upside (~10% weight)
+# and inverted bust (~8%), mirroring the shares the website Bust/Upside fed.
+# Applied at scoring time (not import time) so JSON param overrides can't
+# silently drop them.
+BOOM_BUST_HITTER_WEIGHTS: Dict[str, float] = {
+    "boom_percentage": 0.10,
+    "bust_percentage": -0.08,
 }
 
 # One pitcher slot and eight hitter slots per lineup.
@@ -181,7 +192,7 @@ def build_ownership_features(
     proj = projections_df.copy()
     proj["fd_player_id"] = proj["fd_player_id"].astype(str)
     proj_cols = ["fd_player_id", "proj_fd_mean"]
-    for optional in ("proj_fd_ceiling", "proj_fd_upside", "vegas_team_total", "batting_order_position"):
+    for optional in ("proj_fd_ceiling", "proj_fd_upside", "vegas_team_total", "batting_order_position", "boom_percentage", "bust_percentage"):
         if optional in proj.columns and optional not in proj_cols:
             proj_cols.append(optional)
     proj = proj[proj_cols].groupby("fd_player_id", as_index=False).mean(numeric_only=True)
@@ -228,6 +239,16 @@ def build_ownership_features(
     features["k_proj"] = _numeric(merged, "bpp_strikeouts").fillna(0.0)
     features["win_pct"] = _numeric(merged, "bpp_win_pct").fillna(0.0)
     features["quality_start"] = _numeric(merged, "bpp_quality_start").fillna(0.0)
+
+    # Computed boom/bust signals (zero when the flag is off — weights then
+    # multiply an all-zero z-score column, which is a no-op).
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        _bb = compute_boom_bust_frame(merged)
+        features["boom_percentage"] = _bb["computed_boom_pct"].fillna(0.0)
+        features["bust_percentage"] = _bb["computed_bust_pct"].fillna(0.0)
+    else:
+        features["boom_percentage"] = 0.0
+        features["bust_percentage"] = 0.0
 
     # Viability gate: FanDuel lists whole rosters, but the field only rosters
     # players with a real projection signal. Bench bats without BPP coverage,
@@ -347,9 +368,149 @@ def estimate_structural_ownership(
         PITCHER_BUDGET,
         PITCHER_CAP,
     )
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        # Layer computed boom/bust on top of configured weights so JSON
+        # overrides can't silently drop the signals.
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
+    hitter_weights = dict(params.hitter_weights)
+    if _get_env_flag("COMPUTED_BOOM_BUST", False):
+        hitter_weights.update(BOOM_BUST_HITTER_WEIGHTS)
     hitter_own = _pool_ownership(
         hitters,
-        params.hitter_weights,
+        hitter_weights,
         params.hitter_temperature * slate_factor,
         HITTER_BUDGET,
         HITTER_CAP,

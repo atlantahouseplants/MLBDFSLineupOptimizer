@@ -64,6 +64,17 @@ OPTIMIZER_COLUMNS = [
     "bpp_runs_first5away",
     "bpp_runs_first5home",
     "bpp_stack_count",
+    # Volatility proxies for computed boom/bust (score_distributions.py);
+    # pass-through only — the optimizer itself does not use them.
+    "bpp_home_run_probability",
+    "bpp_hit_probability",
+    "bpp_stolen_base_probability",
+    "bpp_strikeouts",
+    "bpp_innings",
+    "bpp_bb",
+    "bpp_runs_allowed",
+    "bpp_win_pct",
+    "bpp_quality_start",
 ]
 
 BPP_STACK_SIM_COLUMNS = (
@@ -242,6 +253,15 @@ def build_optimizer_dataset(
         "bpp_runs_first5away",
         "bpp_runs_first5home",
         "bpp_stack_count",
+        "bpp_home_run_probability",
+        "bpp_hit_probability",
+        "bpp_stolen_base_probability",
+        "bpp_strikeouts",
+        "bpp_innings",
+        "bpp_bb",
+        "bpp_runs_allowed",
+        "bpp_win_pct",
+        "bpp_quality_start",
         "vegas_game_total",
         "vegas_team_total",
         "vegas_opponent_total",

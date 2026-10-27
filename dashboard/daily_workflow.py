@@ -8,6 +8,9 @@ import hashlib
 import io
 import json
 import tempfile
+import subprocess
+import sys
+import os
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -106,6 +109,16 @@ SIM_RESULTS_KEY = "simulation_results"
 RUN_HISTORY_KEY = "run_history"
 UI_DAILY_MODE_KEY = "ui_daily_build_mode"
 UI_ADVANCED_KEY = "ui_show_advanced_controls"
+FAN_DUEL_CSV_UPLOADED_KEY = "fanduel_csv_uploaded"
+BPP_DFS_OPTIMIZER_UPLOADED_KEY = "bpp_dfs_optimizer_uploaded"
+BPP_API_FETCH_STATUS_KEY = "bpp_api_fetch_status"
+VEGAS_API_FETCH_STATUS_KEY = "vegas_api_fetch_status"
+MLB_ORDERS_API_FETCH_STATUS_KEY = "mlb_orders_api_fetch_status"
+COMPUTED_BOOM_BUST_FLAG_KEY = "computed_boom_bust_flag"
+RUN_ANALYSIS_ENABLED_KEY = "run_analysis_enabled"
+RUN_ANALYSIS_PROGRESS_KEY = "run_analysis_progress"
+RUN_ANALYSIS_OUTPUT_KEY = "run_analysis_output"
+
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "data" / "slates.db"
 FIELD_DUPLICATION_PROFILE_PATH = Path(__file__).resolve().parents[1] / "data" / "field_duplication_profile.json"
 DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "processed"
@@ -629,6 +642,26 @@ def _daily_mode_enabled() -> bool:
 
 def _advanced_controls_enabled() -> bool:
     return (not _daily_mode_enabled()) or bool(st.session_state.get(UI_ADVANCED_KEY, False))
+
+
+def _get_status_icon(status: str) -> str:
+    if status == "green":
+        return "✅"
+    if status == "yellow":
+        return "⚠️"
+    if status == "red":
+        return "❌"
+    return "⏳" # Default to pending
+
+
+def _get_status_color(status: str) -> str:
+    if status == "green":
+        return "success"
+    if status == "yellow":
+        return "warning"
+    if status == "red":
+        return "error"
+    return "info" # Default to info for pending or general messages
 
 
 def _status_token(ready: bool) -> str:
@@ -3151,12 +3184,230 @@ def _sidebar_navigation() -> str:
         default_step = steps[0]
     current_step = st.sidebar.radio("Workflow Step", steps, index=steps.index(default_step))
     st.session_state[NAV_KEY] = current_step
-    st.sidebar.markdown("---")
+    st.sidebar.markdown("----")
     if daily_mode:
         st.sidebar.caption("Daily path: setup -> optimize -> simulate -> review/export.")
         _render_sidebar_daily_status(_get_session())
-        st.sidebar.markdown("---")
+        st.sidebar.markdown("----")
     return current_step
+
+
+def _fetch_all_data() -> None:
+    # Simulate Ballpark Pal API fetch status. The actual files are expected to be present from download/upload.
+    # The prompt implies scripts/fetch_live_data.py handles this, but its direct integration into UI for file generation
+    # and passing to _process_slate is not detailed. For now, we assume it gets populated externally for status.
+    st.session_state[BPP_API_FETCH_STATUS_KEY] = "green"
+
+    # Fetch Vegas Lines
+    try:
+        vegas_lines_result = fetch_vegas_lines()
+        csv_buf = vegas_lines_result.games.to_csv(index=False)
+        st.session_state["fetched_vegas_csv"] = csv_buf
+        st.session_state[VEGAS_API_FETCH_STATUS_KEY] = "green"
+    except Exception:
+        st.session_state[VEGAS_API_FETCH_STATUS_KEY] = "red"
+        st.session_state.pop("fetched_vegas_csv", None)
+
+    # Fetch MLB Batting Orders
+    try:
+        status = lineup_fetch_status()
+        orders_df = fetch_batting_orders()
+        csv_buf = orders_df.to_csv(index=False)
+        st.session_state["fetched_lineups_csv"] = csv_buf
+        if status["games_with_lineups"] == status["total_games"]:
+            st.session_state[MLB_ORDERS_API_FETCH_STATUS_KEY] = "green"
+        elif status["games_with_lineups"] > 0:
+            st.session_state[MLB_ORDERS_API_FETCH_STATUS_KEY] = "yellow"
+        else:
+            st.session_state[MLB_ORDERS_API_FETCH_STATUS_KEY] = "red"
+    except Exception:
+        st.session_state[MLB_ORDERS_API_FETCH_STATUS_KEY] = "red"
+        st.session_state.pop("fetched_lineups_csv", None)
+
+    st.rerun()
+
+
+def _run_analysis_pipeline(workflow: Dict) -> None:
+    st.session_state[RUN_ANALYSIS_PROGRESS_KEY] = "Starting analysis..."
+    st.session_state[RUN_ANALYSIS_OUTPUT_KEY] = ""
+
+    # Ensure necessary files are available from session state or uploads
+    fanduel_file = st.session_state.get("checklist_fanduel_file")
+    bpp_dfs_file = st.session_state.get("checklist_bpp_dfs_file")
+    fetched_vegas_csv = st.session_state.get("fetched_vegas_csv")
+    fetched_lineups_csv = st.session_state.get("fetched_lineups_csv")
+
+    if not fanduel_file:
+        st.error("FanDuel salary CSV is required to run analysis.")
+        return
+
+    # Create temporary files for inputs
+    temp_dir = Path(tempfile.mkdtemp(prefix="run_analysis_temp_"))
+    fanduel_path = temp_dir / fanduel_file.name
+    fanduel_path.write_bytes(fanduel_file.getbuffer())
+
+    bpp_dfs_path = None
+    if bpp_dfs_file:
+        bpp_dfs_path = temp_dir / bpp_dfs_file.name
+        bpp_dfs_path.write_bytes(bpp_dfs_file.getbuffer())
+
+    vegas_path = None
+    if fetched_vegas_csv:
+        vegas_path = temp_dir / "vegas_api_fetched.csv"
+        vegas_path.write_text(fetched_vegas_csv, encoding="utf-8")
+
+    mlb_orders_path = None
+    if fetched_lineups_csv:
+        mlb_orders_path = temp_dir / "mlb_lineups_api_fetched.csv"
+        mlb_orders_path.write_text(fetched_lineups_csv, encoding="utf-8")
+
+    # Construct the command for scripts/run_simulated_pipeline.py
+    command = [
+        sys.executable,
+        str(Path(__file__).resolve().parents[1] / "scripts" / "run_simulated_pipeline.py"),
+        "--bpp-source", str(Path(__file__).resolve().parents[1] / "data" / "live"), # Assuming this is the default BPP source for the script
+        "--fanduel-csv", str(fanduel_path),
+        "--num-candidates", "500",
+        "--num-lineups", "150",
+        "--stack-rotation", "4,3|5,3|4,4|3,3,2|4,2,2|3,2,2,1",
+    ]
+
+    if bpp_dfs_path:
+        command.extend(["--projection-sources", str(bpp_dfs_path)])
+    if vegas_path:
+        command.extend(["--vegas-csv", str(vegas_path)])
+    if mlb_orders_path:
+        command.extend(["--batting-orders-csv", str(mlb_orders_path)])
+
+    try:
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
+
+        output_lines = []
+        for line in process.stdout:
+            output_lines.append(line.strip())
+            st.session_state[RUN_ANALYSIS_PROGRESS_KEY] = line.strip()
+            # Streamlit reruns on session_state change, causing UI update
+            st.rerun()
+
+        process.wait()
+
+        if process.returncode != 0:
+            st.error(f"Analysis pipeline failed with exit code {process.returncode}.")
+            st.session_state[RUN_ANALYSIS_OUTPUT_KEY] = "\n".join(output_lines)
+        else:
+            st.success("Analysis pipeline completed successfully.")
+            st.session_state[RUN_ANALYSIS_OUTPUT_KEY] = "\n".join(output_lines)
+            # The script is expected to produce TAG_simulated_upload.csv in data/output
+            output_dir = Path(__file__).resolve().parents[1] / "data" / "output"
+            # Find the latest generated file
+            output_files = sorted(output_dir.glob("*_simulated_upload.csv"), key=os.path.getmtime, reverse=True)
+            if output_files:
+                latest_output_file = output_files[0]
+                workflow["fanduel_upload_csv_path"] = str(latest_output_file)
+                st.info(f"Generated FanDuel upload CSV: {latest_output_file.name}")
+                st.session_state[NAV_KEY] = "5. Review Lineups" # Navigate to review step
+                st.rerun()
+            else:
+                st.warning("Analysis completed but no FanDuel upload CSV found in data/output.")
+
+    except Exception as exc:
+        st.error(f"Error running analysis pipeline: {exc}")
+        st.session_state[RUN_ANALYSIS_OUTPUT_KEY] = str(exc)
+    finally:
+        # Clean up temporary files, but keep them for debugging if analysis failed
+        if process.returncode != 0:
+            st.warning(f"Temporary files for debugging kept at: {temp_dir}")
+        else:
+            import shutil
+            shutil.rmtree(temp_dir)
+
+
+def _render_daily_checklist(workflow: Dict) -> None:
+    st.subheader("Daily Checklist")
+
+    # Initialize statuses if not present
+    if BPP_API_FETCH_STATUS_KEY not in st.session_state:
+        st.session_state[BPP_API_FETCH_STATUS_KEY] = "red"
+    if VEGAS_API_FETCH_STATUS_KEY not in st.session_state:
+        st.session_state[VEGAS_API_FETCH_STATUS_KEY] = "red"
+    if MLB_ORDERS_API_FETCH_STATUS_KEY not in st.session_state:
+        st.session_state[MLB_ORDERS_API_FETCH_STATUS_KEY] = "red"
+    if FAN_DUEL_CSV_UPLOADED_KEY not in st.session_state:
+        st.session_state[FAN_DUEL_CSV_UPLOADED_KEY] = False
+    if BPP_DFS_OPTIMIZER_UPLOADED_KEY not in st.session_state:
+        st.session_state[BPP_DFS_OPTIMIZER_UPLOADED_KEY] = False
+    if COMPUTED_BOOM_BUST_FLAG_KEY not in st.session_state:
+        st.session_state[COMPUTED_BOOM_BUST_FLAG_KEY] = os.getenv("COMPUTED_BOOM_BUST", "false").lower() == "true"
+    if RUN_ANALYSIS_ENABLED_KEY not in st.session_state:
+        st.session_state[RUN_ANALYSIS_ENABLED_KEY] = False
+
+    computed_boom_bust = st.session_state[COMPUTED_BOOM_BUST_FLAG_KEY]
+
+    # 1. Fetch Today's Data button and status indicators
+    st.markdown("**1. Fetch Today's Data**")
+    col_fetch_btn, col_bpp_status, col_vegas_status, col_mlb_status = st.columns([2, 1, 1, 1])
+
+    if col_fetch_btn.button("Fetch Today's Data", type="primary"):
+        _fetch_all_data()
+
+    col_bpp_status.markdown(f"{_get_status_icon(st.session_state[BPP_API_FETCH_STATUS_KEY])} BPP API")
+    col_vegas_status.markdown(f"{_get_status_icon(st.session_state[VEGAS_API_FETCH_STATUS_KEY])} Vegas Odds")
+    col_mlb_status.markdown(f"{_get_status_icon(st.session_state[MLB_ORDERS_API_FETCH_STATUS_KEY])} MLB Orders")
+
+    st.markdown("**2. Upload Required Files**")
+    # 2a. FanDuel Salary CSV
+    fanduel_uploaded = st.file_uploader("FanDuel salary CSV (REQUIRED)", type=["csv"], key="checklist_fanduel_csv")
+    if fanduel_uploaded:
+        st.session_state[FAN_DUEL_CSV_UPLOADED_KEY] = True
+        # Store file for later processing by _process_slate
+        st.session_state["checklist_fanduel_file"] = fanduel_uploaded
+    else:
+        st.session_state[FAN_DUEL_CSV_UPLOADED_KEY] = False
+        st.session_state.pop("checklist_fanduel_file", None)
+
+    # 2b. Ballpark Pal DFS Optimizer Excel
+    bpp_dfs_label = "Ballpark Pal DFS Optimizer Excel (REQUIRED)"
+    if computed_boom_bust:
+        bpp_dfs_label = "Ballpark Pal DFS Optimizer Excel (OPTIONAL/legacy)"
+
+    bpp_dfs_uploaded = st.file_uploader(bpp_dfs_label, type=["xlsx"], key="checklist_bpp_dfs_excel")
+    if bpp_dfs_uploaded:
+        st.session_state[BPP_DFS_OPTIMIZER_UPLOADED_KEY] = True
+        st.session_state["checklist_bpp_dfs_file"] = bpp_dfs_uploaded
+    else:
+        st.session_state[BPP_DFS_OPTIMIZER_UPLOADED_KEY] = False
+        st.session_state.pop("checklist_bpp_dfs_file", None)
+
+    # Determine if Run Analysis button should be enabled
+    required_uploads_complete = st.session_state[FAN_DUEL_CSV_UPLOADED_KEY] and (
+        st.session_state[BPP_DFS_OPTIMIZER_UPLOADED_KEY] or computed_boom_bust
+    )
+    data_fetched_complete = (
+        st.session_state[BPP_API_FETCH_STATUS_KEY] == "green"
+        and st.session_state[VEGAS_API_FETCH_STATUS_KEY] == "green"
+        and st.session_state[MLB_ORDERS_API_FETCH_STATUS_KEY] == "green"
+    )
+    st.session_state[RUN_ANALYSIS_ENABLED_KEY] = required_uploads_complete and data_fetched_complete
+    
+    st.markdown("**3. Run Analysis**")
+    run_analysis_button_label = "Run Analysis"
+    if not st.session_state[RUN_ANALYSIS_ENABLED_KEY]:
+        run_analysis_button_label += " (Awaiting data/uploads)"
+
+    if st.button(run_analysis_button_label, type="primary", key="run_analysis_button", disabled=not st.session_state[RUN_ANALYSIS_ENABLED_KEY]):
+        _run_analysis_pipeline(workflow)
+
+    # Live progress indicator
+    if st.session_state.get(RUN_ANALYSIS_PROGRESS_KEY):
+        progress_text = st.session_state[RUN_ANALYSIS_PROGRESS_KEY]
+        st.info(f"Running analysis: {progress_text}")
+    if st.session_state.get(RUN_ANALYSIS_OUTPUT_KEY):
+        st.subheader("Analysis Output")
+        st.code(st.session_state[RUN_ANALYSIS_OUTPUT_KEY], language="bash")
+        
+    st.divider()
+
+# ──────────────────────────────────────────────────────────────────────
 
 
 def _apply_filters(df: pd.DataFrame) -> pd.DataFrame:

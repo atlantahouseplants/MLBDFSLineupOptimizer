@@ -221,9 +221,18 @@ def _pitch_adjustment(df: pd.DataFrame) -> pd.Series:
 
 
 def _weather_score(df: pd.DataFrame) -> pd.Series:
-    weather = pd.to_numeric(df.get("bpp_runs_first_inning_pct"), errors="coerce")
+    # df.get() returns None for a missing column and pd.to_numeric(None)
+    # yields a SCALAR nan (numpy.float64) — .isna() then blows up. The
+    # dashboard path uploads the BPP Excel (column present); the cron's
+    # auto-fetched data lacks it. Normalize missing columns to a Series.
+    def _col(name: str) -> pd.Series:
+        if name in df.columns:
+            return pd.to_numeric(df[name], errors="coerce")
+        return pd.Series(float("nan"), index=df.index, dtype=float)
+
+    weather = _col("bpp_runs_first_inning_pct")
     if weather.isna().all():
-        weather = pd.to_numeric(df.get("bpp_runs_first5away"), errors="coerce")
+        weather = _col("bpp_runs_first5away")
     if weather.isna().all():
         return pd.Series(0.0, index=df.index)
     weather = (weather - weather.mean()).fillna(0.0)
