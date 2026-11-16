@@ -36,6 +36,34 @@ def _moneyline_to_prob(value) -> float:
     return float("nan")
 
 
+PYTHAGOREAN_EXPONENT = 1.83
+
+
+def implied_team_totals(game_total, win_prob, exponent: float = PYTHAGOREAN_EXPONENT):
+    """Split a game total into (team, opponent) implied runs from a win probability.
+
+    Inverts the Pythagorean expectation ``p = R^k / (R^k + RA^k)``, so the run
+    ratio is ``(p / (1 - p)) ** (1 / k)``.  An 8.5 total with a 72% favourite
+    gives about 5.3 / 3.2.
+
+    The previous formula, ``total * win_prob``, gave 6.1 / 2.4 for that game -
+    over a run too generous to the favourite and too harsh on the underdog,
+    which then flowed straight into the hitter projection multiplier.
+    """
+    total = pd.to_numeric(game_total, errors="coerce")
+    prob = pd.to_numeric(win_prob, errors="coerce")
+    scalar = not isinstance(total, pd.Series)
+    total = pd.Series(total) if scalar else total
+    prob = pd.Series(prob, index=total.index) if not isinstance(prob, pd.Series) else prob
+    prob = prob.where((prob > 0.0) & (prob < 1.0), 0.5).clip(0.02, 0.98)
+    ratio = (prob / (1.0 - prob)) ** (1.0 / float(exponent))
+    team = total * ratio / (1.0 + ratio)
+    opponent = total - team
+    if scalar:
+        return float(team.iloc[0]), float(opponent.iloc[0])
+    return team, opponent
+
+
 def _parse_game(value: str) -> Tuple[str, str]:
     if not isinstance(value, str) or "@" not in value:
         return "", ""
@@ -114,8 +142,9 @@ class VegasLoader:
         )
         df.loc[~valid_mask, ["away_prob", "home_prob"]] = 0.5
 
-        df["away_implied_total"] = (df["total"] * df["away_prob"]).fillna(0.0)
-        df["home_implied_total"] = (df["total"] * df["home_prob"]).fillna(0.0)
+        away_implied, home_implied = implied_team_totals(df["total"], df["away_prob"])
+        df["away_implied_total"] = away_implied.fillna(0.0)
+        df["home_implied_total"] = home_implied.fillna(0.0)
         df["game_code"] = df["away_team"].str.cat(df["home_team"], sep="@")
 
         team_rows = []
@@ -158,5 +187,5 @@ class VegasLoader:
         return VegasLines(games=df, team_totals=team_totals)
 
 
-__all__ = ["VegasLoader", "VegasLines"]
+__all__ = ["PYTHAGOREAN_EXPONENT", "VegasLoader", "VegasLines", "implied_team_totals"]
 

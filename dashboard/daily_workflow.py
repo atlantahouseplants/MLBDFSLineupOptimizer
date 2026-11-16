@@ -71,6 +71,7 @@ from slate_optimizer.projection import (
     blend_projection_sources,
     compute_baseline_projections,
     compute_ownership_series,
+    load_projection_config,
 )
 from slate_optimizer.projection.ownership_model import build_ownership_features
 from slate_optimizer.simulation import (
@@ -2104,12 +2105,14 @@ def _process_slate(
                     f"Some players may not be in the FanDuel slate or have different name spellings."
                 )
 
+        projection_config = load_projection_config()
         projections = compute_baseline_projections(
             combined,
             recency_blend=recency_blend,
             platoon_opposite_boost=platoon_opposite_boost,
             platoon_same_penalty=platoon_same_penalty,
             platoon_switch_boost=platoon_switch_boost,
+            config=projection_config,
         )
 
         projection_paths_list = [Path(p) for p in projection_paths]
@@ -2155,7 +2158,13 @@ def _process_slate(
         f"Players loaded: {len(combined)}",
         f"Projection sources blended: {projection_blend_result.source_count}",
         f"Ownership sources blended: {ownership_result.source_count}",
-        f"Platoon multipliers -> opp:{platoon_opposite_boost:.2f} same:{platoon_same_penalty:.2f} switch:{platoon_switch_boost:.2f}",
+        (
+            f"Platoon multipliers -> opp:{platoon_opposite_boost:.2f} same:{platoon_same_penalty:.2f} switch:{platoon_switch_boost:.2f}"
+            if projection_config.apply_platoon
+            else "Platoon and batting-order multipliers are OFF: the offseason backtest against real box scores "
+            "showed they made projections less accurate (BallparkPal already accounts for both)."
+        ),
+        f"Projection model: {projection_config.source} (team totals: {projection_config.team_total_mode})",
     ]
     summary_messages.extend(optional_messages)
 

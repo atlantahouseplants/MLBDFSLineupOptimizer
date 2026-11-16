@@ -34,7 +34,7 @@ from slate_optimizer.optimizer.config import OptimizerConfig
 from slate_optimizer.optimizer.dataset import build_optimizer_dataset
 from slate_optimizer.optimizer.export import validate_fanduel_lineups, write_fanduel_upload
 from slate_optimizer.optimizer.solver import MAX_HITTERS_PER_TEAM, SALARY_CAP, generate_lineups
-from slate_optimizer.projection.baseline import compute_baseline_projections
+from slate_optimizer.projection.baseline import compute_baseline_projections, load_projection_config
 from slate_optimizer.projection.blend import blend_projection_sources
 from slate_optimizer.projection.ownership import OwnershipModelConfig, compute_ownership_series
 
@@ -138,7 +138,7 @@ def build_slate(fanduel_csv: Path, bpp_dir: Path, dfs_files: list[Path], paste_p
         else:
             print("WARNING: filtered pool not viable, using full pool")
 
-    projections = compute_baseline_projections(combined)
+    projections = compute_baseline_projections(combined, config=load_projection_config())
     projections, blend_result = blend_projection_sources(
         combined,
         projections,

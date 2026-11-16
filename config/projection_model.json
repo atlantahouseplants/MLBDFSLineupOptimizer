@@ -1,0 +1,11 @@
+{
+  "apply_park_weather": false,
+  "apply_batting_order": false,
+  "apply_platoon": false,
+  "apply_recency": false,
+  "apply_pitcher_adjustments": false,
+  "team_total_mode": "market_ratio",
+  "market_blend_alpha": 0.5,
+  "market_ratio_clip": 0.2,
+  "source": "offseason-backtest-2026 (24 slates, 5733 hitter starts, 648 pitcher starts)"
+}

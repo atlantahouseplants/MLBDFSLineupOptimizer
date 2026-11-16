@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
+from slate_optimizer.projection.baseline import team_run_expectation
+
 _TIME_PATTERN = re.compile(r"(\d{1,2}:\d{2}\s*[AP]M)", re.IGNORECASE)
 _DATE_PATTERN = re.compile(r"(\d{1,2}/\d{1,2})")
 _EASTERN_TZ = ZoneInfo("US/Eastern")
@@ -58,6 +60,7 @@ OPTIMIZER_COLUMNS = [
     "player_leverage_score",
     "team_leverage_score",
     "bpp_runs",
+    "bpp_team_runs",
     "bpp_win_percent",
     "bpp_home_runs",
     "bpp_runs_first_inning_pct",
@@ -102,11 +105,22 @@ def _add_leverage_columns(df: pd.DataFrame) -> pd.DataFrame:
     batters = df[player_type != "pitcher"].copy()
     team_ownership = batters.groupby("team_code")["proj_fd_ownership"].mean().rename("team_avg_ownership")
     df = df.merge(team_ownership, on="team_code", how="left")
+    # Team run expectation.  ``bpp_runs`` on a batter row is that batter's own
+    # projected runs scored (~0.5), so "first batter's bpp_runs" ranked teams
+    # by whichever hitter happened to sort first.  ``bpp_team_runs`` is the
+    # real simulated team total; ``bpp_runs`` is only a fallback for datasets
+    # built without it.
+    team_runs_source = "bpp_runs"
+    if "bpp_team_runs" in batters.columns:
+        candidate = pd.to_numeric(batters["bpp_team_runs"], errors="coerce")
+        if (candidate > 0).any():
+            team_runs_source = "bpp_team_runs"
     team_runs = (
-        batters.assign(_bpp_runs=pd.to_numeric(batters.get("bpp_runs"), errors="coerce"))
+        batters.assign(_bpp_runs=pd.to_numeric(batters.get(team_runs_source), errors="coerce"))
         .dropna(subset=["_bpp_runs"])
-        .drop_duplicates("team_code")
-        .set_index("team_code")["_bpp_runs"]
+        .query("_bpp_runs > 0")
+        .groupby("team_code")["_bpp_runs"]
+        .max()
     )
     run_rank = df["team_code"].map(team_runs.rank(pct=True))
     own_rank = df["team_code"].map(team_ownership.rank(pct=True))
@@ -116,6 +130,12 @@ def _add_leverage_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def _assign_stack_priority(df: pd.DataFrame) -> pd.Series:
     runs = _safe_numeric(df["bpp_runs"]) if "bpp_runs" in df.columns else pd.Series(pd.NA, index=df.index)
+    if "bpp_team_runs" in df.columns:
+        team_runs = _safe_numeric(df["bpp_team_runs"])
+        if (team_runs > 0).any():
+            # Priority is a team attribute: use the team total, not each
+            # batter's own projected runs.
+            runs = team_runs.where(team_runs > 0)
     if runs.notna().sum() < 3:
         return pd.Series(["mid"] * len(df), index=df.index)
     q_low, q_high = runs.quantile([0.33, 0.66])
@@ -194,6 +214,11 @@ def build_optimizer_dataset(
         if col not in merged.columns:
             merged[col] = merged.get(col.replace("_code", ""), "").astype(str).str.upper()
 
+    if "bpp_team_runs" not in merged.columns or not (
+        pd.to_numeric(merged["bpp_team_runs"], errors="coerce") > 0
+    ).any():
+        merged["bpp_team_runs"] = team_run_expectation(merged)
+
     derived = pd.DataFrame(index=merged.index)
     derived["stack_key"] = merged["team_code"].fillna("")
     derived["game_key"] = merged.apply(_build_game_key, axis=1)
@@ -247,6 +272,7 @@ def build_optimizer_dataset(
         "season_fppg",
         "recency_factor",
         "bpp_runs",
+        "bpp_team_runs",
         "bpp_win_percent",
         "bpp_home_runs",
         "bpp_runs_first_inning_pct",

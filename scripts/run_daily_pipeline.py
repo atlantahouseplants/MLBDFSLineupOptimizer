@@ -31,7 +31,12 @@ from slate_optimizer.optimizer import (
     generate_lineups,
 )
 from slate_optimizer.optimizer.export import write_fanduel_upload
-from slate_optimizer.projection import blend_projection_sources, compute_baseline_projections, compute_ownership_series
+from slate_optimizer.projection import (
+    blend_projection_sources,
+    compute_baseline_projections,
+    compute_ownership_series,
+    load_projection_config,
+)
 
 def build_parser(add_help: bool = True) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -381,12 +386,20 @@ def run_pipeline(args: argparse.Namespace) -> dict:
     db.close()
     print(f"Persisted slate #{slate.slate_id} ({tag}) with diagnostics: {diagnostics.as_dict()}")
 
+    projection_config = load_projection_config()
+    print(
+        f"Projection model: {projection_config.source} "
+        f"(team totals: {projection_config.team_total_mode}, "
+        f"order multiplier: {'on' if projection_config.apply_batting_order else 'off'}, "
+        f"platoon multiplier: {'on' if projection_config.apply_platoon else 'off'})"
+    )
     projections = compute_baseline_projections(
         combined,
         recency_blend=recency_blend,
         platoon_opposite_boost=platoon_opposite_boost,
         platoon_same_penalty=platoon_same_penalty,
         platoon_switch_boost=platoon_switch_boost,
+        config=projection_config,
     )
 
     projections, projection_blend = blend_projection_sources(

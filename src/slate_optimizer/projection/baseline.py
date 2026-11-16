@@ -1,7 +1,15 @@
 """Baseline projection helpers built on top of BallparkPal sims."""
 from __future__ import annotations
 
+import json
+from dataclasses import asdict, dataclass, fields
+from pathlib import Path
+from typing import Optional
+
+import numpy as np
 import pandas as pd
+
+DEFAULT_PROJECTION_CONFIG_PATH = Path(__file__).resolve().parents[3] / "config" / "projection_model.json"
 
 BATTING_ORDER_MULTIPLIERS = {
     1: 1.12,
@@ -23,6 +31,118 @@ RECENT_WINDOW_WEIGHTS = (0.5, 0.5)
 DEFAULT_RECENCY_BLEND = (0.7, 0.3)
 RECENCY_MIN_FACTOR = 0.8
 RECENCY_MAX_FACTOR = 1.25
+
+TEAM_TOTAL_MODES = ("legacy", "market_ratio", "off")
+
+
+@dataclass
+class ProjectionConfig:
+    """Switches and strengths for every adjustment layered on BallparkPal points.
+
+    The dataclass defaults reproduce the 2026-season behaviour exactly, so
+    callers that pass nothing get the legacy projection.  The production
+    pipelines call :func:`load_projection_config`, which reads
+    ``config/projection_model.json`` - the settings chosen by
+    ``scripts/backtest_projections.py`` against real box scores.
+
+    ``team_total_mode``:
+      * ``legacy``       - hitters x (Vegas team total / slate average), clipped.
+                           Double counts the run environment BallparkPal has
+                           already simulated.
+      * ``market_ratio`` - hitters x (Vegas team total / BallparkPal team runs)
+                           ** ``market_blend_alpha``.  Only the *disagreement*
+                           between the market and BallparkPal moves a projection.
+      * ``off``          - no team-total adjustment.
+    """
+
+    apply_park_weather: bool = True
+    apply_batting_order: bool = True
+    apply_platoon: bool = True
+    apply_recency: bool = True
+    apply_pitcher_adjustments: bool = True
+    team_total_mode: str = "legacy"
+    market_blend_alpha: float = 0.5
+    market_ratio_clip: float = 0.20
+    source: str = "legacy-defaults"
+
+    def __post_init__(self) -> None:
+        if self.team_total_mode not in TEAM_TOTAL_MODES:
+            raise ValueError(
+                f"team_total_mode must be one of {TEAM_TOTAL_MODES}, got {self.team_total_mode!r}"
+            )
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, payload: dict) -> "ProjectionConfig":
+        known = {item.name for item in fields(cls)}
+        return cls(**{key: value for key, value in payload.items() if key in known})
+
+    @classmethod
+    def raw_bpp(cls) -> "ProjectionConfig":
+        """BallparkPal points untouched - the reference every variant must beat."""
+        return cls(
+            apply_park_weather=False,
+            apply_batting_order=False,
+            apply_platoon=False,
+            apply_recency=False,
+            apply_pitcher_adjustments=False,
+            team_total_mode="off",
+            source="raw-bpp",
+        )
+
+
+def load_projection_config(path: Path | str | None = None) -> ProjectionConfig:
+    """Read the calibrated projection settings, falling back to legacy defaults."""
+    target = Path(path) if path else DEFAULT_PROJECTION_CONFIG_PATH
+    if not target.exists():
+        return ProjectionConfig()
+    try:
+        payload = json.loads(target.read_text(encoding="utf-8"))
+    except Exception:
+        return ProjectionConfig()
+    if not isinstance(payload, dict):
+        return ProjectionConfig()
+    try:
+        return ProjectionConfig.from_dict(payload)
+    except (TypeError, ValueError):
+        return ProjectionConfig()
+
+
+def save_projection_config(config: ProjectionConfig, path: Path | str | None = None) -> None:
+    target = Path(path) if path else DEFAULT_PROJECTION_CONFIG_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(config.to_dict(), indent=2) + "\n", encoding="utf-8")
+
+
+def team_run_expectation(df: pd.DataFrame) -> pd.Series:
+    """BallparkPal's simulated runs for each row's own team.
+
+    ``bpp_runs`` cannot be used for this: after the slate merge it holds a
+    batter's *individual* projected runs scored (~0.5) on batter rows and the
+    team total (~4.5) on pitcher rows.  The Games sheet columns are
+    unambiguous, so prefer them and only fall back to ``bpp_runs`` when it
+    is clearly a team-level number.
+    """
+    result = pd.Series(np.nan, index=df.index, dtype=float)
+    if {"bpp_side", "bpp_runs_home", "bpp_runs_away"}.issubset(df.columns):
+        side = df["bpp_side"].astype(str).str.upper().str[:1]
+        home = pd.to_numeric(df["bpp_runs_home"], errors="coerce")
+        away = pd.to_numeric(df["bpp_runs_away"], errors="coerce")
+        result = home.where(side == "H", away.where(side == "A"))
+    if "bpp_team_runs" in df.columns:
+        result = result.fillna(pd.to_numeric(df["bpp_team_runs"], errors="coerce"))
+    if "bpp_runs" in df.columns:
+        runs = pd.to_numeric(df["bpp_runs"], errors="coerce")
+        result = result.fillna(runs.where(runs >= 1.5))
+    team_key = "team_code" if "team_code" in df.columns else ("team" if "team" in df.columns else None)
+    if team_key is not None and result.notna().any():
+        # Bench bats and unmatched rows inherit their team's number.
+        team_values = result.groupby(df[team_key].astype(str)).transform("max")
+        result = result.fillna(team_values)
+    return result
+
 
 PROJECTION_COLUMNS = [
     "fd_player_id",
@@ -191,13 +311,41 @@ def _vegas_team_multiplier(df: pd.DataFrame) -> pd.Series:
     return result.fillna(1.0)
 
 
+def _market_ratio_multiplier(df: pd.DataFrame, alpha: float, clip: float) -> pd.Series:
+    """Move hitters by the market's disagreement with BallparkPal, not its level."""
+    vegas_totals = df.get("vegas_team_total")
+    if not isinstance(vegas_totals, pd.Series):
+        return pd.Series(1.0, index=df.index)
+    vegas_totals = pd.to_numeric(vegas_totals, errors="coerce")
+    bpp_totals = team_run_expectation(df)
+    valid = vegas_totals.notna() & (vegas_totals > 1.5) & bpp_totals.notna() & (bpp_totals > 1.5)
+    game_totals = df.get("vegas_game_total")
+    if isinstance(game_totals, pd.Series):
+        # Pre-game MLB totals live between about 6 and 13.  Anything outside
+        # 5.5-15 is an in-play or broken line (the odds feed keeps quoting
+        # games after first pitch) and must not touch a projection.
+        game_totals = pd.to_numeric(game_totals, errors="coerce")
+        valid &= game_totals.isna() | game_totals.between(5.5, 15.0)
+    ratio = (vegas_totals / bpp_totals).where(valid, 1.0)
+    clip = abs(float(clip))
+    multiplier = ratio.pow(float(alpha)).clip(lower=1.0 - clip, upper=1.0 + clip)
+    return multiplier.fillna(1.0)
+
+
 def _pitcher_win_multiplier(df: pd.DataFrame) -> pd.Series:
     if "bpp_win_percent" not in df.columns:
         return pd.Series(1.0, index=df.index)
     win_pct = pd.to_numeric(df["bpp_win_percent"], errors="coerce")
     adjustment = ((win_pct - 0.5) * 0.6).clip(-0.25, 0.25)
     multiplier = (1 + adjustment).fillna(1.0)
-    vegas_prob = pd.to_numeric(df.get("vegas_implied_win_prob"), errors="coerce")
+    vegas_prob = df.get("vegas_implied_win_prob")
+    if not isinstance(vegas_prob, pd.Series):
+        return multiplier.fillna(1.0)
+    vegas_prob = pd.to_numeric(vegas_prob, errors="coerce")
+    # A missing Vegas file arrives here as 0.0, not NaN.  Reading that as a
+    # 0% win chance cut every pitcher's projection by 20% on runs with no
+    # odds - so only genuine probabilities are allowed to move a projection.
+    vegas_prob = vegas_prob.where((vegas_prob > 0.0) & (vegas_prob < 1.0))
     if vegas_prob.notna().any():
         vegas_adj = ((vegas_prob - 0.5) * 0.8).clip(-0.2, 0.2)
         multiplier = multiplier * (1 + vegas_adj.fillna(0.0))
@@ -256,8 +404,14 @@ def compute_baseline_projections(
     platoon_opposite_boost: float | None = None,
     platoon_same_penalty: float | None = None,
     platoon_switch_boost: float | None = None,
+    config: Optional[ProjectionConfig] = None,
 ) -> pd.DataFrame:
-    """Generate naive mean/floor/ceiling projections from available columns."""
+    """Generate mean/floor/ceiling projections from available columns.
+
+    ``config`` selects which adjustments run; ``None`` means the legacy
+    all-multipliers behaviour (see :class:`ProjectionConfig`).
+    """
+    config = config or ProjectionConfig()
     df = players_df.copy()
     fd_points = pd.to_numeric(df.get("bpp_points_fd"), errors="coerce")
     fallback = pd.to_numeric(df.get("fppg"), errors="coerce")
@@ -291,12 +445,19 @@ def compute_baseline_projections(
         if col not in df.columns:
             df[col] = 0.0
 
-    park_adj = _park_adjustment(df)
-    weather_score = _weather_score(df)
     hitters_mask = df["player_type"].str.lower() == "batter"
+    if config.apply_park_weather:
+        park_adj = _park_adjustment(df)
+        weather_score = _weather_score(df)
+    else:
+        park_adj = pd.Series(0.0, index=df.index)
+        weather_score = pd.Series(0.0, index=df.index)
     df.loc[hitters_mask, "proj_fd_mean"] += park_adj.loc[hitters_mask] * 0.5 + weather_score.loc[hitters_mask]
 
-    order_factor = _batting_order_adjustment(df)
+    if config.apply_batting_order:
+        order_factor = _batting_order_adjustment(df)
+    else:
+        order_factor = pd.Series(1.0, index=df.index, dtype=float)
     df["order_factor"] = order_factor
     df.loc[hitters_mask, "proj_fd_mean"] *= order_factor.loc[hitters_mask]
 
@@ -316,26 +477,35 @@ def compute_baseline_projections(
         else SWITCH_HITTER_BOOST
     )
 
-    platoon_factor = _platoon_adjustment(
-        df,
-        opposite_boost=opp_boost,
-        same_penalty=same_penalty,
-        switch_boost=switch_boost,
-    )
+    if config.apply_platoon:
+        platoon_factor = _platoon_adjustment(
+            df,
+            opposite_boost=opp_boost,
+            same_penalty=same_penalty,
+            switch_boost=switch_boost,
+        )
+    else:
+        platoon_factor = pd.Series(1.0, index=df.index, dtype=float)
     df["platoon_factor"] = platoon_factor
     df.loc[hitters_mask, "proj_fd_mean"] *= platoon_factor.loc[hitters_mask]
 
     recency_factor, recent_score, season_score = _recency_adjustment(
         df, recency_blend
     )
+    if not config.apply_recency:
+        recency_factor = pd.Series(1.0, index=df.index, dtype=float)
     df["recency_factor"] = recency_factor
     df["recent_fppg"] = recent_score
     df["season_fppg"] = season_score
     df["proj_fd_mean"] *= recency_factor
 
-    pitch_adj = _pitch_adjustment(df)
     pitchers_mask = df["player_type"].str.lower() == "pitcher"
-    win_multiplier = _pitcher_win_multiplier(df)
+    if config.apply_pitcher_adjustments:
+        pitch_adj = _pitch_adjustment(df)
+        win_multiplier = _pitcher_win_multiplier(df)
+    else:
+        pitch_adj = pd.Series(0.0, index=df.index)
+        win_multiplier = pd.Series(1.0, index=df.index, dtype=float)
     df.loc[pitchers_mask, "proj_fd_mean"] = (
         df.loc[pitchers_mask, "proj_fd_mean"] * win_multiplier.loc[pitchers_mask]
         + pitch_adj.loc[pitchers_mask]
@@ -345,7 +515,14 @@ def compute_baseline_projections(
     df["pitch_adjustment"] = pitch_adj.fillna(0.0)
     df["weather_score"] = weather_score.fillna(0.0)
 
-    team_multiplier = _vegas_team_multiplier(df)
+    if config.team_total_mode == "legacy":
+        team_multiplier = _vegas_team_multiplier(df)
+    elif config.team_total_mode == "market_ratio":
+        team_multiplier = _market_ratio_multiplier(
+            df, config.market_blend_alpha, config.market_ratio_clip
+        )
+    else:
+        team_multiplier = pd.Series(1.0, index=df.index, dtype=float)
     df.loc[hitters_mask, "proj_fd_mean"] *= team_multiplier.loc[hitters_mask]
     df["vegas_multiplier"] = team_multiplier
     salary_raw = df.get("salary")
@@ -450,4 +627,13 @@ def data_quality_report(players_df: pd.DataFrame) -> dict[str, int]:
     return report
 
 
-__all__ = ["compute_baseline_projections", "PROJECTION_COLUMNS", "data_quality_report"]
+__all__ = [
+    "DEFAULT_PROJECTION_CONFIG_PATH",
+    "PROJECTION_COLUMNS",
+    "ProjectionConfig",
+    "compute_baseline_projections",
+    "data_quality_report",
+    "load_projection_config",
+    "save_projection_config",
+    "team_run_expectation",
+]

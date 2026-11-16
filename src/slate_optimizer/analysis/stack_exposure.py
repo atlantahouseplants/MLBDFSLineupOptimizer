@@ -73,8 +73,10 @@ def build_stack_exposure_plan(
                 "team_code": team,
                 "eligible_hitters": int(len(group)),
                 "confirmed_hitters": _confirmed_count(group),
-                "team_runs": _first_positive(group, "vegas_team_total", "bpp_runs"),
-                "bpp_runs": _first_positive(group, "bpp_runs"),
+                # bpp_runs on a batter row is the batter's own runs scored, not
+                # the team total - bpp_team_runs is, so it takes precedence.
+                "team_runs": _first_positive(group, "vegas_team_total", "bpp_team_runs", "bpp_runs"),
+                "bpp_runs": _first_positive(group, "bpp_team_runs", "bpp_runs"),
                 "vegas_team_total": _first_positive(group, "vegas_team_total"),
                 "win_percent": _first_positive(group, "bpp_win_percent"),
                 "home_runs": _first_positive(group, "bpp_home_runs"),
