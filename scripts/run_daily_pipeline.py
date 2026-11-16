@@ -21,6 +21,7 @@ from slate_optimizer.ingestion.ballparkpal import BallparkPalLoader
 from slate_optimizer.ingestion.batting_orders import BattingOrderLoader
 from slate_optimizer.ingestion.fanduel import FanduelCSVLoader
 from slate_optimizer.ingestion.handedness import HandednessLoader
+from slate_optimizer.ingestion.preflight import run_preflight
 from slate_optimizer.ingestion.recent_stats import RecentStatsLoader
 from slate_optimizer.ingestion.vegas import VegasLoader
 from slate_optimizer.ingestion.slate_builder import build_player_dataset
@@ -123,6 +124,16 @@ def build_parser(add_help: bool = True) -> argparse.ArgumentParser:
     parser.add_argument("--salary-cap", type=int, default=35000, help="Salary cap override.")
     parser.add_argument("--min-stack-size", type=int, default=4, help="Min hitters from one team.")
     parser.add_argument("--stack-templates", default=None, help="Comma-separated stack sizes (e.g., 4,3).")
+    parser.add_argument(
+        "--skip-preflight",
+        action="store_true",
+        help="Build even if the FanDuel file looks like the wrong sport, date or slate (not recommended).",
+    )
+    parser.add_argument(
+        "--stack-rotation",
+        default=None,
+        help="Pipe-separated stack templates to rotate through, e.g. '4,3|4,4|3,3,2'. Overrides --stack-templates.",
+    )
     parser.add_argument("--max-lineup-ownership", type=float, default=None, help="Optional cap on total lineup ownership.")
     parser.add_argument(
         "--bring-back",
@@ -155,6 +166,32 @@ def build_parser(add_help: bool = True) -> argparse.ArgumentParser:
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = build_parser()
     return parser.parse_args(argv)
+
+def parse_stack_rotation(value: str | None) -> List[tuple] | None:
+    """Turn '4,3|5,3|3,3,2' into [(4, 3), (4, 3), (3, 3, 2)].
+
+    Sizes are capped at FanDuel's four-hitters-per-team limit, so '5,3'
+    becomes a 4-3.  Returns None for an empty value.
+    """
+    if not value or not str(value).strip():
+        return None
+    rotation: List[tuple] = []
+    for chunk in str(value).split("|"):
+        tokens = [token.strip() for token in chunk.split(",") if token.strip()]
+        if not tokens:
+            continue
+        try:
+            sizes = tuple(min(int(token), 4) for token in tokens if int(token) > 0)
+        except ValueError:
+            raise SystemExit(
+                f"Invalid --stack-rotation entry {chunk!r} (use e.g. '4,3|4,4|3,3,2')."
+            )
+        if sum(sizes) > 8:
+            raise SystemExit(f"--stack-rotation entry {chunk!r} needs more than 8 hitters.")
+        if sizes:
+            rotation.append(sizes)
+    return rotation or None
+
 
 def _combine_lineups(lineups: List[LineupResult]) -> pd.DataFrame:
     rows = []
@@ -271,6 +308,23 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         summary = vegas_lines.summary()
         print(
             f"Loaded Vegas lines for {summary['games']} games from {args.vegas_csv}"
+        )
+
+    # Refuse the wrong FanDuel file (other sport, other day, other slate)
+    # before anything is built from it.
+    preflight = run_preflight(
+        fd_players.players,
+        fd_path=Path(args.fanduel_csv),
+        bpp_games=bundle.games,
+        vegas_games=vegas_lines.games if vegas_lines is not None else None,
+        salary_cap=int(args.salary_cap or 35000),
+    )
+    print(preflight.format())
+    if preflight.errors and not getattr(args, "skip_preflight", False):
+        raise SystemExit(
+            "\nNo lineups were built because the inputs do not look right:\n- "
+            + "\n- ".join(issue.message for issue in preflight.errors)
+            + "\n(Use --skip-preflight to build anyway.)"
         )
 
     alias_map = None
@@ -475,9 +529,13 @@ def run_pipeline(args: argparse.Namespace) -> dict:
         if vegas_lines is not None:
             vegas_lines.games.to_csv(output_dir / f"{tag}_vegas_lines.csv", index=False)
 
+    stack_rotation = parse_stack_rotation(getattr(args, "stack_rotation", None))
+    if stack_rotation:
+        print("Stack rotation: " + " | ".join("-".join(str(size) for size in item) for item in stack_rotation))
     lineups = generate_lineups(
         optimizer_df,
         num_lineups=args.num_lineups,
+        stack_rotation=stack_rotation,
         salary_cap=salary_cap,
         min_stack_size=max(0, min_stack_size),
         stack_player_types=(config.stack_player_types if config.stack_player_types else ("batter",)),

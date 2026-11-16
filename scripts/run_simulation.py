@@ -22,6 +22,7 @@ from slate_optimizer.simulation import (
     SimulationConfig,
     build_correlation_matrix,
     fit_player_distributions,
+    load_simulation_calibration,
     parse_payout_ladder_text,
     payout_ladder_to_dicts,
     simulate_slate,
@@ -157,7 +158,12 @@ def main() -> None:
 
     print(f"Loaded {len(dataset)} players, {len(candidates)} candidate lineups")
 
-    distributions = fit_player_distributions(dataset, volatility_scale=config.volatility_scale)
+    calibration = load_simulation_calibration()
+    if calibration is not None and not args.config:
+        config.correlation = calibration.correlation_config()
+    distributions = fit_player_distributions(
+        dataset, volatility_scale=config.volatility_scale, calibration=calibration
+    )
     correlation_model = build_correlation_matrix(dataset, config.correlation)
     slate_sim = simulate_slate(
         distributions,

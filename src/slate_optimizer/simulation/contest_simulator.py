@@ -92,7 +92,22 @@ def simulate_contest(
     payout_structure: Optional[Any] = None,
     contest_entries: Optional[int] = None,
     field_duplication_profile: Optional[Dict[str, Any]] = None,
+    rank_against: str = "field",
 ) -> ContestSimResult:
+    """Score candidate lineups against a simulated field.
+
+    ``rank_against``:
+      * ``"field"`` (default) - each candidate is placed among the field
+        lineups only, as if it were your one entry in the contest.
+      * ``"all"`` - the 2026 behaviour: candidates and field ranked in one
+        pool.  With 500 candidates and 1,000 field lineups a third of that
+        "contest" was your own optimizer output, so candidates sharing a
+        popular stack pushed each other out of the top 1% and the metric
+        penalised a lineup for resembling the rest of your pool, not for
+        being chalk in the real contest.
+    """
+    if rank_against not in {"field", "all"}:
+        raise ValueError("rank_against must be 'field' or 'all'")
     if not candidates:
         raise ValueError("No candidate lineups provided for simulation")
 
@@ -119,22 +134,27 @@ def simulate_contest(
         end = min(start + _FCHUNK, num_field)
         field_scores[:, start:end] = slate_sim.scores[:, field_sim.lineups[start:end]].sum(axis=2)
 
-    # Rank all lineups together, freeing large intermediates eagerly
-    all_scores = np.concatenate([field_scores, candidate_scores], axis=1)
-    del field_scores  # free ~80MB
-    ranks = _rank_scores(all_scores)
-    total_lineups = all_scores.shape[1]
-    actual_contest_entries = int(contest_entries or total_lineups)
-    del all_scores  # free ~120MB
-    percentiles = (ranks + 1) / total_lineups * 100.0
-    del ranks  # free ~120MB
+    if rank_against == "field":
+        candidate_percentiles = _percentiles_vs_field(candidate_scores, field_scores)
+        actual_contest_entries = int(contest_entries or (num_field + 1))
+        del field_scores
+    else:
+        # Legacy: rank all lineups together, freeing large intermediates eagerly
+        all_scores = np.concatenate([field_scores, candidate_scores], axis=1)
+        del field_scores  # free ~80MB
+        ranks = _rank_scores(all_scores)
+        total_lineups = all_scores.shape[1]
+        actual_contest_entries = int(contest_entries or total_lineups)
+        del all_scores  # free ~120MB
+        candidate_percentiles = ((ranks + 1) / total_lineups * 100.0)[:, num_field:]
+        del ranks  # free ~120MB
 
     field_sets = _field_lineup_sets(field_sim)
 
     lineup_results: List[LineupSimResult] = []
     for lineup_id, (candidate, lineup_idx) in enumerate(zip(candidates, candidate_indices)):
         lineup_scores = candidate_scores[:, lineup_id]
-        lineup_percentiles = percentiles[:, num_field + lineup_id]
+        lineup_percentiles = candidate_percentiles[:, lineup_id]
         metrics = _aggregate_metrics(
             lineup_scores,
             lineup_percentiles,
@@ -215,6 +235,21 @@ def _lineup_indices(
         except KeyError as exc:
             raise KeyError(f"Lineup references unknown player {exc}") from exc
     return np.array(indices, dtype=int)
+
+
+def _percentiles_vs_field(candidate_scores: np.ndarray, field_scores: np.ndarray) -> np.ndarray:
+    """Finishing percentile of each candidate if it were one entry among the field.
+
+    For every simulation: count the field lineups a candidate beats, then
+    place it in a contest of (field + 1) entries.  Beating the whole field
+    is the 100th percentile; ties with a field lineup count as not beaten.
+    """
+    num_sims, num_field = field_scores.shape
+    sorted_field = np.sort(field_scores, axis=1)
+    beaten = np.empty(candidate_scores.shape, dtype=np.int64)
+    for sim_idx in range(num_sims):
+        beaten[sim_idx] = np.searchsorted(sorted_field[sim_idx], candidate_scores[sim_idx], side="left")
+    return (beaten + 1) / float(num_field + 1) * 100.0
 
 
 def _rank_scores(all_scores: np.ndarray) -> np.ndarray:

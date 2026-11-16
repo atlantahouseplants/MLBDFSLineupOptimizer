@@ -48,6 +48,7 @@ from slate_optimizer.data.storage import SlateDatabase
 from slate_optimizer.ingestion.ballparkpal import BallparkPalLoader
 from slate_optimizer.ingestion.batting_orders import BattingOrderLoader
 from slate_optimizer.ingestion.fanduel import FanduelCSVLoader
+from slate_optimizer.ingestion.preflight import run_preflight
 from slate_optimizer.ingestion.handedness import HandednessLoader
 from slate_optimizer.ingestion.recent_stats import RecentStatsLoader
 from slate_optimizer.ingestion.slate_builder import build_player_dataset
@@ -84,6 +85,7 @@ from slate_optimizer.simulation import (
     build_correlation_matrix,
     compute_actual_ownership,
     fit_player_distributions,
+    load_simulation_calibration,
     learn_field_duplication_profile,
     match_lineups_to_contest_entries,
     load_field_duplication_profile,
@@ -587,6 +589,9 @@ def _get_config_state() -> Dict:
 
 
 def _get_sim_config_state() -> Dict:
+    # Start the correlation inputs from the outcome-fitted values when a
+    # calibration file exists (config/simulation_calibration.json).
+    _calibration = load_simulation_calibration()
     default_config = {
         "num_simulations": 20000,
         "num_candidates": 300,
@@ -594,9 +599,9 @@ def _get_sim_config_state() -> Dict:
         "contest_entries": 50000,
         "payout_ladder_text": DEFAULT_PAYOUT_LADDER_TEXT,
         "volatility_scale": 1.0,
-        "copula_nu": 5,
-        "teammate_corr": 0.25,
-        "pitcher_vs_opposing": -0.15,
+        "copula_nu": int(_calibration.copula_nu) if _calibration else 5,
+        "teammate_corr": float(_calibration.teammate_base) if _calibration else 0.25,
+        "pitcher_vs_opposing": float(_calibration.pitcher_vs_opposing) if _calibration else -0.15,
         "field_size": 1000,
         "field_quality_shark_pct": 0.10,
         "field_quality_rec_pct": 0.60,
@@ -703,7 +708,9 @@ def _render_advanced_caption() -> None:
 
 def _apply_sim_preset(preset: SimulationConfig, state: Dict) -> None:
     state["num_simulations"] = preset.num_simulations
-    state["volatility_scale"] = preset.volatility_scale
+    # Presets widened or narrowed scores to compensate for the hand-set
+    # simulator.  The calibrated simulator already has the measured spread.
+    state["volatility_scale"] = 1.0 if load_simulation_calibration() is not None else preset.volatility_scale
     state["field_size"] = preset.num_field_lineups
     state["field_quality_shark_pct"] = preset.field_quality_shark_pct
     state["field_quality_rec_pct"] = preset.field_quality_rec_pct
@@ -852,6 +859,9 @@ def _build_simulation_config(state: Dict) -> SimulationConfig:
         use_portfolio_optimizer=bool(state.get("use_portfolio_optimizer", True)),
         portfolio_time_limit_seconds=int(state.get("portfolio_time_limit_seconds", 45)),
     )
+    _calibration = load_simulation_calibration()
+    if _calibration is not None:
+        config.correlation = _calibration.correlation_config()
     config.correlation.teammate_base = float(state.get("teammate_corr", config.correlation.teammate_base))
     config.correlation.pitcher_vs_opposing = float(state.get("pitcher_vs_opposing", config.correlation.pitcher_vs_opposing))
     config.correlation.copula_nu = int(state.get("copula_nu", config.correlation.copula_nu))
@@ -967,6 +977,7 @@ def _simulation_cache_key(optimizer_df: pd.DataFrame, sim_config: SimulationConf
         "field_size": sim_config.num_field_lineups,
         "salary_cap": salary_cap,
         "correlation": asdict(sim_config.correlation),
+        "calibration": (lambda cal: cal.to_dict() if cal is not None else None)(load_simulation_calibration()),
         "field_quality": [
             sim_config.field_quality_shark_pct,
             sim_config.field_quality_rec_pct,
@@ -1016,7 +1027,11 @@ def _run_simulation_stack(
         field_sim = cached["field_sim"]
         stack_plan = cached["stack_plan"]
     else:
-        distributions = fit_player_distributions(optimizer_df, sim_config.volatility_scale)
+        distributions = fit_player_distributions(
+            optimizer_df,
+            sim_config.volatility_scale,
+            calibration=load_simulation_calibration(),
+        )
         correlation_model = build_correlation_matrix(optimizer_df, sim_config.correlation)
         slate_sim = simulate_slate(
             distributions,
@@ -1947,6 +1962,12 @@ def _process_slate(
         fd_loader = FanduelCSVLoader(fd_path)
         fd_players = fd_loader.load()
 
+        # Stop here if this is the wrong FanDuel file (other sport, other
+        # day, other slate).  PreflightError is a ValueError, so it shows
+        # in the same place as every other slate-setup problem.
+        preflight_report = run_preflight(fd_players.players, fd_path=fd_path, bpp_games=bundle.games)
+        preflight_report.raise_if_blocking()
+
         combined, diagnostics = build_player_dataset(bundle, fd_players.players)
         defaults = pd.DataFrame({
             "is_confirmed_lineup": False,
@@ -1966,7 +1987,7 @@ def _process_slate(
             handed_path,
             recent_path,
         )
-        optional_messages = upload_messages + optional_messages
+        optional_messages = preflight_report.messages() + upload_messages + optional_messages
 
         # Backfill handedness from the BallparkPal sim exports (BatterStand /
         # PitcherHand columns) for players not covered by a handedness upload.
@@ -3279,6 +3300,10 @@ def _run_analysis_pipeline(workflow: Dict) -> None:
         "--num-candidates", "500",
         "--num-lineups", "150",
         "--stack-rotation", "4,3|5,3|4,4|3,3,2|4,2,2|3,2,2,1",
+        # The review step looks in data/output; without this the files
+        # landed in data/processed and were never found.
+        "--output-dir", str(Path(__file__).resolve().parents[1] / "data" / "output"),
+        "--tag", pd.Timestamp.now().strftime("%Y-%m-%d"),
     ]
 
     if bpp_dfs_path:
@@ -3288,17 +3313,25 @@ def _run_analysis_pipeline(workflow: Dict) -> None:
     if mlb_orders_path:
         command.extend(["--batting-orders-csv", str(mlb_orders_path)])
 
+    process = None
     try:
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
 
+        # Stream progress into a placeholder.  The previous version called
+        # st.rerun() on the first output line, which abandoned this function
+        # while the pipeline was still running - the button never finished.
         output_lines = []
+        progress_box = st.empty()
         for line in process.stdout:
-            output_lines.append(line.strip())
-            st.session_state[RUN_ANALYSIS_PROGRESS_KEY] = line.strip()
-            # Streamlit reruns on session_state change, causing UI update
-            st.rerun()
+            text = line.strip()
+            if not text:
+                continue
+            output_lines.append(text)
+            progress_box.info(f"Running analysis: {text[:200]}")
 
         process.wait()
+        progress_box.empty()
+        st.session_state[RUN_ANALYSIS_PROGRESS_KEY] = ""
 
         if process.returncode != 0:
             st.error(f"Analysis pipeline failed with exit code {process.returncode}.")
@@ -3324,7 +3357,7 @@ def _run_analysis_pipeline(workflow: Dict) -> None:
         st.session_state[RUN_ANALYSIS_OUTPUT_KEY] = str(exc)
     finally:
         # Clean up temporary files, but keep them for debugging if analysis failed
-        if process.returncode != 0:
+        if process is None or process.returncode != 0:
             st.warning(f"Temporary files for debugging kept at: {temp_dir}")
         else:
             import shutil
@@ -6471,6 +6504,12 @@ def _render_step_four() -> None:
             value=int(sim_state.get("num_simulations", 10000) or 10000),
             step=1000,
         )
+        if load_simulation_calibration() is not None:
+            st.caption(
+                "Simulator is calibrated to real 2026 box scores: hitters can score zero, score spreads and "
+                "correlations match what actually happened. Leave these four at their defaults unless you "
+                "are testing something."
+            )
         sim_state["volatility_scale"] = st.number_input(
             "Volatility scale",
             min_value=0.5,
@@ -6481,13 +6520,13 @@ def _render_step_four() -> None:
         sim_state["copula_nu"] = st.number_input(
             "Copula \u03bd",
             min_value=3,
-            max_value=20,
+            max_value=200,
             value=int(sim_state.get("copula_nu", 5) or 5),
             step=1,
         )
         sim_state["teammate_corr"] = st.number_input(
             "Teammate correlation",
-            min_value=0.05,
+            min_value=0.0,
             max_value=0.50,
             value=float(sim_state.get("teammate_corr", 0.25) or 0.25),
             step=0.01,
@@ -6495,7 +6534,7 @@ def _render_step_four() -> None:
     with col_right:
         sim_state["pitcher_vs_opposing"] = st.number_input(
             "Pitcher vs opposing hitters correlation",
-            min_value=-0.30,
+            min_value=-0.60,
             max_value=0.0,
             value=float(sim_state.get("pitcher_vs_opposing", -0.15) or -0.15),
             step=0.01,

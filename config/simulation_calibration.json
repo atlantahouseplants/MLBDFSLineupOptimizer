@@ -1,0 +1,22 @@
+{
+  "hitter_zero_scale": 6.1,
+  "hitter_zero_min": 0.05,
+  "hitter_zero_max": 0.6,
+  "hitter_positive_cv": 0.761,
+  "hitter_positive_shift": 3.0,
+  "pitcher_sd_intercept": 8.673,
+  "pitcher_sd_slope": 0.2187,
+  "pitcher_lower_bound": -20.0,
+  "pitcher_upper_sd": 2.3,
+  "teammate_base": 0.137,
+  "teammate_adjacent_bonus": 0.0,
+  "same_game_opponent": -0.018,
+  "pitcher_own_hitters": 0.06,
+  "pitcher_vs_opposing": -0.333,
+  "copula_nu": 30,
+  "source": "fitted to real box scores, projection column proj_calibrated_config",
+  "slates_used": 24,
+  "hitter_starts": 5733,
+  "pitcher_starts": 648,
+  "fitted_at": "2026-11-16"
+}

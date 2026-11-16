@@ -22,6 +22,7 @@ from slate_optimizer.simulation import (
     SimulationConfig,
     build_correlation_matrix,
     fit_player_distributions,
+    load_simulation_calibration,
     parse_payout_ladder_text,
     payout_ladder_to_dicts,
     select_portfolio,
@@ -191,9 +192,23 @@ def main() -> None:
         SimulationConfig.load(Path(args.sim_config)) if args.sim_config else SimulationConfig()
     )
     sim_config.num_candidates = len(lineups)
+    # Outcome-fitted distributions and correlations (config/simulation_calibration.json).
+    # An explicit --sim-config file or CLI override still wins for correlations.
+    calibration = load_simulation_calibration()
+    if calibration is not None:
+        if not args.sim_config:
+            sim_config.correlation = calibration.correlation_config()
+        print(
+            f"Simulator: calibrated to {calibration.hitter_starts} hitter and "
+            f"{calibration.pitcher_starts} pitcher starts ({calibration.slates_used} slates)"
+        )
+    else:
+        print("Simulator: hand-set model (no config/simulation_calibration.json)")
     sim_config = _apply_sim_overrides(args, sim_config)
 
-    distributions = fit_player_distributions(optimizer_df, sim_config.volatility_scale)
+    distributions = fit_player_distributions(
+        optimizer_df, sim_config.volatility_scale, calibration=calibration
+    )
     correlation_model = build_correlation_matrix(optimizer_df, sim_config.correlation)
     slate_sim = simulate_slate(
         distributions,
